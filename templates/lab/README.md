@@ -1,6 +1,6 @@
-# Project title
+# Lab title
 
-Replace this title with the project's descriptive name.
+Replace this title with the lab's descriptive name.
 
 ## Overview
 

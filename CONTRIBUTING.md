@@ -2,10 +2,10 @@
 
 ## Naming
 
-- Repository: `cog300-group-projects` (proposed; awaiting owner review).
+- Repository: `cog300-labs` (proposed; awaiting owner review).
 - Default branch: `main`.
-- Project folders: `projects/project-01/`, `projects/project-02/`, etc.
-- Work branches: `project-01/short-description`; shared changes: `docs/short-description`.
+- Lab folders: `labs/lab-03/`, `labs/lab-04/`, etc., matching the course lab number.
+- Work branches: `lab-03/short-description`; shared changes: `docs/short-description`.
 - Files: lowercase words separated by hyphens where practical.
 - Meeting notes: `docs/meetings/YYYY-MM-DD.md`.
 
@@ -17,6 +17,6 @@ Review is a team convention until repository rules are configured.
 
 ## Shared materials
 
-Record sources and citations alongside the work. Keep passwords, API keys, and identifiable participant data out of Git. Store large datasets and recordings in the team's approved shared storage and link them from the project README.
+Record sources and citations alongside the work. Keep passwords, API keys, and identifiable participant data out of Git. Store large datasets and recordings in the team's approved shared storage and link them from the lab README.
 
-Each project should document any tools, dependencies, and steps needed to reproduce its results. Follow the course's collaboration and submission requirements.
+Each lab should document any tools, dependencies, and steps needed to reproduce its results. Follow the course's collaboration and submission requirements.

@@ -1,14 +1,14 @@
 ---
-name: Project task
+name: Lab task
 about: Plan and track a piece of group work
 title: ""
 labels: ""
 assignees: ""
 ---
 
-## Project
+## Lab
 
-Project number or shared team work:
+Lab number or shared team work:
 
 ## Task
 
