@@ -2,7 +2,7 @@
 
 ## Naming
 
-- Repository: `cog300-labs` (proposed; awaiting owner review).
+- Repository: `cog300-labs`.
 - Default branch: `main`.
 - Lab folders: `labs/lab-03/`, `labs/lab-04/`, etc., matching the course lab number.
 - Work branches: `lab-03/short-description`; shared changes: `docs/short-description`.
