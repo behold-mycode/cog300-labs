@@ -26,3 +26,13 @@ struct FakeSerial {
   template<class T> void println(T value) { output << value << "\n"; }
   void println() { output << "\n"; }
 } Serial;
+#define INPUT 0
+#define CHANGE 2
+static uint32_t extraUs = 0;
+inline uint32_t micros() { return nowMs * 1000U + extraUs; }
+inline void delayMicroseconds(unsigned int us) { extraUs += us; }
+inline int digitalRead(int pin) { return levels[pin]; }
+inline int digitalPinToInterrupt(int pin) { return pin; }
+inline void attachInterrupt(int, void (*)(), int) {}
+inline void noInterrupts() {}
+inline void interrupts() {}

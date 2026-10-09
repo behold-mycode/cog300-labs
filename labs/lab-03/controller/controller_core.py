@@ -32,9 +32,11 @@ class Controller:
         self.gap_until = None
         self.last_frame = self.last_heartbeat = -100.0
         self.last_rx = 0.0
+        self.sensor_status = "Sensor: waiting for firmware"
         self.motion = (0, 0)
 
     def connect(self):
+        self.sensor_status = "Sensor: waiting for firmware"
         self.connected = True
         self.ready = self.enabled = False
         self.keys.clear(); self.blocked.clear()
@@ -47,7 +49,21 @@ class Controller:
     def receive(self, line):
         if line != 'ALIVE': self.log('< ' + line)
         now = self.clock()
-        if line == 'ROBOT_READY 2' and self.connected and self.phase == 'Waiting for firmware':
+        if line.startswith('SAFETY '):
+            parts = line.split()
+            if len(parts) != 3 or parts[1] not in ('CLEAR', 'OBSTACLE', 'UNKNOWN'): return
+            label = {'CLEAR': 'Path clear — green', 'OBSTACLE': 'Front obstacle — red',
+                     'UNKNOWN': 'Sensor unavailable — red'}[parts[1]]
+            self.sensor_status = label + (f' ({parts[2]} cm)' if parts[2] != '-1' else '')
+            if parts[1] != 'CLEAR' and self.ready:
+                self.stop()
+                self.phase = 'Forward blocked — check front clearance / sensor'
+            return
+        if line == 'MOTION_BLOCKED':
+            self.stop()
+            self.phase = 'Movement blocked — reverse away or clear obstacle'
+            return
+        if line == 'ROBOT_READY 3' and self.connected and self.phase == 'Waiting for firmware':
             self.last_rx = now
             self.phase = 'Applying settings'
             self.last_heartbeat = now
@@ -85,9 +101,11 @@ class Controller:
         if self.ready: self.phase = 'Controls disabled — enable to resume'
 
     def fail(self, reason):
+        self.sensor_status = "Sensor: connection unavailable"
         self.stop(); self.ready = self.enabled = False; self.phase = reason
 
     def disconnect(self):
+        self.sensor_status = "Sensor: disconnected"
         self.disable(); self.connected = self.ready = False; self.phase = 'Disconnected'
 
     def configure(self, left, right, invert_left, invert_right):
@@ -137,7 +155,7 @@ class Controller:
         now = self.clock()
         if self.phase == 'Waiting for firmware':
             if now - self.connect_at > 10:
-                self.fail('No protocol-2 firmware — upload the updated sketch'); return
+                self.fail('No protocol-3 firmware — upload the updated sketch'); return
             if now - self.connect_at >= 2 and now - self.last_hello >= .5:
                 self.send('HELLO'); self.last_hello = now
             return

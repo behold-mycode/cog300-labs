@@ -9,7 +9,7 @@ char lineBuffer[64];
 uint8_t lineLength = 0;
 bool discardLine = false;
 
-// Protocol 2: GUI opens a heartbeat-protected session. Legacy Serial Monitor works before HELLO.
+// Protocol 3: GUI opens a heartbeat-protected session. Legacy Serial Monitor works before HELLO.
 bool controlSession = false, controlExpired = false;
 uint32_t lastControlMs = 0;
 const uint32_t CONTROL_TIMEOUT_MS = 500;
@@ -51,7 +51,7 @@ void logTestResult(uint8_t index, const char* result) {
 }
 
 void printHelp() {
-  Serial.println(F("ROBOT firmware 2 — stopped on startup"));
+  Serial.println(F("ROBOT firmware 3 — stopped on startup"));
   Serial.println(F("FORWARD / BACKWARD / LEFT / RIGHT [PWM duration_ms]"));
   Serial.println(F("LEFT/RIGHT turn in place. Example: FORWARD 180 500"));
   Serial.println(F("STOP: cancel motion. HELP: this menu. STATUS: settings."));
@@ -60,6 +60,7 @@ void printHelp() {
   Serial.print(F("Default PWM=")); Serial.print(DEFAULT_TEST_PWM);
   Serial.print(F(" duration_ms=")); Serial.println(DEFAULT_TEST_MS);
   reportStatus();
+  reportSafety();
 }
 
 bool parseNumber(const char* text, long low, long high, long& value) {
@@ -88,13 +89,13 @@ void processCommand(char* line) {
   long speed, right, duration;
   if (strcmp(tokens[0], "HELLO") == 0 && count == 1) {
     stopDrive(); controlSession = true; controlExpired = false; lastControlMs = millis();
-    Serial.println(F("ROBOT_READY 2")); return;
+    Serial.println(F("ROBOT_READY 3")); reportSafety(); return;
   }
   if (strcmp(tokens[0], "HEARTBEAT") == 0 && count == 1) {
     if (controlSession) { lastControlMs = millis(); Serial.println(F("ALIVE")); }
     return;
   }
-  if (strcmp(tokens[0], "STATUS") == 0 && count == 1) { reportStatus(); return; }
+  if (strcmp(tokens[0], "STATUS") == 0 && count == 1) { reportStatus(); reportSafety(); return; }
   bool isStop = strcmp(tokens[0], "STOP") == 0 || strcmp(tokens[0], "S") == 0;
   bool isHelp = strcmp(tokens[0], "HELP") == 0 || strcmp(tokens[0], "?") == 0;
   if (controlExpired && !isStop && !isHelp) { invalidCommand(); return; }
@@ -114,7 +115,7 @@ void processCommand(char* line) {
         !parseNumber(tokens[4], 1, 5000, duration)) { invalidCommand(); return; }
     lastControlMs = millis(); scheduleDrive(speed, right, duration);
     if (speed == 0 && right == 0) { Serial.print(F("TEST_DONE ")); Serial.println(requestId); }
-    else remoteTestId = requestId;
+    else if (pending) remoteTestId = requestId;
     return;
   }
   if (strcmp(tokens[0], "DRIVE") == 0) {
