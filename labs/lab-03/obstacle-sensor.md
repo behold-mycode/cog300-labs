@@ -32,13 +32,13 @@ Mount the sensor at the front with a clear view, approximately horizontal. Keep 
 | --- | --- | --- | --- |
 | Startup / no valid reading | Off | On | Forward and spins blocked |
 | Valid clear path | On continuously | Off | Normal controls allowed; green stays on even when stationary |
-| Obstacle at or below 25 cm | Off | On | Both motors stop; queued moves and automatic tests cancelled |
+| Obstacle at or below 10 cm | Off | On | Both motors stop; queued moves and automatic tests cancelled |
 | Echo missing, invalid, or stale | Off | On | Stop and block forward; GUI identifies a sensor problem |
 | Deliberate reverse while blocked | Off | On | Down/reverse allowed to back away; front remains blocked |
 
 **Red means the front is blocked or unverified.** On detection the car stops, but red stays on during an intentional reverse escape. The sensor cannot check behind the car. Forward curves, single-wheel forward movements and in-place spins are blocked too, because they can swing a corner forward.
 
-After stopping, clearance must exceed **35 cm for three consecutive readings** before green returns. Readings between 25 and 35 cm retain the prior blocked/clear state. Clearing the obstacle does not restart a cancelled test or held arrow: release and press the arrow again, or explicitly restart the test. A new obstacle or sensor failure stops any movement, including reverse; a fresh reverse command is then allowed.
+After stopping, clearance must exceed **20 cm for three consecutive readings** before green returns. Readings between 10 and 20 cm retain the prior blocked/clear state. Clearing the obstacle does not restart a cancelled test or held arrow: release and press the arrow again, or explicitly restart the test. A new obstacle or sensor failure stops any movement, including reverse; a fresh reverse command is then allowed.
 
 ## Upload and run
 
@@ -51,18 +51,18 @@ Firmware/controller protocol is now **3**; use this firmware and Python controll
 
 ## Timing and threshold tuning
 
-`Safety.ino` contains `STOP_CM = 25`, `CLEAR_CM = 35`, `PING_MS = 70`, and `STALE_MS = 250`. Echo edges are captured on D2 with an interrupt; no PWM timer library is used. The only sensor delay is a 10 µs trigger pulse. A missing echo times out after 30 ms and blocks forward. An old valid sample expires after 250 ms. An absent echo can also mean an object is out of range or reflects poorly; it is deliberately treated as unknown, not proof of clearance.
+`Safety.ino` contains `STOP_CM = 10`, `CLEAR_CM = 20`, `PING_MS = 70`, and `STALE_MS = 250`. Echo edges are captured on D2 with an interrupt; no PWM timer library is used. The only sensor delay is a 10 µs trigger pulse. A missing echo times out after 30 ms and blocks forward. An old valid sample expires after 250 ms. An absent echo can also mean an object is out of range or reflects poorly; it is deliberately treated as unknown, not proof of clearance.
 
-**25 cm is a starting value, not a verified stopping distance.** The current motor stop disables drive and lets the car coast. The GUI still retains its previous PWM default of 255: lower it before the first floor test. Choose a setting that starts both motors reliably, then measure actual stopping travel. Increase the threshold for speed, sensor latency, coasting distance, bumper offset, and a clearance margin. Do not tune with a person or fragile object as the target.
+**10 cm is a starting value, not a verified stopping distance.** The current motor stop disables drive and lets the car coast. The GUI still retains its previous PWM default of 255: lower it before the first floor test. Choose a setting that starts both motors reliably, then measure actual stopping travel. Increase the threshold for speed, sensor latency, coasting distance, bumper offset, and a clearance margin. Do not tune with a person or fragile object as the target.
 
 This single forward sensor does not cover the whole width, sides, rear, low objects or drop-offs. Soft or angled surfaces can produce poor echoes. Use a broad flat target for the initial demonstration.
 
 ## Bench and floor checks
 
 1. Wheels raised, broad target around 50–100 cm away: after three valid clear readings, green should be on and red off.
-2. Hold Up. Bring the target inside 25 cm: both wheels stop, green turns off and red on. Keeping Up held must not restart them.
+2. Hold Up. Bring the target inside 10 cm: both wheels stop, green turns off and red on. Keeping Up held must not restart them.
 3. While blocked, try Up, a forward curve, a spin, and a Full lab preset. None may produce forward wheel output. Press Down separately: wheels reverse while red remains on.
-4. Clear the target beyond 35 cm. Confirm the robot remains stopped until a fresh command. Restart Full lab, then interrupt a moving step with the target; remaining steps must cancel.
+4. Clear the target beyond 20 cm. Confirm the robot remains stopped until a fresh command. Restart Full lab, then interrupt a moving step with the target; remaining steps must cancel.
 5. Repeat during a queued movement and between automatic test steps. The cancelled suite must not resume when the target is removed.
 6. Switch power off, disconnect the sensor, then power on: red on, green off, forward blocked. Reconnect with power off. Check that missing/stuck echoes during operation also stop motion under a controlled bench setup.
 7. At reduced speed on the floor, measure how far the chassis coasts. Adjust `STOP_CM` and `CLEAR_CM`, re-upload, and repeat at each intended operating speed.

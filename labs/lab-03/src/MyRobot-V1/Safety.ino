@@ -1,6 +1,6 @@
 // HC-SR04 front guard. No timer libraries: preserves motor PWM on D9/D10.
 const uint8_t TRIG_PIN = 4, ECHO_PIN = 2, GREEN_LED = 11, RED_LED = 12;
-const uint16_t STOP_CM = 25, CLEAR_CM = 35;
+const uint16_t STOP_CM = 10, CLEAR_CM = 20;
 const uint32_t PING_MS = 70, ECHO_TIMEOUT_US = 30000, STALE_MS = 250;
 // A positive wheel can swing a chassis corner forward: block spins too.
 // Reverse remains a deliberate escape; the front sensor cannot protect the rear.

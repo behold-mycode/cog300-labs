@@ -7,7 +7,7 @@ class ObstacleTests(unittest.TestCase):
         c = Controller(sent.append, lambda: 0)
         c.connected = c.ready = c.enabled = True
         c.press('Up')
-        c.receive('SAFETY OBSTACLE 20')
+        c.receive('SAFETY OBSTACLE 10')
         self.assertEqual(c.keys, set())
         self.assertIn('Up', c.blocked)
         c.start_test('Full lab')
@@ -21,7 +21,7 @@ class ObstacleTests(unittest.TestCase):
         c = Controller(lambda _: None, lambda: 0)
         c.connected = c.ready = c.enabled = True
         c.press('Up')
-        c.receive('SAFETY OBSTACLE 20')
+        c.receive('SAFETY OBSTACLE 10')
         c.receive('SAFETY CLEAR 50')
         self.assertFalse(c.keys)
         self.assertIsNone(c.plan)

@@ -49,7 +49,7 @@ class IntegrationTests(unittest.TestCase):
                 for _ in range(20):step()
                 self.assertEqual(state,(255,255))
                 # A real firmware obstacle event stops held keys and cancels the GUI plan.
-                exchange('@distance 20'); step()
+                exchange('@distance 10'); step()
                 self.assertEqual(state, (0, 0))
                 self.assertFalse(c.keys)
                 self.assertIn('Up', c.blocked)
@@ -67,7 +67,7 @@ class IntegrationTests(unittest.TestCase):
                 c.start_test('Full lab')
                 for _ in range(12): step()
                 self.assertNotEqual(state, (0, 0))
-                exchange('@distance 20'); step()
+                exchange('@distance 10'); step()
                 self.assertIsNone(c.plan)
                 self.assertEqual(state, (0, 0))
                 exchange('@distance 50')

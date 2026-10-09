@@ -21,7 +21,7 @@ int main() {
   start("F 180 1000"); stopped(); assert(!pending);
   clearFront(); assert(levels[11] == HIGH && levels[12] == LOW);
   start("F 180 1000"); assert(pwm[9] == 180);
-  acceptDistance(25); stopped(); assert(levels[12] == HIGH && levels[11] == LOW);
+  acceptDistance(10); stopped(); assert(levels[12] == HIGH && levels[11] == LOW);
   // Every entry point, including spins and isolated positive wheels, is guarded.
   for (const char* text : {"F 180 1000", "L 180 1000", "R 180 1000", "Q 180 1000",
        "E 180 1000", "M 0 180 1000", "TEST_ALL 180 1000", "FORWARD 180 1000"}) {
@@ -31,10 +31,10 @@ int main() {
   start("B 180 1000"); assert(pwm[9] == 180 && levels[8] == HIGH);
   assert(levels[12] == HIGH && levels[11] == LOW); command("STOP");
   // Hysteresis needs three consecutive clear samples, not one outlier.
-  acceptDistance(36); acceptDistance(36); assert(frontBlocked);
-  acceptDistance(30); acceptDistance(36); acceptDistance(36); assert(frontBlocked);
-  acceptDistance(36); assert(!frontBlocked); stopped(); // No automatic restart.
-  acceptDistance(30); assert(!frontBlocked);
+  acceptDistance(21); acceptDistance(21); assert(frontBlocked);
+  acceptDistance(15); acceptDistance(21); acceptDistance(21); assert(frontBlocked);
+  acceptDistance(21); assert(!frontBlocked); stopped(); // No automatic restart.
+  acceptDistance(15); assert(!frontBlocked);
   // Stop pending motion and a running autonomous suite; no later steps restart it.
   command("T 180 1000"); acceptDistance(10);
   nowMs += 250; serviceMotion(); stopped(); assert(!suiteActive);

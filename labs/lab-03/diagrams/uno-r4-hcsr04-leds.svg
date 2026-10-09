@@ -74,5 +74,5 @@
 <text x="65" y="1220" class="small">Dots mark connections. Wire crossings without dots are not joined.</text>
 <text x="65" y="1270" class="head">GREEN: valid clear path. RED: front blocked or sensor unavailable.</text>
 <text x="65" y="1310" class="small">On detection both motors stop; a fresh reverse command is allowed while red remains on.</text>
-<text x="65" y="1345" class="small">Stop ≤ 25 cm • clear &gt; 35 cm for three readings • measure coasting distance before floor use.</text>
+<text x="65" y="1345" class="small">Stop ≤ 10 cm • clear &gt; 20 cm for three readings • measure coasting distance before floor use.</text>
 </svg>
