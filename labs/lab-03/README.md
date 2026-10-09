@@ -1,10 +1,14 @@
 # Lab 3: Build your own bot
 
-Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests.
+Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 obstacle stopping and green/red status LEDs.
+
+## Distance sensor and LEDs
+
+**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Wire the sensor and LEDs before driving with this firmware. Red blocks forward and spins; deliberate reverse remains available.
 
 ## Start here
 
-1. Open [`src/MyRobot-V1/MyRobot-V1.ino`](src/MyRobot-V1/MyRobot-V1.ino) in Arduino IDE. Keep `Motor.ino` and `Serial.ino` in the same sketch folder.
+1. Open [`src/MyRobot-V1/MyRobot-V1.ino`](src/MyRobot-V1/MyRobot-V1.ino) in Arduino IDE. Keep `Motor.ino`, `Serial.ino`, and `Safety.ino` in the same sketch folder.
 2. Select **UNO R4 WiFi** and its current USB port, then upload. The robot starts stopped.
 3. Close Serial Monitor/Plotter.
 4. Double-click [`Launch Robot Controller.command`](controller/Launch%20Robot%20Controller.command), choose the USB port and Connect.
@@ -48,6 +52,7 @@ Trim cannot exceed the hardware's maximum PWM of 255 or fix weak motor power. Th
 
 - `MyRobot-V1.ino`: pins, startup defaults and main loop.
 - `Motor.ino`: motor output, timed movement, test scheduling and live-drive refresh.
+- `Safety.ino`: interrupt-based front distance measurement, green/red LEDs and motor guard.
 - `Serial.ino`: command parser, firmware handshake, settings, status and heartbeat timeout.
 - `controller/`: native Tk desktop interface, control state machine, launcher and tests.
 - `tests/`: simulated Arduino I/O and host tests of the actual sketch.

@@ -4,7 +4,7 @@ Use the Mac controller described in [controller/README.md](controller/README.md)
 
 ## Bench checks
 
-With power disconnected, secure the previously disconnected motor wire and check all terminals. Raise the wheels. Upload firmware 2, close Serial Monitor, connect the GUI and enable controls. Start with left/right trim 100/100. Use **Wheels (F1)** to test left and right separately. Confirm that each would propel the chassis forward. Correct an individual direction with its Reverse direction checkbox, Apply, and enable again.
+With power disconnected, secure the previously disconnected motor wire and check all terminals. Raise the wheels. Wire the [sensor and LEDs](obstacle-sensor.md), place a broad target 50–100 cm ahead so green lights, and upload firmware 3, close Serial Monitor, connect the GUI and enable controls. Start with left/right trim 100/100. Use **Wheels (F1)** to test left and right separately. Confirm that each would propel the chassis forward. Correct an individual direction with its Reverse direction checkbox, Apply, and enable again.
 
 Use Space to stop during a Wheels test; verify no later step starts. Changing settings, disconnecting, closing the app or switching to another application should stop/cancel and disable control. Verify this first with raised wheels. The firmware also enforces a 500 ms controller heartbeat timeout, tested in simulation; any physical connection-loss demonstration should keep the wheels raised and preserve board power only through the already-validated supply arrangement.
 
@@ -36,3 +36,7 @@ Use the visible settings and log to record actual PWM and reversal flags. Apply 
 ## Demonstration and submission
 
 Show the controller and robot, name the test, and show observed outcomes. Include a cancellation and the calibration performed. Explain relevant limits such as USB motor power, drift and coasting stop. Complete the video, repository link/usage instructions, BOM, circuit diagram and team agreement according to [Lab 3](https://cogs-300.github.io/labs/lab03#7-robust-testing-homework).
+
+## Front obstacle protection
+
+Run the manual, automatic, reverse-escape, LED and sensor-fault checks in the [obstacle sensor guide](obstacle-sensor.md#bench-and-floor-checks). Record actual coasting distance before approving the stop threshold.

@@ -23,6 +23,7 @@ class RobotWindow:
         root.title('COG300 Robot Controller' + (' — DEMO (no robot)' if demo else ''))
         root.geometry('850x780'); root.minsize(790, 740)
         self.status = tk.StringVar(value='Disconnected')
+        self.sensor_status = tk.StringVar(value='Sensor: waiting for firmware')
         self.port_name = tk.StringVar()
         self.speed = tk.IntVar(value=255)
         self.duration = tk.IntVar(value=500)
@@ -34,7 +35,7 @@ class RobotWindow:
         root.bind('<FocusOut>', lambda event: root.after_idle(self.check_focus))
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.refresh_ports()
-        self.log('Connect after uploading firmware 2. Close Arduino Serial Monitor first.')
+        self.log('Connect after uploading firmware 3. Close Arduino Serial Monitor first.')
         if demo: self.log('DEMO MODE: all responses are simulated; no serial port is opened.')
         root.after(25, self.poll)
 
@@ -50,6 +51,7 @@ class RobotWindow:
         self.connect_button.pack(side='left')
         ttk.Button(row, text='Save log', command=self.save_log).pack(side='right')
         ttk.Label(pad, textvariable=self.status, foreground='#16517a', wraplength=770).pack(anchor='w', pady=10)
+        ttk.Label(pad, textvariable=self.sensor_status, wraplength=770).pack(anchor='w', pady=(0, 8))
         settings = ttk.Frame(pad); settings.pack(fill='x')
         ttk.Label(settings, text='PWM').pack(side='left')
         self.speed_box = ttk.Spinbox(settings, from_=0, to=255, textvariable=self.speed, width=6)
@@ -100,7 +102,7 @@ class RobotWindow:
     def send(self, command):
         if command != 'HEARTBEAT' and not command.startswith('DRIVE '): self.log('> '+command)
         if self.demo:
-            if command == 'HELLO': self.root.after(5,lambda:self.core.receive('ROBOT_READY 2'))
+            if command == 'HELLO': self.root.after(5,lambda:self.core.receive('ROBOT_READY 3'))
             elif command.startswith('CONFIG '): self.root.after(5,lambda:self.core.receive('CONFIG_OK'))
             elif command == 'HEARTBEAT': self.root.after(5,lambda:self.core.receive('ALIVE'))
             elif command.startswith('TEST '):
@@ -223,6 +225,7 @@ class RobotWindow:
             self.core.tick()
         except (serial.SerialException,OSError,ValueError) as error: self.io_error(error)
         self.status.set(self.core.phase + ('  [DEMO — no robot]' if self.demo else ''))
+        self.sensor_status.set('DEMO: sensor not simulated' if self.demo else self.core.sensor_status)
         self.connect_button.configure(text='Disconnect' if self.core.connected else 'Connect')
         self.root.after(25,self.poll)
 

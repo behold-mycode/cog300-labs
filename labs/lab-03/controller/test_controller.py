@@ -9,7 +9,7 @@ class ControllerTests(unittest.TestCase):
         self.c.connect()
         self.now = 2.1
         self.c.tick()
-        self.c.receive('ROBOT_READY 2')
+        self.c.receive('ROBOT_READY 3')
         self.c.receive('CONFIG_OK')
         self.c.enable()
 

@@ -4,10 +4,13 @@
 #include "../src/MyRobot-V1/MyRobot-V1.ino"
 #include "../src/MyRobot-V1/Motor.ino"
 #include "../src/MyRobot-V1/Serial.ino"
-void tick(uint32_t ms) { nowMs += ms; loop(); }
+#include "../src/MyRobot-V1/Safety.ino"
+// Legacy movement regressions supply a healthy sensor; acquisition is tested separately.
+void healthyLoop() { pingPending = false; acceptDistance(100); acceptDistance(100); acceptDistance(100); loop(); }
+void tick(uint32_t ms) { nowMs += ms; healthyLoop(); }
 void send(const std::string& s) {
   for (char c : s) Serial.input.push_back(c);
-  while (Serial.available()) loop();
+  while (Serial.available()) healthyLoop();
 }
 void stopped() { assert(pwm[9] == 0 && pwm[10] == 0); }
 void start(const std::string& s) { send(s); tick(250); }

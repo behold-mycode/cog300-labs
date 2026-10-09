@@ -4,13 +4,17 @@ A local desktop window with arrow-key driving and five repeatable lab-test prese
 
 ## Start
 
-1. Open `../src/MyRobot-V1/MyRobot-V1.ino` in Arduino IDE, keeping its two other tabs together. Select **UNO R4 WiFi**, select its current USB port, and upload the updated firmware. The three-file course structure is preserved.
+1. Open `../src/MyRobot-V1/MyRobot-V1.ino` in Arduino IDE, keeping its three other tabs together. Select **UNO R4 WiFi**, select its current USB port, and upload the updated firmware. The course structure is extended with Safety.ino.
 2. **Close Arduino Serial Monitor and Serial Plotter** so they do not compete with this controller for the serial port.
 3. Double-click **Launch Robot Controller.command**. Python 3 with Tk is required; this Mac already has it. The launcher uses a local `.venv` and installs the pinned `pyserial` dependency on first use if necessary.
-4. Select the board's `/dev/cu.usbmodem…` port and click **Connect**. Opening the port may reset the board. The controller waits for firmware version 2 and applies its visible calibration settings before enabling anything.
+4. Select the board's `/dev/cu.usbmodem…` port and click **Connect**. Opening the port may reset the board. The controller waits for firmware version 3 and applies its visible calibration settings before enabling anything.
 5. Support the wheels for initial tests. Click **Enable controls**. Use the focused controller window to drive or run tests.
 
 No upload or motor movement is performed by the launcher. Firmware that does not support this controller is rejected with an upload instruction.
+
+## Obstacle stop
+
+Wire the HC-SR04 and two LEDs using the [hookup guide and diagram](../obstacle-sensor.md). Firmware 3 blocks forward and spins when the front is obstructed or unverified, in manual and preset modes. Green means clear; red means front blocked. Down/reverse remains available. An obstacle cancels a running preset and held keys; clearing it does not restart them. Release and press again. The sensor status line shows transitions and the associated distance, not continuous live ranging.
 
 ## Controls
 

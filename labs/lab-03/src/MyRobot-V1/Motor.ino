@@ -54,6 +54,8 @@ void writeMotor(uint8_t enable, uint8_t a, uint8_t b, int speed, bool invert) {
 }
 
 void setDrive(int left, int right) {
+  // Final output gate also covers future callers.
+  if (!allowMotion(left, right)) return;
   // Internal helper: callers validate -255..255 before reaching here.
   writeMotor(ENA, IN1, IN2, adjustedPwm(left, leftPwmPercent), INVERT_LEFT);
   writeMotor(ENB, IN3, IN4, adjustedPwm(right, rightPwmPercent), INVERT_RIGHT);
@@ -65,6 +67,7 @@ void scheduleDrive(int left, int right, uint32_t duration) {
     Serial.println(F("STOP"));
     return;
   }
+  if (!allowMotion(left, right)) return;
   pendingLeft = left; pendingRight = right;
   durationMs = duration;
   phaseStart = millis();
@@ -79,6 +82,7 @@ void scheduleDrive(int left, int right, uint32_t duration) {
 // Repeated keyboard frames refresh the lease rather than requeueing motion.
 void updateLiveDrive(int left, int right) {
   if (left == 0 && right == 0) { stopDrive(); return; }
+  if (!allowMotion(left, right)) return;
   if (liveDrive && (pending || running)) {
     bool reverses = (left != 0 && pendingLeft != 0 && (left < 0) != (pendingLeft < 0)) ||
                     (right != 0 && pendingRight != 0 && (right < 0) != (pendingRight < 0));
@@ -89,7 +93,7 @@ void updateLiveDrive(int left, int right) {
     }
   }
   scheduleDrive(left, right, 500);
-  liveDrive = true;
+  liveDrive = pending;
 }
 
 void forward(int speed, uint32_t ms) { scheduleDrive(speed, speed, ms); }
@@ -116,6 +120,7 @@ void runPreset(uint8_t index, int speed, uint32_t duration) {
     default: stopDrive(); return;
   }
   scheduleDrive(left, right, duration);
+  if (!pending) return;
   activeTest = index;
   logTestStart(index, left, right, duration);
 }
@@ -123,9 +128,9 @@ void runPreset(uint8_t index, int speed, uint32_t duration) {
 void startTestSuite(int speed, uint32_t duration) {
   stopDrive();
   suiteIndex = 0; suiteSpeed = speed; suiteDuration = duration;
-  Serial.println(F("SUITE START: 10 tests. S cancels. Observe actual motion; no sensors."));
+  Serial.println(F("SUITE START: 10 tests. S cancels. Observe actual motion; obstacle stop enabled."));
   runPreset(suiteIndex, suiteSpeed, suiteDuration);
-  suiteActive = true;
+  suiteActive = pending;
 }
 
 void serviceTestSuite() {
@@ -141,12 +146,13 @@ void serviceTestSuite() {
   // runPreset stops/cancels any previous activity; preserve this suite afterward.
   suiteActive = false;
   runPreset(suiteIndex, suiteSpeed, suiteDuration);
-  suiteActive = true;
+  suiteActive = pending;
 }
 
 void serviceMotion() {
   uint32_t now = millis();
   if (pending && (uint32_t)(now - phaseStart) >= SETTLE_MS) {
+    if (!allowMotion(pendingLeft, pendingRight)) return;
     setDrive(pendingLeft, pendingRight);
     pending = false; running = true; phaseStart = now;
     Serial.println(F("RUN"));
