@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1320" viewBox="0 0 1320 1320"><rect width="1320" height="1320" fill="white"/>
+<text x="40" y="45" font-family="Arial,sans-serif" font-size="30" fill="#172b40" font-weight="bold">UNO + L298N — USB-only bench wiring</text>
+<text x="40" y="78" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">Standard module with removable 5V-EN regulator jumper. No battery or external supply connected.</text>
+<text x="40" y="108" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">Disconnect USB before wiring. Follow printed terminal labels, not their positions in this schematic.</text>
+<rect x="40" y="170" width="260" height="580" rx="12" fill="#f3f6fa" stroke="#bcc9d6" stroke-width="2"/>
+<text x="60" y="206" font-family="Arial,sans-serif" font-size="23" fill="#172b40" font-weight="bold">Arduino UNO</text>
+<rect x="660" y="170" width="310" height="580" rx="12" fill="#f3f6fa" stroke="#bcc9d6" stroke-width="2"/>
+<text x="680" y="206" font-family="Arial,sans-serif" font-size="23" fill="#172b40" font-weight="bold">L298N module</text>
+<text x="65" y="240" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">USB socket</text>
+<text x="40" y="153" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">Laptop USB → Uno USB socket</text>
+<text x="70" y="306" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D9  (~ PWM)</text>
+<text x="680" y="306" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">ENA</text>
+<polyline points="300,300 660,300" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="351" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D8</text>
+<text x="680" y="351" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">IN1</text>
+<polyline points="300,345 660,345" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="396" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D7</text>
+<text x="680" y="396" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">IN2</text>
+<polyline points="300,390 660,390" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="461" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D10 (~ PWM)</text>
+<text x="680" y="461" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">ENB</text>
+<polyline points="300,455 660,455" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="506" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D6</text>
+<text x="680" y="506" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">IN3</text>
+<polyline points="300,500 660,500" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="551" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">D5</text>
+<text x="680" y="551" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="normal">IN4</text>
+<polyline points="300,545 660,545" fill="none" stroke="#237baf" stroke-width="3" stroke-linejoin="round"/>
+<text x="70" y="626" font-family="Arial,sans-serif" font-size="21" fill="#bb2d32" font-weight="bold">5V</text>
+<text x="680" y="616" font-family="Arial,sans-serif" font-size="20" fill="#bb2d32" font-weight="bold">VS / “12V”</text>
+<text x="680" y="661" font-family="Arial,sans-serif" font-size="20" fill="#bb2d32" font-weight="bold">5V logic</text>
+<polyline points="300,620 510,620 510,610 660,610" fill="none" stroke="#bb2d32" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="510,620 510,655 660,655" fill="none" stroke="#bb2d32" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="510" cy="620" r="5" fill="#bb2d32"/>
+<text x="335" y="595" font-family="Arial,sans-serif" font-size="17" fill="#bb2d32" font-weight="bold">5V supplied to BOTH</text>
+<text x="70" y="716" font-family="Arial,sans-serif" font-size="21" fill="#172b40" font-weight="bold">GND</text>
+<text x="680" y="716" font-family="Arial,sans-serif" font-size="21" fill="#172b40" font-weight="bold">GND</text>
+<polyline points="300,710 660,710" fill="none" stroke="#172b40" stroke-width="5" stroke-linejoin="round"/>
+<text x="365" y="698" font-family="Arial,sans-serif" font-size="16" fill="#172b40" font-weight="bold">COMMON GROUND</text>
+<text x="850" y="325" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">OUT1</text>
+<text x="850" y="375" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">OUT2</text>
+<text x="850" y="460" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">OUT3</text>
+<text x="850" y="510" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">OUT4</text>
+<rect x="1080" y="290" width="195" height="110" rx="12" fill="#f3f6fa" stroke="#bcc9d6" stroke-width="2"/>
+<text x="1100" y="326" font-family="Arial,sans-serif" font-size="23" fill="#172b40" font-weight="bold">Left motor</text>
+<rect x="1080" y="425" width="195" height="110" rx="12" fill="#f3f6fa" stroke="#bcc9d6" stroke-width="2"/>
+<text x="1100" y="461" font-family="Arial,sans-serif" font-size="23" fill="#172b40" font-weight="bold">Right motor</text>
+<polyline points="970,320 1080,320" fill="none" stroke="#98632a" stroke-width="3" stroke-linejoin="round"/>
+<polyline points="970,370 1080,370" fill="none" stroke="#98632a" stroke-width="3" stroke-linejoin="round"/>
+<polyline points="970,455 1080,455" fill="none" stroke="#98632a" stroke-width="3" stroke-linejoin="round"/>
+<polyline points="970,505 1080,505" fill="none" stroke="#98632a" stroke-width="3" stroke-linejoin="round"/>
+<text x="1010" y="585" font-family="Arial,sans-serif" font-size="17" fill="#172b40" font-weight="normal">Each motor uses</text>
+<text x="1010" y="610" font-family="Arial,sans-serif" font-size="17" fill="#172b40" font-weight="normal">TWO output wires.</text>
+<text x="1010" y="648" font-family="Arial,sans-serif" font-size="17" fill="#172b40" font-weight="normal">Neither motor wire</text>
+<text x="1010" y="673" font-family="Arial,sans-serif" font-size="17" fill="#172b40" font-weight="normal">connects to GND.</text>
+<text x="680" y="250" font-family="Arial,sans-serif" font-size="17" fill="#9b292f" font-weight="bold">REMOVE ENA + ENB caps</text>
+<text x="680" y="277" font-family="Arial,sans-serif" font-size="16" fill="#172b40" font-weight="normal">Connect signals to labeled pins.</text>
+<rect x="40" y="790" width="1235" height="125" rx="10" fill="#fff1dd" stroke="#d89932"/>
+<text x="60" y="822" font-family="Arial,sans-serif" font-size="21" fill="#172b40" font-weight="bold">JUMPER CHECK — before connecting USB</text>
+<text x="60" y="854" font-family="Arial,sans-serif" font-size="20" fill="#172b40" font-weight="bold">1. ENA cap: REMOVE     2. ENB cap: REMOVE     3. 5V-EN regulator cap: REMOVE</text>
+<text x="60" y="886" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">5V-EN is separate from ENA / ENB. If its label or location is unclear, confirm from a board photo first.</text>
+<text x="40" y="957" font-family="Arial,sans-serif" font-size="19" fill="#172b40" font-weight="bold">POWER LIMIT: USB may not supply enough current for both motors, especially at startup or stall.</text>
+<text x="40" y="988" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">Begin with one motor and wheels raised. Disconnect if the Uno resets, a motor stalls, or anything heats up.</text>
+<text x="40" y="1019" font-family="Arial,sans-serif" font-size="18" fill="#172b40" font-weight="normal">Do not add a battery to this diagram. An external motor supply needs a different positive-power connection.</text>
+<text x="40" y="1062" font-family="Arial,sans-serif" font-size="17" fill="#172b40" font-weight="normal">Red = +5V power   •   Dark = common ground   •   Blue = control signals   •   Brown = motor pairs</text>
+<text x="40" y="1095" font-family="Arial,sans-serif" font-size="16" fill="#172b40" font-weight="normal">Connection schematic, not a physical board layout. Hardware and available motor current have not been verified.</text>
+</svg>
