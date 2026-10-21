@@ -1,6 +1,6 @@
 # Lab 3: Build your own bot
 
-**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
+**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 logs both sensors independently.
 
 Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 distance logging and a green status LED.
 
@@ -60,7 +60,7 @@ Trim cannot exceed the hardware's maximum PWM of 255 or fix weak motor power. Th
 
 - `MyRobot-V2.ino`: pins, startup defaults and main loop.
 - `Motor.ino`: motor output, timed movement, test scheduling and live-drive refresh.
-- `Safety.ino`: interrupt-based front distance measurement and green reading-valid LED.
+- `Safety.ino`: interrupt-based front/right distance measurement and green reading-valid LED.
 - `Serial.ino`: command parser, firmware handshake, settings, status and heartbeat timeout.
 - `controller/`: native Tk desktop interface, control state machine, launcher and tests.
 - `tests/`: simulated Arduino I/O and host tests of the actual sketch.

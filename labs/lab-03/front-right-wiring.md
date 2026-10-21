@@ -64,9 +64,9 @@ Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulato
 2. Add the right sensor mount and four connections from the table. Use a shared 5 V rail and shared GND rail; bridge rail breaks if your breadboard has split rails.
 3. Check printed VCC/TRIG/ECHO/GND labels on each sensor, rail polarity, and that A1 and A3 echoes are separate. Do not join the trigger lines either.
 4. For this sensor-only rebuild, retain the already verified USB bench power configuration described in the power reference. Do not add the battery yet.
-5. With motor power disconnected, upload the updated V2 sketch after completing the rewiring. Reconnect for testing with the wheels raised. V2 still reads only the front sensor; use `LOG ON` to check that the existing front readings and green validity LED still work.
-6. Leave the right sensor VCC disconnected until the dual-sensor firmware is installed, then connect it with power off. This avoids powering a sensor whose trigger is not yet configured by the current firmware.
-7. After the next firmware milestone, verify front and right readings independently against a ruler, then verify them together before enabling autonomous motion.
+5. With motor power disconnected, upload the updated V2 sketch after completing the rewiring. Reconnect for testing with the wheels raised. V2 now reads both sensors; use `LOG ON` to check that the existing front readings and green validity LED still work.
+6. With power off, connect right sensor VCC to the same regulated 5V source as the front sensor. Upload this dual-sensor V2 before testing.
+7. Verify front and right readings independently against a ruler, then verify them together before enabling autonomous motion.
 
 ## Battery transition (design pending)
 
@@ -91,7 +91,7 @@ For fully untethered operation, the Uno also needs a suitable supply path. The U
 
 ## Next software milestone
 
-V2 uses the new pin map and removes the red LED output; it still measures only the front sensor. The reserved right trigger is configured LOW at startup. Add separate front/right readings and alternate pings rather than triggering both sensors at once. A conservative starting schedule is one ping every 70 ms, alternating front/right (140 ms per sensor); this is a design proposal to test for cross-talk, not a proven timing requirement. Revisit sample age and stopping distance with that reduced per-sensor rate.
+V2 now reads both sensors, alternating one ping every 70 ms (140 ms per sensor). LOG ON displays both distances independently; stale readings expire after 350 ms. Hardware cross-talk and accuracy still need ruler checks. Autonomous modes are a separate layer above acquisition.
 
 P control will regulate distance to the right wall. Corner handling needs additional states: front obstruction can require a left turn; loss of the right wall may indicate an outside corner, doorway, poor echo or sensor failure. Missing echo alone must not trigger a blind right turn. Tune P control and validate corner behavior separately after sensor and power checks.
 
@@ -116,7 +116,7 @@ The drawing shows four connected groups of five holes. On a typical solderless b
 | Front | a11 TRIG | e11 | A0 |
 | Front | a12 ECHO | e12 | A1 |
 | Front | a13 GND | e13 | common GND |
-| Right | a10 VCC | e10 | regulated 5V (connect after dual-sensor firmware) |
+| Right | a10 VCC | e10 | regulated 5V |
 | Right | a11 TRIG | e11 | A2 |
 | Right | a12 ECHO | e12 | A3 |
 | Right | a13 GND | e13 | common GND |
