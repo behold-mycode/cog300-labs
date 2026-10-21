@@ -1,10 +1,10 @@
 #include <cassert>
 #include <iostream>
 // Match Arduino concatenation: main sketch first, remaining tabs alphabetically.
-#include "../src/MyRobot-V1/MyRobot-V1.ino"
-#include "../src/MyRobot-V1/Motor.ino"
-#include "../src/MyRobot-V1/Serial.ino"
-#include "../src/MyRobot-V1/Safety.ino"
+#include "../src/MyRobot-V2/MyRobot-V2.ino"
+#include "../src/MyRobot-V2/Motor.ino"
+#include "../src/MyRobot-V2/Serial.ino"
+#include "../src/MyRobot-V2/Safety.ino"
 // Legacy movement regressions supply a healthy sensor; acquisition is tested separately.
 void healthyLoop() { pingPending = false; acceptDistance(100); acceptDistance(100); acceptDistance(100); loop(); }
 void tick(uint32_t ms) { nowMs += ms; healthyLoop(); }

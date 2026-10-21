@@ -42,8 +42,8 @@ After stopping, clearance must exceed **20 cm for three consecutive readings** b
 
 ## Upload and run
 
-1. Keep **all four** tabs together in `src/MyRobot-V1/`: `MyRobot-V1.ino`, `Motor.ino`, `Serial.ino`, and **`Safety.ino`**.
-2. In Arduino IDE select **UNO R4 WiFi** and the correct USB port. Upload `MyRobot-V1.ino`.
+1. Keep **all four** tabs together in `src/MyRobot-V2/`: `MyRobot-V2.ino`, `Motor.ino`, `Serial.ino`, and **`Safety.ino`**.
+2. In Arduino IDE select **UNO R4 WiFi** and the correct USB port. Upload `MyRobot-V2.ino`.
 3. Close Serial Monitor and Plotter. Run the updated `controller/Launch Robot Controller.command`.
 4. Connect, inspect the sensor status, and enable controls with the wheels raised for the first check.
 
@@ -77,7 +77,7 @@ c++ -std=c++11 -Wall -Wextra -Werror -I labs/lab-03/tests labs/lab-03/tests/test
 /tmp/cog300-test-robot
 c++ -std=c++11 -Wall -Wextra -Werror -I labs/lab-03/tests labs/lab-03/tests/test_obstacle.cpp -o /tmp/cog300-test-obstacle
 /tmp/cog300-test-obstacle
-arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi labs/lab-03/src/MyRobot-V1
+arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi labs/lab-03/src/MyRobot-V2
 ```
 
 Host tests exercise the actual sketch with simulated I/O. They cover motor entry points, running/queued autonomous cancellation, manual driving and reverse escape, LEDs, hysteresis, timeout/stale/stuck echo and timestamp rollover. Integration tests connect the Python controller to a host build of the sketch. They do not verify physical wiring or stopping distance.
