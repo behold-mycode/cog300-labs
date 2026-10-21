@@ -7,7 +7,7 @@
 void command(const char* text) {
   char buffer[64]; strncpy(buffer, text, sizeof(buffer)); processCommand(buffer);
 }
-void stopped() { assert(pwm[9] == 0 && pwm[10] == 0); }
+void stopped() { assert(pwm[ENA] == 0 && pwm[ENB] == 0); }
 void clearFront() { for (int i=0; i<3; ++i) acceptDistance(50); }
 void start(const char* text) { command(text); nowMs += 250; serviceMotion(); }
 void echoPulse(uint32_t width) {
@@ -17,19 +17,20 @@ void echoPulse(uint32_t width) {
 }
 int main() {
   setup();
-  assert(levels[12] == HIGH && levels[11] == LOW);
+  assert(modes[12] != OUTPUT); // D12 remains unused after removing red LED.
+  assert(levels[11] == LOW);
   start("F 180 1000"); stopped(); assert(!pending);
-  clearFront(); assert(levels[11] == HIGH && levels[12] == LOW);
-  start("F 180 1000"); assert(pwm[9] == 180);
-  acceptDistance(10); stopped(); assert(levels[12] == HIGH && levels[11] == LOW);
+  clearFront(); assert(levels[11] == HIGH);
+  start("F 180 1000"); assert(pwm[ENA] == 180);
+  acceptDistance(10); stopped(); assert(levels[11] == LOW);
   // Every entry point, including spins and isolated positive wheels, is guarded.
   for (const char* text : {"F 180 1000", "L 180 1000", "R 180 1000", "Q 180 1000",
        "E 180 1000", "M 0 180 1000", "TEST_ALL 180 1000", "FORWARD 180 1000"}) {
     start(text); stopped(); assert(!pending && !suiteActive && activeTest == -1);
   }
   setDrive(180, 180); stopped(); // Final output gate cannot be bypassed.
-  start("B 180 1000"); assert(pwm[9] == 180 && levels[8] == HIGH);
-  assert(levels[12] == HIGH && levels[11] == LOW); command("STOP");
+  start("B 180 1000"); assert(pwm[ENA] == 180 && levels[IN1] == HIGH);
+  assert(levels[11] == LOW); command("STOP");
   // Hysteresis needs three consecutive clear samples, not one outlier.
   acceptDistance(21); acceptDistance(21); assert(frontBlocked);
   acceptDistance(15); acceptDistance(21); acceptDistance(21); assert(frontBlocked);
@@ -38,7 +39,7 @@ int main() {
   // Stop pending motion and a running autonomous suite; no later steps restart it.
   command("T 180 1000"); acceptDistance(10);
   nowMs += 250; serviceMotion(); stopped(); assert(!suiteActive);
-  clearFront(); start("T 180 1000"); assert(pwm[9] == 180);
+  clearFront(); start("T 180 1000"); assert(pwm[ENA] == 180);
   acceptDistance(10); clearFront(); nowMs += 3000; serviceMotion(); serviceTestSuite();
   stopped(); assert(!suiteActive);
   clearFront(); start("T 180 100"); nowMs += 100; serviceMotion();

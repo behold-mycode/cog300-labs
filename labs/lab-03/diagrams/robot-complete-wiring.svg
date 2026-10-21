@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="2200" viewBox="0 0 2200 2200"><rect width="2200" height="2200" fill="#f4f7fa"/><style>text{font-family:Arial,sans-serif;fill:#183044}.title{font-size:38px;font-weight:bold}.head{font-size:27px;font-weight:bold}.body{font-size:23px}.small{font-size:20px}</style>
+<text x="55" y="60" class="title">COG300 • Complete robot wiring</text>
+<text x="55" y="102" class="body">UNO R4 WiFi • L298N • two HC-SR04 sensors • two motors • green status LED</text>
+<text x="55" y="138" class="small">Solid connections: current USB bench arrangement. Battery is NOT connected. Match terminal labels, not drawn board positions.</text>
+<rect x="70" y="185" width="360" height="1205" rx="12" fill="#e5f2f1" stroke="#afc2ce" stroke-width="2"/>
+<text x="95" y="230" class="head">UNO R4 WiFi</text>
+<text x="95" y="265" class="small">Main 5 V GPIO headers</text>
+<rect x="70" y="1450" width="360" height="100" rx="12" fill="#fff" stroke="#afc2ce" stroke-width="2"/>
+<text x="95" y="1490" class="head">Laptop USB</text>
+<polyline points="250,1450 250,1390" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="270" y="1425" class="small">USB-C</text>
+<rect x="1100" y="190" width="1030" height="285" rx="12" fill="#fff" stroke="#afc2ce" stroke-width="2"/>
+<text x="1125" y="230" class="head">FRONT • faces forward</text>
+<text x="1125" y="263" class="small">HC-SR04 • standard 5 V module</text>
+<text x="335" y="308" class="body">5V</text>
+<polyline points="430,300 1100,300" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="610" y="290" class="small">5 V supply</text>
+<text x="1130" y="307" class="body">VCC</text>
+<text x="335" y="351" class="body">A0</text>
+<polyline points="430,343 1100,343" fill="none" stroke="#a16b00" stroke-width="4"/>
+<text x="610" y="333" class="small">Trigger →</text>
+<text x="1130" y="350" class="body">TRIG</text>
+<text x="335" y="394" class="body">A1</text>
+<polyline points="430,386 1100,386" fill="none" stroke="#7752ad" stroke-width="4"/>
+<text x="610" y="376" class="small">← Echo</text>
+<text x="1130" y="393" class="body">ECHO</text>
+<text x="335" y="437" class="body">GND</text>
+<polyline points="430,429 1100,429" fill="none" stroke="#344554" stroke-width="4"/>
+<text x="610" y="419" class="small">Ground</text>
+<text x="1130" y="436" class="body">GND</text>
+<rect x="1100" y="510" width="1030" height="285" rx="12" fill="#fff" stroke="#afc2ce" stroke-width="2"/>
+<text x="1125" y="550" class="head">RIGHT • faces right →</text>
+<text x="1125" y="583" class="small">HC-SR04 • standard 5 V module</text>
+<text x="335" y="628" class="body">5V</text>
+<polyline points="430,620 1100,620" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="610" y="610" class="small">5 V supply</text>
+<text x="1130" y="627" class="body">VCC</text>
+<text x="335" y="671" class="body">A2</text>
+<polyline points="430,663 1100,663" fill="none" stroke="#a16b00" stroke-width="4"/>
+<text x="610" y="653" class="small">Trigger →</text>
+<text x="1130" y="670" class="body">TRIG</text>
+<text x="335" y="714" class="body">A3</text>
+<polyline points="430,706 1100,706" fill="none" stroke="#7752ad" stroke-width="4"/>
+<text x="610" y="696" class="small">← Echo</text>
+<text x="1130" y="713" class="body">ECHO</text>
+<text x="335" y="757" class="body">GND</text>
+<polyline points="430,749 1100,749" fill="none" stroke="#344554" stroke-width="4"/>
+<text x="610" y="739" class="small">Ground</text>
+<text x="1130" y="756" class="body">GND</text>
+<text x="325" y="858" class="body">D11</text>
+<polyline points="430,850 1120,850" fill="none" stroke="#16834a" stroke-width="4"/>
+<rect x="1120" y="835" width="120" height="30" rx="12" fill="#fff" stroke="#afc2ce" stroke-width="2"/>
+<text x="1135" y="825" class="small">1 kΩ</text>
+<polyline points="1240,850 1370,850" fill="none" stroke="#16834a" stroke-width="4"/>
+<circle cx="1400" cy="850" r="30" fill="#16834a"/>
+<text x="1450" y="857" class="head">GREEN LED</text>
+<text x="1300" y="898" class="small">anode (+)     cathode (−)</text>
+<polyline points="1430,850 1430,915 1840,915" fill="none" stroke="#344554" stroke-width="4"/>
+<text x="1850" y="922" class="small">GND rail</text>
+<text x="1100" y="970" class="small">Green ON = front clear; OFF = blocked / unknown.</text>
+<text x="1100" y="1005" class="small">Sensors A0–A3 • motor header D5–D10 • green LED D11.</text>
+<rect x="1100" y="1045" width="570" height="345" rx="12" fill="#fcece7" stroke="#afc2ce" stroke-width="2"/>
+<text x="1130" y="1085" class="head">L298N driver</text>
+<text x="325" y="1127" class="body">D5</text>
+<polyline points="430,1120 1100,1120" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1127" class="body">ENA</text>
+<text x="325" y="1171" class="body">D6</text>
+<polyline points="430,1164 1100,1164" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1171" class="body">IN1</text>
+<text x="325" y="1215" class="body">D7</text>
+<polyline points="430,1208 1100,1208" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1215" class="body">IN2</text>
+<text x="325" y="1259" class="body">D8</text>
+<polyline points="430,1252 1100,1252" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1259" class="body">IN3</text>
+<text x="325" y="1303" class="body">D9</text>
+<polyline points="430,1296 1100,1296" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1303" class="body">IN4</text>
+<text x="325" y="1347" class="body">D10</text>
+<polyline points="430,1340 1100,1340" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1130" y="1347" class="body">ENB</text>
+<rect x="1880" y="1105" width="260" height="100" rx="12" fill="#e7edf5" stroke="#afc2ce" stroke-width="2"/>
+<text x="1900" y="1150" class="head">LEFT MOTOR</text>
+<text x="1540" y="1142" class="small">OUT1</text>
+<polyline points="1670,1135 1880,1135" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1540" y="1172" class="small">OUT2</text>
+<polyline points="1670,1165 1880,1165" fill="none" stroke="#227b98" stroke-width="4"/>
+<rect x="1880" y="1245" width="260" height="100" rx="12" fill="#e7edf5" stroke="#afc2ce" stroke-width="2"/>
+<text x="1900" y="1290" class="head">RIGHT MOTOR</text>
+<text x="1540" y="1282" class="small">OUT3</text>
+<polyline points="1670,1275 1880,1275" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1540" y="1312" class="small">OUT4</text>
+<polyline points="1670,1305 1880,1305" fill="none" stroke="#227b98" stroke-width="4"/>
+<text x="1110" y="1425" class="small">ENA + ENB caps: REMOVED. 5V-EN: REMOVED.</text>
+<rect x="500" y="1465" width="1640" height="235" rx="12" fill="#fff" stroke="#afc2ce" stroke-width="2"/>
+<text x="525" y="1505" class="head">POWER DISTRIBUTION — all matching rail names are electrically joined</text>
+<polyline points="545,1560 2060,1560" fill="none" stroke="#bd481f" stroke-width="4"/>
+<circle cx="545" cy="1560" r="6" fill="#bd481f"/>
+<polyline points="545,1560 545,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="525" y="1538" class="small">Uno 5V</text>
+<circle cx="850" cy="1560" r="6" fill="#bd481f"/>
+<polyline points="850,1560 850,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="830" y="1538" class="small">Front VCC</text>
+<circle cx="1150" cy="1560" r="6" fill="#bd481f"/>
+<polyline points="1150,1560 1150,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="1130" y="1538" class="small">Right VCC*</text>
+<circle cx="1480" cy="1560" r="6" fill="#bd481f"/>
+<polyline points="1480,1560 1480,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="1460" y="1538" class="small">L298N logic 5V</text>
+<circle cx="1830" cy="1560" r="6" fill="#bd481f"/>
+<polyline points="1830,1560 1830,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
+<text x="1810" y="1538" class="small">L298N VS / +12V**</text>
+<polyline points="545,1655 2060,1655" fill="none" stroke="#344554" stroke-width="4"/>
+<circle cx="545" cy="1655" r="6" fill="#344554"/>
+<text x="525" y="1640" class="small">Uno GND</text>
+<circle cx="850" cy="1655" r="6" fill="#344554"/>
+<text x="830" y="1640" class="small">Front GND</text>
+<circle cx="1150" cy="1655" r="6" fill="#344554"/>
+<text x="1130" y="1640" class="small">Right GND</text>
+<circle cx="1480" cy="1655" r="6" fill="#344554"/>
+<text x="1460" y="1640" class="small">L298N GND</text>
+<circle cx="1830" cy="1655" r="6" fill="#344554"/>
+<text x="1810" y="1640" class="small">Green LED cathode</text>
+<text x="55" y="1740" class="body">* Right VCC: leave disconnected until dual-sensor firmware is installed. Current V2 measures front only.</text>
+<text x="55" y="1780" class="body">** VS is currently fed from Uno 5V in the course bench setup. Remove that wire BEFORE connecting a rated motor battery.</text>
+<text x="55" y="1820" class="body">Future AA battery: specs pending. Do not connect it yet. Sensors and driver logic must remain on regulated 5 V.</text>
+<text x="55" y="1860" class="small">Rail labels denote the same electrical node. Motor pairs go across OUT terminals, never to GND. Power off before rewiring.</text>
+</svg>

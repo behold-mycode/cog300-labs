@@ -1,5 +1,7 @@
 # Lab 3: programming review and proposed wiring
 
+**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
+
 Reviewed 2026-10-08. Chassis assembled; circuit ready to connect. Hardware model and wiring have not yet been confirmed. This is a proposed Arduino Uno + common L298N module mapping, not a verified drawing of the assembled robot.
 
 ## What the lab requires

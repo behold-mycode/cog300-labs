@@ -22,6 +22,6 @@ int main() {
       while (Serial.available()) sensorLoop();
     }
     std::cout << Serial.output.str(); Serial.output.str(""); Serial.output.clear();
-    std::cout << "@state " << pwm[9] << ' ' << pwm[10] << '\n' << "@end" << std::endl;
+    std::cout << "@state " << pwm[ENA] << ' ' << pwm[ENB] << '\n' << "@end" << std::endl;
   }
 }

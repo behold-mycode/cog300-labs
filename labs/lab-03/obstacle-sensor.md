@@ -1,10 +1,14 @@
-# Add the HC-SR04 and two status LEDs
+# Historical reference: single HC-SR04 and two LEDs
+
+**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
 
 This upgrade targets the **Arduino Uno R4 WiFi** in the current Lab 3 setup. The Arduino enforces the obstacle stop for arrow commands, GUI presets, standalone Serial Monitor commands, and the firmware's automatic suite. Python displays the stop and cancels its remaining preset steps.
 
 ![Sensor and LED connections](diagrams/uno-r4-hcsr04-leds.png)
 
 [Open the full-size wiring diagram](diagrams/uno-r4-hcsr04-leds.svg). This is a signal schematic, not a breadboard-position drawing. Existing motor power details remain in the [power reference](programming-and-wiring.md).
+
+**Superseded wiring:** the current rebuild removes the red LED and groups front on A0/A1 and right on A2/A3. Use the complete diagrams linked above, not the two-LED diagram below.
 
 ## Parts and connections
 

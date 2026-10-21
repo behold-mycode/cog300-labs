@@ -1,6 +1,8 @@
 # Lab 3: Build your own bot
 
-Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 obstacle stopping and green/red status LEDs.
+**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
+
+Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 obstacle stopping and a green status LED.
 
 ## Working version and milestones
 
@@ -10,7 +12,7 @@ Each milestone gets a focused branch and regular GitHub PR; record software chec
 
 ## Distance sensor and LEDs
 
-**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Wire the sensor and LEDs before driving with this firmware. Red blocks forward and spins; deliberate reverse remains available.
+**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Wire the sensor and LEDs before driving with this firmware. Blocked or invalid front readings block forward and spins; deliberate reverse remains available.
 
 ## Start here
 
@@ -42,10 +44,10 @@ Use the buttons or F1–F5 (possibly Fn + F1 on a Mac): **Wheels**, **Straight**
 
 | Uno R4 | L298N | Purpose |
 | --- | --- | --- |
-| D9 (PWM) | ENA | Left speed |
-| D8 / D7 | IN1 / IN2 | Left direction |
+| D5 (PWM) | ENA | Left speed |
+| D6 / D7 | IN1 / IN2 | Left direction |
+| D8 / D9 | IN3 / IN4 | Right direction |
 | D10 (PWM) | ENB | Right speed |
-| D6 / D5 | IN3 / IN4 | Right direction |
 | GND | GND | Common ground |
 
 Recorded motor wires: left black OUT1, left red OUT2; right red OUT3, right black OUT4. Confirm labels and actual wheel direction rather than relying on wire colours.
@@ -58,7 +60,7 @@ Trim cannot exceed the hardware's maximum PWM of 255 or fix weak motor power. Th
 
 - `MyRobot-V2.ino`: pins, startup defaults and main loop.
 - `Motor.ino`: motor output, timed movement, test scheduling and live-drive refresh.
-- `Safety.ino`: interrupt-based front distance measurement, green/red LEDs and motor guard.
+- `Safety.ino`: interrupt-based front distance measurement, green LED and motor guard.
 - `Serial.ino`: command parser, firmware handshake, settings, status and heartbeat timeout.
 - `controller/`: native Tk desktop interface, control state machine, launcher and tests.
 - `tests/`: simulated Arduino I/O and host tests of the actual sketch.
