@@ -41,7 +41,7 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 | Green LED cathode | GND |
 | Uno GND | Both sensors, green LED return and L298N GND |
 
-Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid clear front path; off means blocked or unverified.
+Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid front reading at any accepted distance; off means invalid or missing. Sensor readings never block or stop motion in the current logging-only V2.
 
 ## Rebuild sequence
 
@@ -64,7 +64,7 @@ Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulato
 2. Add the right sensor mount and four connections from the table. Use a shared 5 V rail and shared GND rail; bridge rail breaks if your breadboard has split rails.
 3. Check printed VCC/TRIG/ECHO/GND labels on each sensor, rail polarity, and that A1 and A3 echoes are separate. Do not join the trigger lines either.
 4. For this sensor-only rebuild, retain the already verified USB bench power configuration described in the power reference. Do not add the battery yet.
-5. With motor power disconnected, upload the updated V2 sketch after completing the rewiring. Reconnect for testing with the wheels raised. V2 still reads only the front sensor; use `LOG ON` to check that the existing front readings and LEDs still work.
+5. With motor power disconnected, upload the updated V2 sketch after completing the rewiring. Reconnect for testing with the wheels raised. V2 still reads only the front sensor; use `LOG ON` to check that the existing front readings and green validity LED still work.
 6. Leave the right sensor VCC disconnected until the dual-sensor firmware is installed, then connect it with power off. This avoids powering a sensor whose trigger is not yet configured by the current firmware.
 7. After the next firmware milestone, verify front and right readings independently against a ruler, then verify them together before enabling autonomous motion.
 

@@ -15,9 +15,9 @@ int main() {
   command("log on"); resetOutput();
   nowMs = 999; serviceDistanceLog(); assert(Serial.output.str().empty());
   // Exercise actual echo acquisition and conversion, including a fractional cm.
-  nowMs = 1000; serviceSafety();
+  nowMs = 1000; serviceSensor();
   levels[ECHO_PIN] = HIGH; echoChanged();
-  extraUs += 1752; levels[ECHO_PIN] = LOW; echoChanged(); serviceSafety();
+  extraUs += 1752; levels[ECHO_PIN] = LOW; echoChanged(); serviceSensor();
   resetOutput(); serviceDistanceLog();
   assert(Serial.output.str() == "t=1.0s | distance=30.2 cm | OK\n");
   assert(distanceCm == 30); assert(pwm[ENA] == 0 && pwm[ENB] == 0);

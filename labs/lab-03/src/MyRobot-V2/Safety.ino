@@ -1,10 +1,6 @@
-// HC-SR04 front guard. No timer libraries: preserves motor PWM on D5/D10.
-const uint16_t STOP_CM = 10, CLEAR_CM = 20;
+// HC-SR04 measurement only: sensor readings never control motor motion.
 const uint32_t PING_MS = 70, ECHO_TIMEOUT_US = 30000, STALE_MS = 250;
-// A positive wheel can swing a chassis corner forward: block spins too.
-// Reverse remains a deliberate escape; the front sensor cannot protect the rear.
-bool frontBlocked = true, sensorValid = false;
-uint8_t clearReadings = 0;
+bool sensorValid = false;
 int distanceCm = -1;
 uint32_t lastEchoUs = 0; // Raw pulse retained for decimal distance logging only.
 uint32_t lastSampleMs = 0, lastPingMs = 0, pingStartUs = 0;
@@ -23,48 +19,22 @@ void echoChanged() {
   }
 }
 
-void reportSafety() {
-  Serial.print(F("SAFETY "));
-  Serial.print(!sensorValid ? F("UNKNOWN") : frontBlocked ? F("OBSTACLE") : F("CLEAR"));
+void reportSensor() {
+  Serial.print(F("SENSOR "));
+  Serial.print(sensorValid ? F("VALID") : F("INVALID"));
   Serial.print(' '); Serial.println(distanceCm);
 }
 
-void applySafetyState(bool wasBlocked, bool wasValid) {
-  digitalWrite(GREEN_LED, frontBlocked ? LOW : HIGH);
-  // On detection stop everything, including reverse, pending steps and suite gaps.
-  // A subsequent deliberate reverse request can be accepted by allowMotion().
-  if (frontBlocked && (!wasBlocked || (wasValid && !sensorValid))) {
-    stopDrive();
-  }
-  if (wasBlocked != frontBlocked || wasValid != sensorValid) reportSafety();
-}
-
 void acceptDistance(int cm) {
-  bool wasBlocked = frontBlocked, wasValid = sensorValid;
+  bool wasValid = sensorValid;
   lastSampleMs = millis();
   sensorValid = cm >= 2 && cm <= 400;
   distanceCm = sensorValid ? cm : -1;
-  if (!sensorValid || cm <= STOP_CM) {
-    frontBlocked = true; clearReadings = 0;
-  } else if (cm > CLEAR_CM) {
-    if (clearReadings < 3) ++clearReadings;
-    if (clearReadings >= 3) frontBlocked = false;
-  } else {
-    clearReadings = 0; // Hysteresis: retain blocked/clear in the middle band.
-  }
-  applySafetyState(wasBlocked, wasValid);
+  digitalWrite(GREEN_LED, sensorValid ? HIGH : LOW);
+  if (wasValid != sensorValid) reportSensor();
 }
 
-bool allowMotion(int left, int right) {
-  if (frontBlocked && (left > 0 || right > 0)) {
-    stopDrive();
-    Serial.println(F("MOTION_BLOCKED"));
-    return false;
-  }
-  return true;
-}
-
-void setupSafety() {
+void setupSensor() {
   // Keep the reserved right sensor quiet until its acquisition is implemented.
   digitalWrite(RIGHT_TRIG_PIN, LOW); pinMode(RIGHT_TRIG_PIN, OUTPUT);
   pinMode(RIGHT_ECHO_PIN, INPUT);
@@ -76,7 +46,7 @@ void setupSafety() {
   lastPingMs = millis() - PING_MS;
 }
 
-void serviceSafety() {
+void serviceSensor() {
   uint32_t now = millis();
   bool ready; uint32_t width;
   noInterrupts();
@@ -122,7 +92,7 @@ void serviceDistanceLog() {
   Serial.print('.'); Serial.print((now % 1000) / 100);
   Serial.print(F("s | distance="));
   if (sensorValid && (uint32_t)(now - lastSampleMs) < STALE_MS) {
-    // Round to tenths of a cm; the safety guard keeps its existing whole-cm logic.
+    // Round raw echo to tenths of a cm for measurement logging.
     uint32_t tenthsCm = (lastEchoUs * 10UL + 29UL) / 58UL;
     Serial.print(tenthsCm / 10); Serial.print('.'); Serial.print(tenthsCm % 10);
     Serial.println(F(" cm | OK"));

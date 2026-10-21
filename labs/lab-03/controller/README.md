@@ -1,3 +1,5 @@
+> Current V2: sensors are logging-only. Close or missing readings do not block driving or stop tests. Manual stop and controller timeout remain active.
+
 # Mac robot controller
 
 A local desktop window with arrow-key driving and five repeatable lab-test presets. Uses USB serial; no browser, account, global keyboard monitoring, or Wi-Fi configuration is needed.

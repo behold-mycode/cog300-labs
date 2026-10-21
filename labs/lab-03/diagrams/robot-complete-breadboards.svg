@@ -131,7 +131,7 @@
 <text x="1300" y="898" class="small">anode (+)     cathode (−)</text>
 <polyline points="1430,850 1430,915 1840,915" fill="none" stroke="#344554" stroke-width="4"/>
 <text x="1850" y="922" class="small">GND rail</text>
-<text x="1100" y="970" class="small">Green ON = front clear; OFF = blocked / unknown.</text>
+<text x="1100" y="970" class="small">Green ON = valid front reading; OFF = invalid / missing.</text>
 <text x="1100" y="1005" class="small">Sensors A0–A3 • motor header D5–D10 • green LED D11.</text>
 <rect x="1100" y="1045" width="570" height="345" rx="12" fill="#fcece7" stroke="#afc2ce" stroke-width="2"/>
 <text x="1130" y="1085" class="head">L298N driver</text>

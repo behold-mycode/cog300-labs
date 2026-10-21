@@ -49,6 +49,12 @@ class Controller:
     def receive(self, line):
         if line != 'ALIVE': self.log('< ' + line)
         now = self.clock()
+        if line.startswith('SENSOR '):
+            parts = line.split()
+            if len(parts) == 3 and parts[1] in ('VALID', 'INVALID'):
+                reading = f'{parts[2]} cm' if parts[1] == 'VALID' else 'no valid reading'
+                self.sensor_status = f'Sensor: {reading} — logging only (no obstacle stop)'
+            return
         if line.startswith('SAFETY '):
             parts = line.split()
             if len(parts) != 3 or parts[1] not in ('CLEAR', 'OBSTACLE', 'UNKNOWN'): return
