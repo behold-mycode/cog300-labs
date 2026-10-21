@@ -19,11 +19,13 @@ These replace the earlier separate sensor and motor diagrams as the current rebu
 | Sensor terminal | Front sensor (existing) | Right sensor (new) |
 | --- | --- | --- |
 | VCC | Uno 5V rail | Same Uno 5V rail |
-| TRIG | D4 | D12 |
-| ECHO | D2 | D3 |
+| TRIG | A0 | A2 |
+| ECHO | A1 | A3 |
 | GND | Common GND rail | Same common GND rail |
 
-D2 and D3 support external interrupts on UNO R4 WiFi. D12 is freed by removing the red LED. This keeps D2–D12 in use, preserves the motor connections and leaves A0–A5 and D0/D1 available. Use the main Uno headers, not the ESP32 or Qwiic connectors. Echo connections are for this 5 V Uno board; do not transfer this wiring to a 3.3 V board without checking its input limits.
+Both sensors now occupy adjacent pairs on the analog header, used as digital GPIO: front A0/A1, right A2/A3. On UNO R4 WiFi with Arduino Renesas core 1.6.0, A1 maps to P000 / IRQ6 and A3 to P002 / IRQ2. These are separate interrupt channels, so echo timing can remain interrupt-based. A0/A2 are digital trigger outputs, not analog distance inputs. This mapping is specific to UNO R4 WiFi; do not assume the same interrupt support on an Uno R3.
+
+Motor signals follow the L298N control-header order across D5–D10. ENA on D5 and ENB on D10 both support PWM. Green stays D11. D0/D1 (UART), D2–D4, D12/D13 and A4/A5 remain free. Use the main Uno headers, not the ESP32 or Qwiic connectors. Echo connections are for this 5 V Uno board; do not transfer this wiring to a 3.3 V board without checking its input limits.
 
 Mount the front sensor facing straight ahead. Mount the right sensor facing directly right, perpendicular to forward travel, with both transducers clear of the chassis and wiring. Right means the robot's right when facing forward. Keep the right sensor level and facing the wall; measure the desired wall distance from its sensor face. Secure the mount so it does not rotate during turns.
 
@@ -31,23 +33,38 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 
 | Uno pin / component | Connection |
 | --- | --- |
-| D9 / D8 / D7 | L298N ENA / IN1 / IN2 |
-| D10 / D6 / D5 | L298N ENB / IN3 / IN4 |
+| D5 / D6 / D7 | L298N ENA / IN1 / IN2 |
+| D8 / D9 / D10 | L298N IN3 / IN4 / ENB |
 | OUT1 + OUT2 | Left motor pair |
 | OUT3 + OUT4 | Right motor pair |
 | D11 | 1 kΩ resistor → green LED anode |
 | Green LED cathode | GND |
 | Uno GND | Both sensors, green LED return and L298N GND |
 
-Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its D12 wire before using D12 for the right trigger. Green remains on D11. Green on means a valid clear front path; off means blocked or unverified.
+Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid clear front path; off means blocked or unverified.
 
 ## Rebuild sequence
 
-1. Disconnect USB and any motor supply. Label the existing front sensor wires.
+1. Disconnect USB and any motor supply. Rewire using the table below; this revision changes sensor AND motor pins. Do not run the new firmware on the old wiring.
+
+   | Connection | Previous pin | New pin |
+   | --- | --- | --- |
+   | Front TRIG | D4 | A0 |
+   | Front ECHO | D2 | A1 |
+   | Right TRIG | D12 (earlier proposal) | A2 |
+   | Right ECHO | D3 (earlier proposal) | A3 |
+   | ENA | D9 | D5 |
+   | IN1 | D8 | D6 |
+   | IN2 | D7 | D7 |
+   | IN3 | D6 | D8 |
+   | IN4 | D5 | D9 |
+   | ENB | D10 | D10 |
+   | Green LED | D11 | D11 |
+
 2. Add the right sensor mount and four connections from the table. Use a shared 5 V rail and shared GND rail; bridge rail breaks if your breadboard has split rails.
-3. Check printed VCC/TRIG/ECHO/GND labels on each sensor, rail polarity, and that D2 and D3 echoes are separate. Do not join the trigger lines either.
+3. Check printed VCC/TRIG/ECHO/GND labels on each sensor, rail polarity, and that A1 and A3 echoes are separate. Do not join the trigger lines either.
 4. For this sensor-only rebuild, retain the already verified USB bench power configuration described in the power reference. Do not add the battery yet.
-5. Reconnect USB with the wheels raised. V2 still reads only the front sensor; use `LOG ON` to check that the existing front readings and LEDs still work.
+5. With motor power disconnected, upload the updated V2 sketch after completing the rewiring. Reconnect for testing with the wheels raised. V2 still reads only the front sensor; use `LOG ON` to check that the existing front readings and LEDs still work.
 6. Leave the right sensor VCC disconnected until the dual-sensor firmware is installed, then connect it with power off. This avoids powering a sensor whose trigger is not yet configured by the current firmware.
 7. After the next firmware milestone, verify front and right readings independently against a ruler, then verify them together before enabling autonomous motion.
 
@@ -74,13 +91,14 @@ For fully untethered operation, the Uno also needs a suitable supply path. The U
 
 ## Next software milestone
 
-V2 now removes the red LED output; it still measures only the front sensor. Add separate front/right readings and alternate pings rather than triggering both sensors at once. A conservative starting schedule is one ping every 70 ms, alternating front/right (140 ms per sensor); this is a design proposal to test for cross-talk, not a proven timing requirement. Revisit sample age and stopping distance with that reduced per-sensor rate.
+V2 uses the new pin map and removes the red LED output; it still measures only the front sensor. The reserved right trigger is configured LOW at startup. Add separate front/right readings and alternate pings rather than triggering both sensors at once. A conservative starting schedule is one ping every 70 ms, alternating front/right (140 ms per sensor); this is a design proposal to test for cross-talk, not a proven timing requirement. Revisit sample age and stopping distance with that reduced per-sensor rate.
 
 P control will regulate distance to the right wall. Corner handling needs additional states: front obstruction can require a left turn; loss of the right wall may indicate an outside corner, doorway, poor echo or sensor failure. Missing echo alone must not trigger a blind right turn. Tune P control and validate corner behavior separately after sensor and power checks.
 
 ## Sources
 
 - [Arduino UNO R4 WiFi pinout](https://docs.arduino.cc/resources/pinouts/ABX00087-full-pinout.pdf): main-header pins and voltage domains.
+- [UNO R4 WiFi core 1.6.0 pin mapping](https://github.com/arduino/ArduinoCore-renesas/blob/1.6.0/variants/UNOWIFIR4/variant.cpp) and [interrupt capabilities](https://github.com/arduino/ArduinoCore-renesas/blob/1.6.0/variants/UNOWIFIR4/pinmux.inc): A1/P000/IRQ6 and A3/P002/IRQ2. Verified against the installed core.
 - [Arduino interrupt reference](https://github.com/arduino/reference-en/blob/master/Language/Functions/External%20Interrupts/attachInterrupt.adoc): D2/D3 interrupt support.
 - [UNO R4 WiFi hardware documentation](https://docs.arduino.cc/hardware/uno-r4-wifi/): power input range.
 - [HC-SR04 datasheet](https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf): 5 V supply, trigger/echo interface and measurement-cycle guidance.
@@ -95,12 +113,12 @@ The drawing shows four connected groups of five holes. On a typical solderless b
 | Board | Sensor pin hole | Jumper in same row | Jumper destination |
 | --- | --- | --- | --- |
 | Front | a10 VCC | e10 | regulated 5V |
-| Front | a11 TRIG | e11 | D4 |
-| Front | a12 ECHO | e12 | D2 |
+| Front | a11 TRIG | e11 | A0 |
+| Front | a12 ECHO | e12 | A1 |
 | Front | a13 GND | e13 | common GND |
 | Right | a10 VCC | e10 | regulated 5V (connect after dual-sensor firmware) |
-| Right | a11 TRIG | e11 | D12 |
-| Right | a12 ECHO | e12 | D3 |
+| Right | a11 TRIG | e11 | A2 |
+| Right | a12 ECHO | e12 | A3 |
 | Right | a13 GND | e13 | common GND |
 
 Orient each module so its four header pins occupy four different numbered rows, not a–d of one row. Follow its printed pin order. If mounting geometry prevents direct insertion, use short jumpers from the module to these rows.

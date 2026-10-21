@@ -20,7 +20,7 @@ int main() {
   extraUs += 1752; levels[ECHO_PIN] = LOW; echoChanged(); serviceSafety();
   resetOutput(); serviceDistanceLog();
   assert(Serial.output.str() == "t=1.0s | distance=30.2 cm | OK\n");
-  assert(distanceCm == 30); assert(pwm[9] == 0 && pwm[10] == 0);
+  assert(distanceCm == 30); assert(pwm[ENA] == 0 && pwm[ENB] == 0);
   resetOutput(); serviceDistanceLog(); assert(Serial.output.str().empty());
   nowMs = 1500; serviceDistanceLog(); // Stale value must not be displayed.
   assert(Serial.output.str().find("-- cm | NO VALID READING") != std::string::npos);

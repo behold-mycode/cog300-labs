@@ -44,10 +44,10 @@ Use the buttons or F1–F5 (possibly Fn + F1 on a Mac): **Wheels**, **Straight**
 
 | Uno R4 | L298N | Purpose |
 | --- | --- | --- |
-| D9 (PWM) | ENA | Left speed |
-| D8 / D7 | IN1 / IN2 | Left direction |
+| D5 (PWM) | ENA | Left speed |
+| D6 / D7 | IN1 / IN2 | Left direction |
+| D8 / D9 | IN3 / IN4 | Right direction |
 | D10 (PWM) | ENB | Right speed |
-| D6 / D5 | IN3 / IN4 | Right direction |
 | GND | GND | Common ground |
 
 Recorded motor wires: left black OUT1, left red OUT2; right red OUT3, right black OUT4. Confirm labels and actual wheel direction rather than relying on wire colours.

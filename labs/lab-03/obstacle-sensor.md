@@ -8,7 +8,7 @@ This upgrade targets the **Arduino Uno R4 WiFi** in the current Lab 3 setup. The
 
 [Open the full-size wiring diagram](diagrams/uno-r4-hcsr04-leds.svg). This is a signal schematic, not a breadboard-position drawing. Existing motor power details remain in the [power reference](programming-and-wiring.md).
 
-**Superseded wiring:** the current rebuild removes the red LED and assigns D12 to right TRIG. Use the complete diagrams linked above, not the two-LED diagram below.
+**Superseded wiring:** the current rebuild removes the red LED and groups front on A0/A1 and right on A2/A3. Use the complete diagrams linked above, not the two-LED diagram below.
 
 ## Parts and connections
 

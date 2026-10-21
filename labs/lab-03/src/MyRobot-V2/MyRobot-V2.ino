@@ -3,8 +3,12 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-const uint8_t ENA = 9, IN1 = 8, IN2 = 7;   // Left motor: OUT1 / OUT2
-const uint8_t ENB = 10, IN3 = 6, IN4 = 5;  // Right motor: OUT3 / OUT4
+// Ordered wiring: sensors on A0-A3; motor header on D5-D10; LED on D11.
+const uint8_t TRIG_PIN = A0, ECHO_PIN = A1;
+const uint8_t RIGHT_TRIG_PIN = A2, RIGHT_ECHO_PIN = A3; // Reserved for dual-sensor acquisition.
+const uint8_t GREEN_LED = 11;
+const uint8_t ENA = 5, IN1 = 6, IN2 = 7;   // Left motor: OUT1 / OUT2
+const uint8_t ENB = 10, IN3 = 8, IN4 = 9;  // Right motor: OUT3 / OUT4
 // Test one wheel at a time. Change ONLY the corresponding flag if it runs backward.
 bool INVERT_LEFT = false;
 bool INVERT_RIGHT = true; // Verify using the Wheels preset; configurable in the Mac controller.
