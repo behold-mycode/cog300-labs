@@ -51,12 +51,12 @@ for bread in [False,True]:
  # power net blocks complete explicit fanout (net labels match sensor GPIO panel)
  box(500,1465,1640,235);t(525,1505,'POWER DISTRIBUTION — all matching rail names are electrically joined','head')
  wire('545,1560 2060,1560',red)
- for x,label in [(545,'Uno 5V'),(850,'Front VCC'),(1150,'Right VCC*'),(1480,'L298N logic 5V'),(1830,'L298N VS / +12V**')]:
+ for x,label in [(545,'Uno 5V'),(850,'Front VCC'),(1150,'Right VCC'),(1480,'L298N logic 5V'),(1830,'L298N VS / +12V**')]:
   dot(x,1560,red);wire(f'{x},1560 {x},1530',red);t(x-20,1538,label,'small')
  wire('545,1655 2060,1655',black)
  for x,label in [(545,'Uno GND'),(850,'Front GND'),(1150,'Right GND'),(1480,'L298N GND'),(1830,'Green LED cathode')]:
   dot(x,1655,black);t(x-20,1640,label,'small')
- t(55,1740,'* Right VCC: leave disconnected until dual-sensor firmware is installed. Current V2 measures front only.','body')
+ t(55,1740,'Both sensor VCC pins connect to regulated 5 V. Updated V2 logs front and right independently.','body')
  t(55,1780,'** VS is currently fed from Uno 5V in the course bench setup. Remove that wire BEFORE connecting a rated motor battery.','body')
  t(55,1820,'Future AA battery: specs pending. Do not connect it yet. Sensors and driver logic must remain on regulated 5 V.','body')
  t(55,1860,('Breadboard: each shown row is five joined holes; different rows are isolated. No sensor pins share a row. See guide for LED rows.' if bread else 'Rail labels denote the same electrical node. Motor pairs go across OUT terminals, never to GND. Power off before rewiring.'),'small')

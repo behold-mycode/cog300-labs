@@ -103,7 +103,7 @@
 <text x="830" y="1538" class="small">Front VCC</text>
 <circle cx="1150" cy="1560" r="6" fill="#bd481f"/>
 <polyline points="1150,1560 1150,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
-<text x="1130" y="1538" class="small">Right VCC*</text>
+<text x="1130" y="1538" class="small">Right VCC</text>
 <circle cx="1480" cy="1560" r="6" fill="#bd481f"/>
 <polyline points="1480,1560 1480,1530" fill="none" stroke="#bd481f" stroke-width="4"/>
 <text x="1460" y="1538" class="small">L298N logic 5V</text>
@@ -121,7 +121,7 @@
 <text x="1460" y="1640" class="small">L298N GND</text>
 <circle cx="1830" cy="1655" r="6" fill="#344554"/>
 <text x="1810" y="1640" class="small">Green LED cathode</text>
-<text x="55" y="1740" class="body">* Right VCC: leave disconnected until dual-sensor firmware is installed. Current V2 measures front only.</text>
+<text x="55" y="1740" class="body">Both sensor VCC pins connect to regulated 5 V. Updated V2 logs front and right independently.</text>
 <text x="55" y="1780" class="body">** VS is currently fed from Uno 5V in the course bench setup. Remove that wire BEFORE connecting a rated motor battery.</text>
 <text x="55" y="1820" class="body">Future AA battery: specs pending. Do not connect it yet. Sensors and driver logic must remain on regulated 5 V.</text>
 <text x="55" y="1860" class="small">Rail labels denote the same electrical node. Motor pairs go across OUT terminals, never to GND. Power off before rewiring.</text>

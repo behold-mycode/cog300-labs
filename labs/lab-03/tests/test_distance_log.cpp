@@ -19,13 +19,13 @@ int main() {
   levels[ECHO_PIN] = HIGH; echoChanged();
   extraUs += 1752; levels[ECHO_PIN] = LOW; echoChanged(); serviceSensor();
   resetOutput(); serviceDistanceLog();
-  assert(Serial.output.str() == "t=1.0s | distance=30.2 cm | OK\n");
-  assert(distanceCm == 30); assert(pwm[ENA] == 0 && pwm[ENB] == 0);
+  assert(Serial.output.str() == "t=1.0s | front=30.2 cm OK | right=-- INVALID\n");
+  assert(samples[FRONT_SENSOR].cm == 30); assert(pwm[ENA] == 0 && pwm[ENB] == 0);
   resetOutput(); serviceDistanceLog(); assert(Serial.output.str().empty());
   nowMs = 1500; serviceDistanceLog(); // Stale value must not be displayed.
-  assert(Serial.output.str().find("-- cm | NO VALID READING") != std::string::npos);
+  assert(Serial.output.str().find("-- INVALID") != std::string::npos);
   resetOutput(); acceptDistance(-1); nowMs = 2000; serviceDistanceLog();
-  assert(Serial.output.str().find("-- cm | NO VALID READING") != std::string::npos);
+  assert(Serial.output.str().find("-- INVALID") != std::string::npos);
   command("LOG OFF"); resetOutput(); nowMs += 500; serviceDistanceLog();
   assert(Serial.output.str().empty());
   command("LOG ON"); command("HELLO"); assert(!distanceLogEnabled);

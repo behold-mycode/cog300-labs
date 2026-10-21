@@ -13,15 +13,15 @@ MyRobot-V2 is the working version. Keep V1 as the previous version.
 Example (illustrative, not a hardware measurement):
 
 ```text
-Distance log ON (cm, every 500 ms)
-t=1.0s | distance=30.2 cm | OK
-t=1.5s | distance=30.0 cm | OK
-t=2.0s | distance=-- cm | NO VALID READING
+Distance log ON (front/right cm, every 500 ms)
+t=1.0s | front=30.2 cm OK | right=20.1 cm OK
+t=1.5s | front=30.0 cm OK | right=20.0 cm OK
+t=2.0s | front=-- INVALID | right=20.2 cm OK
 ```
 
 Time is elapsed since reset. Distance is the latest raw echo converted with the existing `microseconds / 58` formula, rounded to one decimal place. Decimal resolution does not establish accuracy. Invalid or stale readings display `--`, never zero or a previous valid distance. Sensor-validity messages and command responses remain visible alongside the optional stream. `OK` describes a valid measurement.
 
-The sensor still samples every 70 ms. Logging shows one snapshot every 500 ms and does not perform extra measurements. Sensor-based motion blocking is disabled. Near objects, missing echoes and invalid/stale readings do not stop motors or cancel tests. Green indicates a valid reading, including close readings; off indicates no valid reading. Manual STOP, finite movement durations and controller timeout still stop motion. Logging neither starts nor stops motion; use `STOP` to stop the robot.
+The sensors alternate one ping every 70 ms, so each updates every 140 ms. Samples expire after 350 ms independently. Logging shows one snapshot every 500 ms and does not perform extra measurements. Sensor-based motion blocking is disabled. Near objects, missing echoes and invalid/stale readings do not stop motors or cancel tests. Green indicates a valid reading, including close readings; off indicates no valid reading. Manual STOP, finite movement durations and controller timeout still stop motion. Logging neither starts nor stops motion; use `STOP` to stop the robot.
 
 ## Milestone 2: establish measurement accuracy
 
@@ -43,8 +43,10 @@ Run from the repository root:
 
 ```sh
 python3 -m unittest discover -s labs/lab-03/controller -v
-for name in robot obstacle distance_log; do
+for name in robot obstacle distance_log dual_sensor; do
   c++ -std=c++11 -Wall -Wextra -Werror -I labs/lab-03/tests labs/lab-03/tests/test_${name}.cpp -o /tmp/cog300-test-${name} && /tmp/cog300-test-${name} || exit 1
 done
 arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi labs/lab-03/src/MyRobot-V2
 ```
+
+Both sensors are active: front TRIG/ECHO A0/A1, right TRIG/ECHO A2/A3. Connect both VCC pins to regulated 5V and both grounds to common GND. Each log column independently shows INVALID for a missing, out-of-range or stale reading. Test each against a ruler separately, then together to check cross-talk. Green still indicates front validity only.
