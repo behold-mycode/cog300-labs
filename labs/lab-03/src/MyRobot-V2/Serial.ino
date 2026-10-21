@@ -22,6 +22,7 @@ void serviceControlTimeout() {
 }
 
 void reportStatus() {
+  reportNavigation();
   Serial.print(F("STATE trim=")); Serial.print(leftPwmPercent); Serial.print('/'); Serial.print(rightPwmPercent);
   Serial.print(F(" invert=")); Serial.print(INVERT_LEFT); Serial.print('/'); Serial.print(INVERT_RIGHT);
   Serial.print(F(" requested=")); Serial.print(running ? pendingLeft : 0); Serial.print('/'); Serial.print(running ? pendingRight : 0);
@@ -60,7 +61,8 @@ void printHelp() {
   Serial.print(F("Default PWM=")); Serial.print(DEFAULT_TEST_PWM);
   Serial.print(F(" duration_ms=")); Serial.println(DEFAULT_TEST_MS);
   Serial.println(F("LOG ON / LOG OFF: live distance readings every 500 ms."));
-  Serial.println(F("Sensors: logging only; obstacle stopping DISABLED."));
+  Serial.println(F("Manual: sensors do not stop motion. MODE FOLLOW / MODE WALL: autonomous."));
+  Serial.println(F("KP FOLLOW 6.0 / KP WALL 3.0 / BASE 100: tune then re-enter mode."));
   reportStatus();
   reportSensor();
 }
@@ -110,6 +112,7 @@ void processCommand(char* line) {
   bool isStop = strcmp(tokens[0], "STOP") == 0 || strcmp(tokens[0], "S") == 0;
   bool isHelp = strcmp(tokens[0], "HELP") == 0 || strcmp(tokens[0], "?") == 0;
   if (controlExpired && !isStop && !isHelp) { invalidCommand(); return; }
+  if (navigationCommand(tokens, count)) return;
   if (strcmp(tokens[0], "CONFIG") == 0) {
     long leftInvert, rightInvert;
     if (count != 5 || !parseNumber(tokens[1], 1, 200, speed) ||

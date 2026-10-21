@@ -4,6 +4,7 @@
 #include "../src/MyRobot-V2/Motor.ino"
 #include "../src/MyRobot-V2/Serial.ino"
 #include "../src/MyRobot-V2/Safety.ino"
+#include "../src/MyRobot-V2/Navigation.ino"
 void pulse(uint8_t sensor, uint32_t width) {
   levels[echoPins[sensor]] = HIGH; captureEcho(sensor);
   extraUs += width; levels[echoPins[sensor]] = LOW; captureEcho(sensor);

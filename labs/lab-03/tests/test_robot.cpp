@@ -5,6 +5,7 @@
 #include "../src/MyRobot-V2/Motor.ino"
 #include "../src/MyRobot-V2/Serial.ino"
 #include "../src/MyRobot-V2/Safety.ino"
+#include "../src/MyRobot-V2/Navigation.ino"
 // Legacy movement regressions supply a healthy sensor; acquisition is tested separately.
 void healthyLoop() { pingPending = false; acceptDistance(100); acceptDistance(100); acceptDistance(100); loop(); }
 void tick(uint32_t ms) { nowMs += ms; healthyLoop(); }

@@ -5,6 +5,7 @@
 #include "../src/MyRobot-V2/Motor.ino"
 #include "../src/MyRobot-V2/Serial.ino"
 #include "../src/MyRobot-V2/Safety.ino"
+#include "../src/MyRobot-V2/Navigation.ino"
 void command(const char* text) { char b[64]; strncpy(b,text,sizeof(b)); processCommand(b); }
 void start(const char* text) { command(text); nowMs += 250; serviceMotion(); }
 void echoPulse(uint32_t width) {

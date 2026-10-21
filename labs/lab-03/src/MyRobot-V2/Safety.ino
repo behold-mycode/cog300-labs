@@ -122,5 +122,12 @@ void serviceDistanceLog() {
   Serial.print('.'); Serial.print((now % 1000) / 100);
   Serial.print(F("s | front=")); printDistance(FRONT_SENSOR);
   Serial.print(F(" | right=")); printDistance(RIGHT_SENSOR);
+  printNavigationLog();
   Serial.println();
+}
+
+float sensorDistanceCm(uint8_t sensor) {
+  if (sensor >= 2 || !samples[sensor].valid ||
+      (uint32_t)(millis() - samples[sensor].sampledMs) >= STALE_MS) return -1;
+  return samples[sensor].echoUs / 58.0f;
 }

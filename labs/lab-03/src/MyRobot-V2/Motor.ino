@@ -36,6 +36,7 @@ void stopOutputs() {
 }
 
 void stopDrive() {
+  cancelNavigation();
   stopOutputs();
   remoteTestId = 0;
   if (activeTest >= 0) logTestResult(activeTest, "CANCELLED");

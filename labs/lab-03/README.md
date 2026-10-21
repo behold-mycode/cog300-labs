@@ -4,6 +4,10 @@
 
 Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 distance logging and a green status LED.
 
+## Autonomous modes
+
+[Functions, commands and P-gain tuning](autonomous-modes.md). `MODE FOLLOW` keeps an object ahead at 20 cm; `MODE WALL` regulates right-wall distance to 20 cm. `STOP` cancels either mode. Defaults need physical tuning. Manual driving remains sensor-unrestricted.
+
 ## Working version and milestones
 
 **MyRobot-V2 is the working sketch.** V1 is retained as the previous version.
@@ -12,11 +16,11 @@ Each milestone gets a focused branch and regular GitHub PR; record software chec
 
 ## Distance sensor and LEDs
 
-**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Sensors are logging-only: close, missing and invalid readings never block or stop movement. Manual stop, timed stops and controller timeout remain active. The front sensor and green LED are optional for driving.
+**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. In MANUAL, sensors are logging-only: close, missing and invalid readings never block or stop movement. Autonomous modes have their own distance-stop policy. Manual stop, timed stops and controller timeout remain active. The front sensor and green LED are optional for driving.
 
 ## Start here
 
-1. Open [`src/MyRobot-V2/MyRobot-V2.ino`](src/MyRobot-V2/MyRobot-V2.ino) in Arduino IDE. Keep `Motor.ino`, `Serial.ino`, and `Safety.ino` in the same sketch folder.
+1. Open [`src/MyRobot-V2/MyRobot-V2.ino`](src/MyRobot-V2/MyRobot-V2.ino) in Arduino IDE. Keep `Motor.ino`, `Navigation.ino`, `Serial.ino`, and `Safety.ino` in the same sketch folder.
 2. Select **UNO R4 WiFi** and its current USB port, then upload. The robot starts stopped.
 3. Close Serial Monitor/Plotter.
 4. Double-click [`Launch Robot Controller.command`](controller/Launch%20Robot%20Controller.command), choose the USB port and Connect.
@@ -60,6 +64,7 @@ Trim cannot exceed the hardware's maximum PWM of 255 or fix weak motor power. Th
 
 - `MyRobot-V2.ino`: pins, startup defaults and main loop.
 - `Motor.ino`: motor output, timed movement, test scheduling and live-drive refresh.
+- `Navigation.ino`: mode selection, P control, distance stops and bounded left-corner handling.
 - `Safety.ino`: interrupt-based front/right distance measurement and green reading-valid LED.
 - `Serial.ino`: command parser, firmware handshake, settings, status and heartbeat timeout.
 - `controller/`: native Tk desktop interface, control state machine, launcher and tests.
