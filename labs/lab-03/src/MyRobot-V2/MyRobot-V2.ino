@@ -14,12 +14,11 @@ bool INVERT_LEFT = false;
 bool INVERT_RIGHT = true; // Verify using the Wheels preset; configurable in the Mac controller.
 
 // Cross-tab entry points; explicit declarations also support the host tests.
-void setupSafety();
+void setupSensor();
 void serviceDistanceLog();
 void setDistanceLog(bool enabled);
-void serviceSafety();
-bool allowMotion(int left, int right);
-void reportSafety();
+void serviceSensor();
+void reportSensor();
 void stopDrive();
 void serviceMotion();
 void serviceTestSuite();
@@ -38,12 +37,12 @@ void setup() {
   stopDrive();
   Serial.begin(9600);
   Serial.println(F("Lab03Robot READY — stopped"));
-  setupSafety();
+  setupSensor();
   printHelp();
 }
 
 void loop() {
-  serviceSafety();
+  serviceSensor();
   serviceControlTimeout();
   readCommands();
   serviceMotion();

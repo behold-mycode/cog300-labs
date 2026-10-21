@@ -60,8 +60,9 @@ void printHelp() {
   Serial.print(F("Default PWM=")); Serial.print(DEFAULT_TEST_PWM);
   Serial.print(F(" duration_ms=")); Serial.println(DEFAULT_TEST_MS);
   Serial.println(F("LOG ON / LOG OFF: live distance readings every 500 ms."));
+  Serial.println(F("Sensors: logging only; obstacle stopping DISABLED."));
   reportStatus();
-  reportSafety();
+  reportSensor();
 }
 
 bool parseNumber(const char* text, long low, long high, long& value) {
@@ -91,13 +92,13 @@ void processCommand(char* line) {
   if (strcmp(tokens[0], "HELLO") == 0 && count == 1) {
     setDistanceLog(false);
     stopDrive(); controlSession = true; controlExpired = false; lastControlMs = millis();
-    Serial.println(F("ROBOT_READY 3")); reportSafety(); return;
+    Serial.println(F("ROBOT_READY 3")); reportSensor(); return;
   }
   if (strcmp(tokens[0], "HEARTBEAT") == 0 && count == 1) {
     if (controlSession) { lastControlMs = millis(); Serial.println(F("ALIVE")); }
     return;
   }
-  if (strcmp(tokens[0], "STATUS") == 0 && count == 1) { reportStatus(); reportSafety(); return; }
+  if (strcmp(tokens[0], "STATUS") == 0 && count == 1) { reportStatus(); reportSensor(); return; }
   if (strcmp(tokens[0], "LOG") == 0) {
     if (count != 2) { invalidCommand(); return; }
     for (char* c = tokens[1]; *c; ++c) *c = toupper((unsigned char)*c);

@@ -19,9 +19,9 @@ t=1.5s | distance=30.0 cm | OK
 t=2.0s | distance=-- cm | NO VALID READING
 ```
 
-Time is elapsed since reset. Distance is the latest raw echo converted with the existing `microseconds / 58` formula, rounded to one decimal place. Decimal resolution does not establish accuracy. Invalid or stale readings display `--`, never zero or a previous valid distance. Safety messages and command responses remain visible alongside the optional stream. `OK` describes a valid measurement, not permission to move.
+Time is elapsed since reset. Distance is the latest raw echo converted with the existing `microseconds / 58` formula, rounded to one decimal place. Decimal resolution does not establish accuracy. Invalid or stale readings display `--`, never zero or a previous valid distance. Sensor-validity messages and command responses remain visible alongside the optional stream. `OK` describes a valid measurement.
 
-The sensor still samples every 70 ms. Logging shows one snapshot every 500 ms and does not perform extra measurements. Motor commands, obstacle thresholds, LEDs and protocol version remain unchanged. Logging neither starts nor stops motion; use `STOP` to stop the robot.
+The sensor still samples every 70 ms. Logging shows one snapshot every 500 ms and does not perform extra measurements. Sensor-based motion blocking is disabled. Near objects, missing echoes and invalid/stale readings do not stop motors or cancel tests. Green indicates a valid reading, including close readings; off indicates no valid reading. Manual STOP, finite movement durations and controller timeout still stop motion. Logging neither starts nor stops motion; use `STOP` to stop the robot.
 
 ## Milestone 2: establish measurement accuracy
 

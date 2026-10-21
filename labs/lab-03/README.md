@@ -2,7 +2,7 @@
 
 **Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
 
-Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 obstacle stopping and a green status LED.
+Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 distance logging and a green status LED.
 
 ## Working version and milestones
 
@@ -12,7 +12,7 @@ Each milestone gets a focused branch and regular GitHub PR; record software chec
 
 ## Distance sensor and LEDs
 
-**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Wire the sensor and LEDs before driving with this firmware. Blocked or invalid front readings block forward and spins; deliberate reverse remains available.
+**[Wiring diagram, hookup instructions and obstacle-stop behavior](obstacle-sensor.md)**. Sensors are logging-only: close, missing and invalid readings never block or stop movement. Manual stop, timed stops and controller timeout remain active. The front sensor and green LED are optional for driving.
 
 ## Start here
 
@@ -60,7 +60,7 @@ Trim cannot exceed the hardware's maximum PWM of 255 or fix weak motor power. Th
 
 - `MyRobot-V2.ino`: pins, startup defaults and main loop.
 - `Motor.ino`: motor output, timed movement, test scheduling and live-drive refresh.
-- `Safety.ino`: interrupt-based front distance measurement, green LED and motor guard.
+- `Safety.ino`: interrupt-based front distance measurement and green reading-valid LED.
 - `Serial.ino`: command parser, firmware handshake, settings, status and heartbeat timeout.
 - `controller/`: native Tk desktop interface, control state machine, launcher and tests.
 - `tests/`: simulated Arduino I/O and host tests of the actual sketch.

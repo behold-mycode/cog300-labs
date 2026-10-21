@@ -37,7 +37,7 @@ for bread in [False,True]:
   t(325,y+8,pin);wire(f'430,{y} 1120,{y}',col);box(1120,y-15,120,30);t(1135,y-25,'1 kΩ','small');wire(f'1240,{y} 1370,{y}',col)
   a.append(f'<circle cx="1400" cy="{y}" r="30" fill="{col}"/>');t(1450,y+7,name,'head');t(1300,y+48,'anode (+)     cathode (−)','small')
   wire(f'1430,{y} 1430,{y+65} 1840,{y+65}',black);t(1850,y+72,'GND rail','small')
- t(1100,970,'Green ON = front clear; OFF = blocked / unknown.','small')
+ t(1100,970,'Green ON = valid front reading; OFF = invalid / missing.','small')
  t(1100,1005,'Sensors A0–A3 • motor header D5–D10 • green LED D11.','small')
  # motor driver with all signal paths
  box(1100,1045,570,345,'#fcece7');t(1130,1085,'L298N driver','head')
