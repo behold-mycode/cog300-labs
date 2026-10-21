@@ -1,4 +1,4 @@
-> Current V2: sensors are logging-only. Close or missing readings do not block driving or stop tests. Manual stop and controller timeout remain active.
+> Current V2 MANUAL mode: sensors are logging-only. Close or missing readings do not block driving or stop tests. Manual stop and controller timeout remain active.
 
 # Mac robot controller
 

@@ -41,7 +41,7 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 | Green LED cathode | GND |
 | Uno GND | Both sensors, green LED return and L298N GND |
 
-Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid front reading at any accepted distance; off means invalid or missing. Sensor readings never block or stop motion in the current logging-only V2.
+Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid front reading at any accepted distance; off means invalid or missing. In MANUAL, sensor readings do not stop motion. Autonomous modes use their own distance-stop rules; see [P-control modes](autonomous-modes.md).
 
 ## Rebuild sequence
 

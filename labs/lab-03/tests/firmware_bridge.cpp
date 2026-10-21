@@ -5,6 +5,7 @@
 #include "../src/MyRobot-V2/Motor.ino"
 #include "../src/MyRobot-V2/Serial.ino"
 #include "../src/MyRobot-V2/Safety.ino"
+#include "../src/MyRobot-V2/Navigation.ino"
 int simulatedCm = 100;
 void sensorLoop() {
   pingPending = false;

@@ -15,6 +15,14 @@ bool INVERT_RIGHT = true; // Verify using the Wheels preset; configurable in the
 
 // Cross-tab entry points; explicit declarations also support the host tests.
 void setupSensor();
+float sensorDistanceCm(uint8_t sensor);
+void cancelNavigation();
+void serviceNavigation();
+void reportNavigation();
+void printNavigationLog();
+bool navigationCommand(char** tokens, uint8_t count);
+bool parseNumber(const char* text, long low, long high, long& value);
+void invalidCommand();
 void serviceDistanceLog();
 void setDistanceLog(bool enabled);
 void serviceSensor();
@@ -45,6 +53,7 @@ void loop() {
   serviceSensor();
   serviceControlTimeout();
   readCommands();
+  serviceNavigation();
   serviceMotion();
   serviceTestSuite();
   serviceDistanceLog();
