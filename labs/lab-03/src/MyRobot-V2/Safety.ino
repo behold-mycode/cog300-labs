@@ -1,5 +1,5 @@
 // HC-SR04 front guard. No timer libraries: preserves motor PWM on D9/D10.
-const uint8_t TRIG_PIN = 4, ECHO_PIN = 2, GREEN_LED = 11, RED_LED = 12;
+const uint8_t TRIG_PIN = 4, ECHO_PIN = 2, GREEN_LED = 11;
 const uint16_t STOP_CM = 10, CLEAR_CM = 20;
 const uint32_t PING_MS = 70, ECHO_TIMEOUT_US = 30000, STALE_MS = 250;
 // A positive wheel can swing a chassis corner forward: block spins too.
@@ -32,7 +32,6 @@ void reportSafety() {
 
 void applySafetyState(bool wasBlocked, bool wasValid) {
   digitalWrite(GREEN_LED, frontBlocked ? LOW : HIGH);
-  digitalWrite(RED_LED, frontBlocked ? HIGH : LOW);
   // On detection stop everything, including reverse, pending steps and suite gaps.
   // A subsequent deliberate reverse request can be accepted by allowMotion().
   if (frontBlocked && (!wasBlocked || (wasValid && !sensorValid))) {
@@ -69,8 +68,8 @@ bool allowMotion(int left, int right) {
 void setupSafety() {
   pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW);
   pinMode(ECHO_PIN, INPUT);
-  pinMode(GREEN_LED, OUTPUT); pinMode(RED_LED, OUTPUT);
-  digitalWrite(GREEN_LED, LOW); digitalWrite(RED_LED, HIGH);
+  pinMode(GREEN_LED, OUTPUT);
+  digitalWrite(GREEN_LED, LOW);
   attachInterrupt(digitalPinToInterrupt(ECHO_PIN), echoChanged, CHANGE);
   lastPingMs = millis() - PING_MS;
 }

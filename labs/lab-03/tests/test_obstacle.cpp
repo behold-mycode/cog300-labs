@@ -17,11 +17,12 @@ void echoPulse(uint32_t width) {
 }
 int main() {
   setup();
-  assert(levels[12] == HIGH && levels[11] == LOW);
+  assert(modes[12] != OUTPUT); // D12 released from the removed red LED.
+  assert(levels[11] == LOW);
   start("F 180 1000"); stopped(); assert(!pending);
-  clearFront(); assert(levels[11] == HIGH && levels[12] == LOW);
+  clearFront(); assert(levels[11] == HIGH);
   start("F 180 1000"); assert(pwm[9] == 180);
-  acceptDistance(10); stopped(); assert(levels[12] == HIGH && levels[11] == LOW);
+  acceptDistance(10); stopped(); assert(levels[11] == LOW);
   // Every entry point, including spins and isolated positive wheels, is guarded.
   for (const char* text : {"F 180 1000", "L 180 1000", "R 180 1000", "Q 180 1000",
        "E 180 1000", "M 0 180 1000", "TEST_ALL 180 1000", "FORWARD 180 1000"}) {
@@ -29,7 +30,7 @@ int main() {
   }
   setDrive(180, 180); stopped(); // Final output gate cannot be bypassed.
   start("B 180 1000"); assert(pwm[9] == 180 && levels[8] == HIGH);
-  assert(levels[12] == HIGH && levels[11] == LOW); command("STOP");
+  assert(levels[11] == LOW); command("STOP");
   // Hysteresis needs three consecutive clear samples, not one outlier.
   acceptDistance(21); acceptDistance(21); assert(frontBlocked);
   acceptDistance(15); acceptDistance(21); acceptDistance(21); assert(frontBlocked);

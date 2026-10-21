@@ -2,20 +2,28 @@
 
 Updated 2026-10-21. Target: UNO R4 WiFi, common L298N module and two standard 5 V HC-SR04 sensors. This is a connection schematic, not a physical breadboard layout. Confirm component labels before connecting.
 
-![Front and right sensor wiring](diagrams/uno-r4-front-right-wiring.png)
+## Complete diagrams
 
-[Full-size SVG](diagrams/uno-r4-front-right-wiring.svg)
+These replace the earlier separate sensor and motor diagrams as the current rebuild reference.
+
+![Complete robot wiring](diagrams/robot-complete-wiring.png)
+
+[Full-size wiring SVG](diagrams/robot-complete-wiring.svg)
+
+![Two separate sensor breadboards](diagrams/robot-complete-breadboards.png)
+
+[Full-size breadboard SVG](diagrams/robot-complete-breadboards.svg)
 
 ## Sensor connections
 
 | Sensor terminal | Front sensor (existing) | Right sensor (new) |
 | --- | --- | --- |
 | VCC | Uno 5V rail | Same Uno 5V rail |
-| TRIG | D4 | A0, used as a digital output |
+| TRIG | D4 | D12 |
 | ECHO | D2 | D3 |
 | GND | Common GND rail | Same common GND rail |
 
-D2 and D3 support external interrupts on UNO R4 WiFi. A0 is available as a digital GPIO and does not conflict with the existing motor or LED pins. Use the main Uno headers, not the ESP32 or Qwiic connectors. Echo connections are for this 5 V Uno board; do not transfer this wiring to a 3.3 V board without checking its input limits.
+D2 and D3 support external interrupts on UNO R4 WiFi. D12 is freed by removing the red LED. This keeps D2–D12 in use, preserves the motor connections and leaves A0–A5 and D0/D1 available. Use the main Uno headers, not the ESP32 or Qwiic connectors. Echo connections are for this 5 V Uno board; do not transfer this wiring to a 3.3 V board without checking its input limits.
 
 Mount the front sensor facing straight ahead. Mount the right sensor facing directly right, perpendicular to forward travel, with both transducers clear of the chassis and wiring. Right means the robot's right when facing forward. Keep the right sensor level and facing the wall; measure the desired wall distance from its sensor face. Secure the mount so it does not rotate during turns.
 
@@ -28,11 +36,10 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 | OUT1 + OUT2 | Left motor pair |
 | OUT3 + OUT4 | Right motor pair |
 | D11 | 1 kΩ resistor → green LED anode |
-| D12 | 1 kΩ resistor → red LED anode |
-| Both LED cathodes | GND |
-| Uno GND | Both sensors, LED returns and L298N GND |
+| Green LED cathode | GND |
+| Uno GND | Both sensors, green LED return and L298N GND |
 
-Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Do not change motor polarity or LED wiring for this upgrade.
+Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its D12 wire before using D12 for the right trigger. Green remains on D11. Green on means a valid clear front path; off means blocked or unverified.
 
 ## Rebuild sequence
 
@@ -55,7 +62,7 @@ USB → Uno USB-C
 Uno 5V → both sensor VCC pins + L298N logic 5V
 Battery + → appropriately rated fuse / switch → L298N VS (+12V-labelled terminal)
 Battery − → L298N GND
-Uno GND → L298N GND + both sensor grounds + LED returns
+Uno GND → L298N GND + both sensor grounds + green LED return
 REMOVE the old Uno 5V → L298N VS wire before connecting the battery.
 ```
 
@@ -67,14 +74,37 @@ For fully untethered operation, the Uno also needs a suitable supply path. The U
 
 ## Next software milestone
 
-No firmware changes are included in this wiring milestone. Add separate front/right readings and alternate pings rather than triggering both sensors at once. A conservative starting schedule is one ping every 70 ms, alternating front/right (140 ms per sensor); this is a design proposal to test for cross-talk, not a proven timing requirement. Revisit sample age and stopping distance with that reduced per-sensor rate.
+V2 now removes the red LED output; it still measures only the front sensor. Add separate front/right readings and alternate pings rather than triggering both sensors at once. A conservative starting schedule is one ping every 70 ms, alternating front/right (140 ms per sensor); this is a design proposal to test for cross-talk, not a proven timing requirement. Revisit sample age and stopping distance with that reduced per-sensor rate.
 
 P control will regulate distance to the right wall. Corner handling needs additional states: front obstruction can require a left turn; loss of the right wall may indicate an outside corner, doorway, poor echo or sensor failure. Missing echo alone must not trigger a blind right turn. Tune P control and validate corner behavior separately after sensor and power checks.
 
 ## Sources
 
-- [Arduino UNO R4 WiFi pinout](https://docs.arduino.cc/resources/pinouts/ABX00087-full-pinout.pdf): main-header pins, A0/D14 and voltage domains.
+- [Arduino UNO R4 WiFi pinout](https://docs.arduino.cc/resources/pinouts/ABX00087-full-pinout.pdf): main-header pins and voltage domains.
 - [Arduino interrupt reference](https://github.com/arduino/reference-en/blob/master/Language/Functions/External%20Interrupts/attachInterrupt.adoc): D2/D3 interrupt support.
 - [UNO R4 WiFi hardware documentation](https://docs.arduino.cc/hardware/uno-r4-wifi/): power input range.
 - [HC-SR04 datasheet](https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf): 5 V supply, trigger/echo interface and measurement-cycle guidance.
 - [ST L298 datasheet](https://www.st.com/resource/en/datasheet/l298.pdf): separate motor and logic supply domains; module regulator behavior still requires the actual module documentation.
+
+## Two-breadboard placement
+
+Use one four-wire harness per sensor. Each harness carries regulated 5V, GND, its own TRIG and its own ECHO. The two breadboards do not need to touch; their grounds and 5V supplies join back at the common distribution point. Do not daisy-chain motor current through either sensor board.
+
+The drawing shows four connected groups of five holes. On a typical solderless breadboard, a–e in one numbered row are connected; f–j are a separate group across the centre gap. Verify your board layout. Row numbers below are examples, not required positions.
+
+| Board | Sensor pin hole | Jumper in same row | Jumper destination |
+| --- | --- | --- | --- |
+| Front | a10 VCC | e10 | regulated 5V |
+| Front | a11 TRIG | e11 | D4 |
+| Front | a12 ECHO | e12 | D2 |
+| Front | a13 GND | e13 | common GND |
+| Right | a10 VCC | e10 | regulated 5V (connect after dual-sensor firmware) |
+| Right | a11 TRIG | e11 | D12 |
+| Right | a12 ECHO | e12 | D3 |
+| Right | a13 GND | e13 | common GND |
+
+Orient each module so its four header pins occupy four different numbered rows, not a–d of one row. Follow its printed pin order. If mounting geometry prevents direct insertion, use short jumpers from the module to these rows.
+
+The green LED may sit on the front breadboard: D11 → e20; 1 kΩ resistor from a20 to a22; LED anode in b22 and cathode in b23; e23 → common GND. This creates D11 → resistor → LED → ground without shorting either component. No red LED remains.
+
+If using power rails, connect each board's + rail to regulated 5V and − rail to common GND, then route its VCC/GND row jumpers to those rails. Check and bridge rail splits. The two rails are not joined merely because both are marked with the same colour.
