@@ -1,5 +1,7 @@
 # Lab 3: Build your own bot
 
+**Latest rebuild plan:** [front + right ultrasonic wiring and battery transition](front-right-wiring.md). The second sensor is planned hardware; current V2 firmware still reads only the front sensor.
+
 Arduino Uno R4 WiFi + L298N, with a Mac desktop controller for arrow-key driving and preset lab tests, HC-SR04 obstacle stopping and green/red status LEDs.
 
 ## Working version and milestones
