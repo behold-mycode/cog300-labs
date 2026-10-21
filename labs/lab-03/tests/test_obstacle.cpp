@@ -1,9 +1,9 @@
 #include <cassert>
 #include <iostream>
-#include "../src/MyRobot-V1/MyRobot-V1.ino"
-#include "../src/MyRobot-V1/Motor.ino"
-#include "../src/MyRobot-V1/Serial.ino"
-#include "../src/MyRobot-V1/Safety.ino"
+#include "../src/MyRobot-V2/MyRobot-V2.ino"
+#include "../src/MyRobot-V2/Motor.ino"
+#include "../src/MyRobot-V2/Serial.ino"
+#include "../src/MyRobot-V2/Safety.ino"
 void command(const char* text) {
   char buffer[64]; strncpy(buffer, text, sizeof(buffer)); processCommand(buffer);
 }

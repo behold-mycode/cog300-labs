@@ -4,7 +4,7 @@ A local desktop window with arrow-key driving and five repeatable lab-test prese
 
 ## Start
 
-1. Open `../src/MyRobot-V1/MyRobot-V1.ino` in Arduino IDE, keeping its three other tabs together. Select **UNO R4 WiFi**, select its current USB port, and upload the updated firmware. The course structure is extended with Safety.ino.
+1. Open `../src/MyRobot-V2/MyRobot-V2.ino` in Arduino IDE, keeping its three other tabs together. Select **UNO R4 WiFi**, select its current USB port, and upload the updated firmware. The course structure is extended with Safety.ino.
 2. **Close Arduino Serial Monitor and Serial Plotter** so they do not compete with this controller for the serial port.
 3. Double-click **Launch Robot Controller.command**. Python 3 with Tk is required; this Mac already has it. The launcher uses a local `.venv` and installs the pinned `pyserial` dependency on first use if necessary.
 4. Select the board's `/dev/cu.usbmodem…` port and click **Connect**. Opening the port may reset the board. The controller waits for firmware version 3 and applies its visible calibration settings before enabling anything.

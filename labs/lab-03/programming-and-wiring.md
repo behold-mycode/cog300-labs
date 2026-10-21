@@ -14,15 +14,15 @@ Source: [Lab 3](https://cogs-300.github.io/labs/lab03).
 
 Reviewed [MyRobot at commit 6e385b7](https://github.com/COGS-300/MyRobot/tree/6e385b75434afee1c335e896739c24d360590470).
 
-1. **Correctness: fix before testing.** `MyRobot-V1.ino:7–10` starts Serial but never configures the motor pins as outputs. Add `pinMode(..., OUTPUT)` for every enable and direction pin, and explicitly initialize both enable outputs LOW. The inline lab example includes the pin setup; the repository starter omits it.
+1. **Correctness: fix before testing.** `MyRobot-V2.ino:7–10` starts Serial but never configures the motor pins as outputs. Add `pinMode(..., OUTPUT)` for every enable and direction pin, and explicitly initialize both enable outputs LOW. The inline lab example includes the pin setup; the repository starter omits it.
 2. **Incomplete drive functionality.** `Motor.ino:23–26` sets one direction and enables one motor fully using `digitalWrite`. Add speed control with `analogWrite(enablePin, speed)` and reverse direction by exchanging the two input levels. Define and configure a second motor's pins.
 3. **Stop semantics.** `Motor.ino:29–32` disables the bridge, which produces a coasting stop rather than active braking. Disable the enable output before changing direction pins. A whole-car stop must disable both channels.
-4. **Test responsiveness.** `MyRobot-V1.ino:18,23` uses one-second blocking delays and automatically repeats motion. Adequate for an isolated motor demonstration, but a proposed interactive test loop should use `millis()` so stop commands remain responsive. Start stationary and use finite-duration tests with automatic stop.
+4. **Test responsiveness.** `MyRobot-V2.ino:18,23` uses one-second blocking delays and automatically repeats motion. Adequate for an isolated motor demonstration, but a proposed interactive test loop should use `millis()` so stop commands remain responsive. Start stationary and use finite-duration tests with automatic stop.
 5. **Serial is logging only.** `Serial.ino:24–42` prints messages; it does not receive or interpret commands. Add a command parser if choosing the Serial Monitor test interface. Match its existing baud rate of 9600.
 
 The small motor helpers and separated logging file are a useful foundation. Maintainability: good starting separation, unfinished interface. Performance: trivial computation; blocking delays are the relevant limitation. Security: no credential/network handling in these three files; input validation becomes relevant when a command parser is added. This is a source review, not a compiled or hardware-tested result.
 
-Keep `MyRobot-V1.ino`, `Motor.ino`, and `Serial.ino` together in a folder named `MyRobot-V1`; Arduino treats these as one sketch. A suitable future location is `labs/lab-03/src/MyRobot-V1/`.
+Keep `MyRobot-V2.ino`, `Motor.ino`, and `Serial.ino` together in a folder named `MyRobot-V2`; Arduino treats these as one sketch. A suitable future location is `labs/lab-03/src/MyRobot-V2/`.
 
 ## Proposed signal connections
 
