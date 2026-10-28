@@ -5,12 +5,12 @@ A small local browser interface for keyboard driving and two autonomous modes. P
 ## Mac setup
 
 1. Install **Python 3.9+** from [python.org](https://www.python.org/downloads/macos/) if `python3 --version` is missing or older.
-2. Upload the complete `../src/MyRobot-V2` sketch to UNO R4 WiFi. This controller requires **firmware 4**.
+2. Upload the complete `../Robot` sketch to UNO R4 WiFi. This controller requires **firmware 4**.
 3. Close Arduino Serial Monitor and Serial Plotter.
-4. Double-click **Launch Robot Controller.command**. It creates `.venv`, installs `pyserial==3.5` on first use, starts a loopback server, and opens your browser. First-time dependency installation needs internet.
+4. Double-click **Launch Robot Controller.command** in the project root. It creates `.venv`, installs `pyserial==3.5` on first use, starts a loopback server, and opens your browser. First-time dependency installation needs internet.
 5. Select the `/dev/cu.usbmodem…` port and click Connect. Wait about two seconds for reset/handshake, then drive.
 
-If macOS prevents double-click launch, run `zsh 'Launch Robot Controller.command'` from this folder in Terminal. If a copied `.venv` fails, rename/remove that generated `.venv` folder and rerun the launcher; virtual environments should not be copied between computers. Keep Terminal open while using the controller; Ctrl+C shuts it down and stops the robot. If the browser does not open, use the full local URL printed in Terminal, including its `#token=…` fragment.
+If macOS prevents double-click launch, run `zsh '../Launch Robot Controller.command'` from this folder in Terminal. If a copied `.venv` fails, rename/remove that generated `.venv` folder and rerun the launcher; virtual environments should not be copied between computers. Keep Terminal open while using the controller; Ctrl+C shuts it down and stops the robot. If the browser does not open, use the full local URL printed in Terminal, including its `#token=…` fragment.
 
 Manual setup, also usable on Windows/Linux:
 
@@ -26,7 +26,7 @@ On Windows use `.venv\Scripts\python` for the last two commands. Linux users nee
 
 Hold arrows or WASD. Left/right alone spins; combine with forward/reverse to curve. Release to stop. Opposing directions stop. Space/Esc cancels any mode. Keyboard input only drives while this page is focused, and never while editing a settings field. Switching windows/tabs stops; held-key repeat cannot restart motion after stopping.
 
-The side buttons choose **Follow object** or **Follow right wall**. Any new driving key returns to Manual. [Algorithm behavior and tuning](../autonomous-modes.md).
+The side buttons choose **Follow object** or **Follow right wall**. Any new driving key returns to Manual. [Algorithm behavior and tuning](../docs/autonomous-modes.md).
 
 Settings are collapsed by default. Opening/editing them stops motion. Apply power, minimum follow PWM, independent wheel reversal and target distances there. The server retains applied settings during reconnects; closing it restores defaults on the next launch. A firmware reset also restores firmware defaults until the controller reconnects and applies its settings. Settings may be adjusted only when connected.
 
@@ -44,7 +44,7 @@ Requests use increasing sequence numbers so delayed requests cannot overwrite a 
 - **Port busy:** close Serial Monitor/Plotter and other controller instances.
 - **No firmware 4 response:** upload the current complete sketch. Old Tk/firmware 3 code is incompatible.
 - **Browser stopped responding:** return to the page and reconnect. No automatic motion resume.
-- **Weak/no movement:** verify individual wheel direction with the [hardware checklist](../test-plan.md); software PWM cannot fix a loose wire or inadequate supply.
+- **Weak/no movement:** verify individual wheel direction with the [hardware checklist](../docs/test-plan.md); software PWM cannot fix a loose wire or inadequate supply.
 
 Demo without dependencies or hardware:
 

@@ -1,11 +1,11 @@
 #include <cassert>
 #include <iostream>
-#include "../src/MyRobot-V2/Robot.h"
-#include "../src/MyRobot-V2/Motor.cpp"
-#include "../src/MyRobot-V2/Sensors.cpp"
-#include "../src/MyRobot-V2/Navigation.cpp"
-#include "../src/MyRobot-V2/Protocol.cpp"
-#include "../src/MyRobot-V2/MyRobot-V2.ino"
+#include "../Robot/Robot.h"
+#include "../Robot/Motor.cpp"
+#include "../Robot/Sensors.cpp"
+#include "../Robot/Navigation.cpp"
+#include "../Robot/Protocol.cpp"
+#include "../Robot/Robot.ino"
 void command(const char* text) { char line[96]; strcpy(line,text); processCommand(line); }
 void feed(const std::string& text) {
   for(char c:text) Serial.input.push_back(c);

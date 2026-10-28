@@ -1,7 +1,7 @@
 #include <cassert>
 #include <iostream>
-#include "../src/MyRobot-V2/Robot.h"
-#include "../src/MyRobot-V2/Sensors.cpp"
+#include "../Robot/Robot.h"
+#include "../Robot/Sensors.cpp"
 void pulse(uint8_t sensor, uint32_t width) {
   levels[echoPins[sensor]] = HIGH; captureEcho(sensor);
   extraUs += width; levels[echoPins[sensor]] = LOW; captureEcho(sensor);

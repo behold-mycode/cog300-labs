@@ -1,5 +1,12 @@
-# Team documentation
+# Documentation
 
-Keep shared references and team agreements here. Store dated meeting notes under `meetings/` when needed.
+- [Controller setup](../controller/README.md)
+- [Autonomous modes and tuning](autonomous-modes.md)
+- [Serial protocol](protocol.md)
+- [Wiring and battery transition](front-right-wiring.md)
+- [Power reference](programming-and-wiring.md)
+- [Hardware test checklist](test-plan.md)
+- [Results worksheet](test-results.csv)
 
-At the first meeting, record team members, responsibilities, communication channels, and the review/submission process. Keep lab-specific notes in the relevant lab folder.
+Keep shared notes in this folder. Active code stays in the root-level `Robot/`
+and `controller/` folders. See [the project README](../README.md) to get started.

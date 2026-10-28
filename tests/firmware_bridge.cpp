@@ -1,12 +1,12 @@
 // Deterministic host serial transport around the actual firmware.
 #include <iostream>
 #include <sstream>
-#include "../src/MyRobot-V2/Robot.h"
-#include "../src/MyRobot-V2/Motor.cpp"
-#include "../src/MyRobot-V2/Sensors.cpp"
-#include "../src/MyRobot-V2/Navigation.cpp"
-#include "../src/MyRobot-V2/Protocol.cpp"
-#include "../src/MyRobot-V2/MyRobot-V2.ino"
+#include "../Robot/Robot.h"
+#include "../Robot/Motor.cpp"
+#include "../Robot/Sensors.cpp"
+#include "../Robot/Navigation.cpp"
+#include "../Robot/Protocol.cpp"
+#include "../Robot/Robot.ino"
 int front = 100, right = 20;
 void step() {
   acceptReading(0,front,front > 0 ? front * 58UL : 0);
