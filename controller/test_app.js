@@ -12,8 +12,8 @@ function element(id) {
     focus(){}, click(){}, closest(){return null;}};
 }
 const buttons = ['MANUAL','FOLLOW','WALL'].map(mode => Object.assign(element(mode),{dataset:{mode}}));
-element('settingsForm').elements = Object.fromEntries(['power','minimum','followCm','wallCm','invertLeft','invertRight'].map(k=>[k,element(k)]));
-let state = {connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertLeft:false,invertRight:true,followCm:20,wallCm:20},telemetry:{},log:[]};
+element('settingsForm').elements = Object.fromEntries(['power','minimum','followCm','wallCm','invertA','invertB'].map(k=>[k,element(k)]));
+let state = {connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertA:true,invertB:false,followCm:20,wallCm:20},telemetry:{},log:[]};
 const document = {getElementById:element, querySelectorAll:()=>buttons, createElement:()=>element('new'),
   hasFocus:()=>true, hidden:false, addEventListener:(name,fn)=>events['doc:'+name]=fn};
 const context = vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},

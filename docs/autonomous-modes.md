@@ -30,11 +30,11 @@ Wheel reversal inserts a 250 ms unpowered interval. Repeated requests do not res
 After resetting the board, at 115200 baud / Newline:
 
 ```text
-CONFIG 255 255 0 1 20 20
+CONFIG 255 255 1 0 20 20
 MODE FOLLOW
 STOP
 MODE WALL
 STOP
 ```
 
-For a battery tuning trial, a **starting example**, not a verified calibration, is `CONFIG 150 80 0 1 20 20`. Increase the minimum if the wheels stall; reduce output or gain if control overshoots. Gain/deadband/range/turn constants are grouped in `Robot.h`. Keep the current signal wiring; follow the battery wiring guide before changing the supply.
+For a battery tuning trial, a **starting example**, not a verified calibration, is `CONFIG 150 80 1 0 20 20`. Increase the minimum if the wheels stall; reduce output or gain if control overshoots. Gain/deadband/range/turn constants are grouped in `Robot.h`. Keep the current signal wiring; follow the battery wiring guide before changing the supply.

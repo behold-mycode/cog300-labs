@@ -65,7 +65,7 @@ void processCommand(char* line) {
     Serial.println(F("HELLO opens 500ms watchdog session; HEARTBEAT keeps it alive."));
     Serial.println(F("DRIVE left right (-255..255; session required)"));
     Serial.println(F("MODE MANUAL|FOLLOW|WALL; TEST left right ms (1..5000)"));
-    Serial.println(F("CONFIG power minimum invertLeft invertRight followCm wallCm"));
+    Serial.println(F("CONFIG power minimum invertA invertB followCm wallCm"));
     Serial.println(F("Example: CONFIG 255 255 0 1 20 20; power 1..255, minimum 0..power"));
     Serial.println(F("LOG ON|OFF; STATUS. DATA,ms,mode,state,front_cm,right_cm,left_pwm,right_pwm"));
     return;
@@ -82,7 +82,7 @@ void processCommand(char* line) {
         !number(args[3], 0, 1, c) || !number(args[4], 0, 1, d) ||
         !number(args[5], 5, 100, e) || !number(args[6], 5, 80, f)) { invalid(); return; }
     stopRobot(); settleMotor(); settings.power = a; settings.minimum = b;
-    settings.invertLeft = c; settings.invertRight = d;
+    settings.invertA = c; settings.invertB = d;
     settings.followCm = e; settings.wallCm = f;
     Serial.println(F("OK CONFIG")); return;
   }

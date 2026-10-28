@@ -31,7 +31,7 @@ The main page contains a port selector and Connect, a large keyboard-control
 area with a stop button and concise status, and side buttons for Manual,
 Follow object, and Follow right wall. Show front/right distances. Put power,
 target distances, and independent wheel inversion under Settings. Default power
-is 255, left inversion false, right inversion true. Settings changes stop motion.
+is 255, motor A inversion true, motor B inversion false. Settings changes stop motion.
 No enable step, preset dashboard, trim multipliers, or permanent log console.
 Provide log download and a small expandable diagnostics view.
 

@@ -53,3 +53,11 @@ python3 controller.py --demo
 ```
 
 Demo simulates protocol responses and telemetry only; it does not simulate robot physics or validate the autonomous algorithms.
+
+Motor direction calibration: the former “Reverse left wheel” checkbox controlled
+channel A, which drives this car’s right wheel; the former right checkbox controlled
+B, which drives its left wheel. Settings now name both the channel and wheel.
+Defaults preserve the observed working polarity: A reversed, B normal. Firmware
+maps logical left/right drive requests to B/A, so spins, curves and autonomous
+steering use the same physical directions. Restart the controller and upload the
+updated firmware together after this calibration change.

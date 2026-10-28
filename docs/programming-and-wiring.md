@@ -25,4 +25,4 @@ Sources: [course power instructions](https://cogs-300.github.io/labs/lab03#2-pro
 
 ## Software calibration
 
-The [browser controller](../controller/README.md) exposes independent left/right inversion and maximum PWM. Default power is 255, left inversion off, right inversion on. Confirm the actual wheel direction using bounded individual-wheel tests; see the [hardware test checklist](test-plan.md). Use [protocol.md](protocol.md) for current commands. The old proposed pin map and starter-code review are available in Git history.
+The [browser controller](../controller/README.md) exposes independent motor A/B inversion and maximum PWM. Default power is 255, motor A inversion on, motor B inversion off. Confirm the actual wheel direction using bounded individual-wheel tests; see the [hardware test checklist](test-plan.md). Use [protocol.md](protocol.md) for current commands. The old proposed pin map and starter-code review are available in Git history.

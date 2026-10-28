@@ -4,7 +4,7 @@ import math
 import secrets
 import time
 
-DEFAULTS = dict(power=255, minimum=255, invertLeft=False, invertRight=True,
+DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
                 followCm=20, wallCm=20)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
 MODES = {'MANUAL', 'FOLLOW', 'WALL'}
@@ -13,14 +13,14 @@ BROWSER_TIMEOUT = .6
 
 def validate_settings(values):
     if not isinstance(values, dict) or set(values) != set(DEFAULTS):
-        raise ValueError('Settings must include power, minimum, directions and both distances.')
+        raise ValueError('Settings must include power, minimum, motor A/B directions and both distances.')
     for name, low, high in [('power', 1, 255), ('minimum', 0, 255),
                             ('followCm', 5, 100), ('wallCm', 5, 80)]:
         if type(values[name]) is not int or not low <= values[name] <= high:
             raise ValueError(f'{name} must be an integer from {low} to {high}.')
     if values['minimum'] > values['power']:
         raise ValueError('Minimum moving PWM cannot exceed power.')
-    if any(type(values[name]) is not bool for name in ('invertLeft', 'invertRight')):
+    if any(type(values[name]) is not bool for name in ('invertA', 'invertB')):
         raise ValueError('Wheel reversal settings must be true or false.')
     return values.copy()
 
@@ -106,7 +106,7 @@ class RobotLink:
     def _config(self):
         s = self.settings
         self._send('CONFIG %d %d %d %d %d %d' % (
-            s['power'], s['minimum'], s['invertLeft'], s['invertRight'], s['followCm'], s['wallCm']))
+            s['power'], s['minimum'], s['invertA'], s['invertB'], s['followCm'], s['wallCm']))
 
     def configure(self, owner, seq, settings):
         settings = validate_settings(settings)

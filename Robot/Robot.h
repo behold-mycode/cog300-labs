@@ -15,7 +15,7 @@ const float FOLLOW_MAX_CM = 150.0f, WALL_MAX_CM = 100.0f;
 struct Settings {
   int power = 255;
   int minimum = 255; // Lower this along with power when switching to batteries.
-  bool invertLeft = false, invertRight = true;
+  bool invertA = true, invertB = false; // User-tested forward polarity: A reversed, B normal.
   int followCm = 20, wallCm = 20;
 };
 enum Mode { MANUAL, FOLLOW, WALL };

@@ -16,7 +16,7 @@ Send one command at a time and observe the indicated wheel. Commands stop after 
 | Moving left / right | `TEST 127 255 500` / `TEST 255 127 500` |
 | Spin left / right | `TEST -255 255 500` / `TEST 255 -255 500` |
 
-`CONFIG 255 255 0 1 20 20` restores full power and the current inversion defaults. Change only the corresponding inversion flag if that wheel is backward. Reversal has a 250 ms unpowered interval. Verify on the raised car before running on the floor.
+`CONFIG 255 255 1 0 20 20` restores full power and the current inversion defaults. Change only the corresponding inversion flag if that wheel is backward. Reversal has a 250 ms unpowered interval. Verify on the raised car before running on the floor.
 
 ## 2. Keyboard controller
 

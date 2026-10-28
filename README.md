@@ -19,14 +19,14 @@ UNO R4 WiFi + L298N + front/right HC-SR04 sensors. **Use `Robot` and the browser
 - Settings: maximum PWM, minimum object-follow PWM, independent wheel inversion, and separate target distances.
 - Leaving the window, opening/editing settings, or losing the connection stops movement. New input is required to resume.
 
-Maximum and minimum moving PWM default to **255**. Default inversion is left off/right on. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
+Maximum and minimum moving PWM default to **255**. Default inversion is motor A on / motor B off, matching the user-tested forward direction. Channel A drives the right wheel and B the left. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
 
 ## Wiring — unchanged by this cleanup
 
 | UNO R4 pin | Connection |
 | --- | --- |
-| D5 / D6 / D7 | L298N ENA / IN1 / IN2 (left) |
-| D8 / D9 / D10 | L298N IN3 / IN4 / ENB (right) |
+| D5 / D6 / D7 | L298N ENA / IN1 / IN2 (right wheel) |
+| D8 / D9 / D10 | L298N IN3 / IN4 / ENB (left wheel) |
 | A0 / A1 | Front TRIG / ECHO |
 | A2 / A3 | Right TRIG / ECHO |
 | D11 | Green LED via resistor |
