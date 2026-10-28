@@ -1,42 +1,41 @@
-# Lab 3 test procedure
+# Hardware verification checklist
 
-Use the Mac controller described in [controller/README.md](controller/README.md). This framework demonstrates the lab concepts, but physical results must be observed and recorded.
+Software tests are not physical results. Record observed behavior and configuration in `test-results.csv`; all new hardware trials remain NOT TESTED until performed.
 
-## Bench checks
+## 1. Pins, wheel polarity and power
 
-With power disconnected, secure the previously disconnected motor wire and check all terminals. Raise the wheels. Wire the [sensor and LEDs](obstacle-sensor.md), place a broad target 50–100 cm ahead so green lights, and upload firmware 3, close Serial Monitor, connect the GUI and enable controls. Start with left/right trim 100/100. Use **Wheels (F1)** to test left and right separately. Confirm that each would propel the chassis forward. Correct an individual direction with its Reverse direction checkbox, Apply, and enable again.
+Keep current [wiring](front-right-wiring.md), secure loose wires, and raise the wheels. Upload the complete V2 sketch. Use Serial Monitor at **115200 baud / Newline**, after resetting the board (no GUI session).
 
-Use Space to stop during a Wheels test; verify no later step starts. Changing settings, disconnecting, closing the app or switching to another application should stop/cancel and disable control. Verify this first with raised wheels. The firmware also enforces a 500 ms controller heartbeat timeout, tested in simulation; any physical connection-loss demonstration should keep the wheels raised and preserve board power only through the already-validated supply arrangement.
+Send one command at a time and observe the indicated wheel. Commands stop after 500 ms of actual output. `STOP` cancels immediately.
 
-## Required movements
-
-After directions are confirmed, demonstrate these on the floor with enough room for the USB lead:
-
-| Preset / hotkey | Expected observations |
+| Trial | Command |
 | --- | --- |
-| Straight / F2 | Forward then reverse; record drift |
-| Turns / F3 | Left and right moving curves; inner wheel has half nominal PWM |
-| Spins / F4 | Left and right in-place rotation with opposite wheel directions |
-| Full lab / F5 | Wheels, Straight, Turns and Spins in sequence |
+| Left forward / reverse | `TEST 255 0 500` / `TEST -255 0 500` |
+| Right forward / reverse | `TEST 0 255 500` / `TEST 0 -255 500` |
+| Forward / reverse | `TEST 255 255 500` / `TEST -255 -255 500` |
+| Moving left / right | `TEST 127 255 500` / `TEST 255 127 500` |
+| Spin left / right | `TEST -255 255 500` / `TEST 255 -255 500` |
 
-Each step uses displayed PWM/duration. Initial values are PWM 255 and 500 ms, with a 1-second stopped gap and a 250 ms settling period when beginning a new movement. Full lab has eight steps. Stop and cancellation must work at every stage. Function keys may require Fn on a Mac; buttons perform the same tests.
+`CONFIG 255 255 0 1 20 20` restores full power and the current inversion defaults. Change only the corresponding inversion flag if that wheel is backward. Reversal has a 250 ms unpowered interval. Verify on the raised car before running on the floor.
 
-## Repeatability
+## 2. Keyboard controller
 
-Perform three trials with the same power source, surface, PWM, trim, inversion flags and test duration. Record conditions and actual behavior in `test-results.csv`; use the name column to match GUI log descriptions. The existing sheet also has isolated reverse-wheel rows from the earlier ten-step suite; mark those NOT TESTED unless run separately. Do not replace already-recorded measurements with assumed outcomes.
+Close Serial Monitor, launch the controller, select the port and Connect. No Enable step is needed.
 
-Save the serial log using Save log. Each test has a request ID and board start/completion acknowledgment. Completion means the command ran to its deadline, not that wheels rotated or distance/angle targets were met. Pick a straight-line drift tolerance before measuring repeated forward runs against a marked line.
+- Hold/release each arrow or WASD key. Verify release stops, diagonals curve and opposing directions stop.
+- While driving, Space/Esc must stop and require a fresh press.
+- Switch windows/tabs and open/edit Settings: motion must stop.
+- Apply wheel inversion/power changes while stopped; verify the new output.
+- Close the page or interrupt Python: verify the browser/firmware watchdog stops the wheels. Reconnect must not resume prior movement.
 
-## Calibration
+## 3. Sensors and modes
 
-The user identified a disconnected wire as the likely cause of left-wheel failure. Retest after fixing it before applying compensation. At PWM 255 a weak right motor cannot be boosted further by software. Check friction, wiring and supply if either is weak alone. If both run well but differ in speed, reduce the faster wheel's trim in small increments; too much reduction may fall below its starting threshold.
+Place a broad target in front and a flat wall to the right. Compare displayed distances with a ruler. Disconnect/misalign one sensor at a time; its reading must become unavailable, without corrupting the other sensor.
 
-Use the visible settings and log to record actual PWM and reversal flags. Apply stops the car and requires re-enabling controls. Settings are sent on connection but not saved across app restarts. Recheck on the floor under load. These are open-loop PWM commands, not measured wheel speed; no encoders are used.
+- Follow object: test farther than target, deadband and closer than target. Verify both wheels move together, including reverse when too close. Move target out of range: output stops.
+- Follow wall: test too far/too close to wall. Verify steering direction. Bring a front obstruction within 20 cm: left turn; clearance ≥25 cm: resume wall tracking.
+- Keep front blocked: stop and exit after 2.5 seconds. Missing wall or invalid required sensor: hold stopped.
+- Space/Esc and window switching cancel both autonomous modes.
+- Repeat after reducing maximum and minimum PWM for battery trials, using the [power guide](programming-and-wiring.md) before changing wiring.
 
-## Demonstration and submission
-
-Show the controller and robot, name the test, and show observed outcomes. Include a cancellation and the calibration performed. Explain relevant limits such as USB motor power, drift and coasting stop. Complete the video, repository link/usage instructions, BOM, circuit diagram and team agreement according to [Lab 3](https://cogs-300.github.io/labs/lab03#7-robust-testing-homework).
-
-## Front obstacle protection
-
-Run the manual, automatic, reverse-escape, LED and sensor-fault checks in the [obstacle sensor guide](obstacle-sensor.md#bench-and-floor-checks). Record actual coasting distance before approving the stop threshold.
+Record oscillation, wheel stalls, overshoot, sensor dropouts and actual stop distance. Tune gains/power based on measurements. Do not mark a physical trial passed merely because TEST_DONE or a software test appears.

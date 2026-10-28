@@ -1,6 +1,6 @@
 # Rebuild: front and right ultrasonic sensors
 
-Updated 2026-10-21. Target: UNO R4 WiFi, common L298N module and two standard 5 V HC-SR04 sensors. This is a connection schematic, not a physical breadboard layout. Confirm component labels before connecting.
+Signal wiring unchanged as of 2026-10-28. Target: UNO R4 WiFi, common L298N module and two standard 5 V HC-SR04 sensors. This is a connection schematic, not a physical breadboard layout. Confirm component labels before connecting.
 
 ## Complete diagrams
 
@@ -41,9 +41,11 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 | Green LED cathode | GND |
 | Uno GND | Both sensors, green LED return and L298N GND |
 
-Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid front reading at any accepted distance; off means invalid or missing. In MANUAL, sensor readings do not stop motion. Autonomous modes use their own distance-stop rules; see [P-control modes](autonomous-modes.md).
+Remove the ENA and ENB caps for PWM. These are different from the 5V-EN regulator jumper. Remove the red LED, its resistor and its old D12 wire. D12 is now unused. Green remains on D11. Green on means a valid front reading at any accepted distance; off means invalid or missing. In MANUAL, sensor readings do not stop motion. Autonomous modes use their own distance-stop rules; see [autonomous modes](autonomous-modes.md).
 
-## Rebuild sequence
+## Historical rebuild sequence (2026-10-21)
+
+The software cleanup does not require repeating this rewiring. These steps document the earlier transition.
 
 1. Disconnect USB and any motor supply. Rewire using the table below; this revision changes sensor AND motor pins. Do not run the new firmware on the old wiring.
 
