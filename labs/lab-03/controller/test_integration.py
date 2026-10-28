@@ -1,85 +1,70 @@
-"""Run against the real sketch compiled for host I/O, not a duplicate firmware model."""
+"""Run RobotLink against host-compiled production firmware via a serial adapter."""
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from controller_core import Controller
+from robot_link import RobotLink
+
+
+class FirmwareSerial:
+    def __init__(self, binary):
+        self.proc = subprocess.Popen([binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        self.pending = bytearray(); self.state = (0, 0)
+    def exchange(self, command):
+        self.proc.stdin.write(command + '\n'); self.proc.stdin.flush()
+        while True:
+            line = self.proc.stdout.readline().strip()
+            if line == '@end': return
+            if not line: raise RuntimeError('Firmware bridge exited unexpectedly')
+            if line.startswith('@state '): self.state = tuple(map(int, line.split()[1:]))
+            else: self.pending.extend((line + '\n').encode())
+    def write(self, data): self.exchange(data.decode().strip()); return len(data)
+    @property
+    def in_waiting(self): return len(self.pending)
+    def read(self, count):
+        result = bytes(self.pending[:count]); del self.pending[:count]; return result
+    def close(self): pass  # Keep test process alive for assertions after disconnect.
+    def finish(self):
+        self.proc.stdin.close(); self.proc.wait(timeout=3); self.proc.stdout.close()
+
 
 class IntegrationTests(unittest.TestCase):
-    def test_full_controller_to_firmware_protocol(self):
+    def test_controller_to_real_firmware(self):
         lab = Path(__file__).resolve().parent.parent
         with tempfile.TemporaryDirectory() as directory:
-            binary = str(Path(directory)/'bridge')
-            subprocess.run(['c++','-std=c++11','-I',str(lab/'tests'),str(lab/'tests/firmware_bridge.cpp'),'-o',binary],check=True)
-            proc = subprocess.Popen([binary],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+            binary = str(Path(directory) / 'bridge')
+            subprocess.run(['c++', '-std=c++11', '-Wall', '-Wextra', '-Werror', '-I', str(lab/'tests'),
+                            str(lab/'tests/firmware_bridge.cpp'), '-o', binary], check=True)
+            wire = FirmwareSerial(binary)
             try:
-                now = 0.0
-                tx,rx=[],[]
-                state=(0,0)
-                def exchange(command):
-                    nonlocal state
-                    proc.stdin.write(command+'\n');proc.stdin.flush()
-                    while True:
-                        line=proc.stdout.readline().strip()
-                        if line=='@end':return
-                        if line.startswith('@state '):state=tuple(map(int,line.split()[1:]))
-                        else:rx.append(line)
-                c=Controller(tx.append,lambda:now)
-                c.connect()
-                def step(milliseconds=25):
-                    nonlocal now
-                    now+=milliseconds/1000
-                    exchange(f'@tick {milliseconds}')
-                    while rx:c.receive(rx.pop(0))
-                    c.tick()
-                    while tx:exchange(tx.pop(0))
-                    while rx:c.receive(rx.pop(0))
-                for _ in range(100):step()
-                self.assertTrue(c.ready)
-                c.enable();c.press('Up')
-                for _ in range(60):step()
-                self.assertEqual(state,(255,255))
-                c.release('Up');step();self.assertEqual(state,(0,0))
-                c.start_test('Full lab')
-                for _ in range(650):step()
-                self.assertIsNone(c.plan)
-                self.assertEqual(c.step,8)
-                self.assertEqual(state,(0,0))
-                c.press('Up')
-                for _ in range(20):step()
-                self.assertEqual(state,(255,255))
-                # A real firmware obstacle event stops held keys and cancels the GUI plan.
-                exchange('@distance 10'); step()
-                self.assertEqual(state, (0, 0))
-                self.assertFalse(c.keys)
-                self.assertIn('Up', c.blocked)
-                c.start_test('Full lab')
-                for _ in range(20): step()
-                self.assertIsNone(c.plan)
-                self.assertEqual(state, (0, 0))
-                c.release('Up'); c.press('Down')
-                for _ in range(20): step()
-                self.assertEqual(state, (255, 255))
-                c.release('Down'); step()
-                exchange('@distance 50')
-                for _ in range(20): step()
-                self.assertEqual(state, (0, 0))
-                c.start_test('Full lab')
-                for _ in range(12): step()
-                self.assertNotEqual(state, (0, 0))
-                exchange('@distance 10'); step()
-                self.assertIsNone(c.plan)
-                self.assertEqual(state, (0, 0))
-                exchange('@distance 50')
-                for _ in range(20): step()
-                c.press('Up')
-                for _ in range(20): step()
-                self.assertEqual(state, (255, 255))
-                exchange('@tick 501') # Simulate frozen application: no heartbeat or tick on host.
-                self.assertEqual(state,(0,0))
-                while rx:c.receive(rx.pop(0))
-                self.assertFalse(c.ready)
-            finally:
-                proc.stdin.close();proc.wait(timeout=3);proc.stdout.close()
+                now = 0.; seq = 0
+                link = RobotLink(clock=lambda: now, serial_factory=lambda port: wire)
+                owner = link.connect('test')
+                def steps(count=1, keys=None, mode='MANUAL'):
+                    nonlocal now, seq
+                    for _ in range(count):
+                        now += .05; seq += 1
+                        link.frame(owner, seq, keys or [], mode)
+                        wire.exchange('@tick 50'); link.tick()
+                steps(50); self.assertTrue(link.ready)
+                steps(10, ['Up']); self.assertEqual(wire.state, (255,255))
+                wire.exchange('@distance -1 -1')
+                steps(5, ['Up']); self.assertEqual(wire.state, (255,255))
+                steps(5); self.assertEqual(wire.state, (0,0))
+                wire.exchange('@distance 35 20')
+                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(255,255))
+                wire.exchange('@distance 15 20')
+                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(-255,-255))
+                wire.exchange('@distance -1 20')
+                steps(3, mode='FOLLOW'); self.assertEqual(wire.state,(0,0))
+                wire.exchange('@distance 50 30')
+                steps(10, mode='WALL'); self.assertGreater(wire.state[0],wire.state[1])
+                steps(3); self.assertEqual(wire.state,(0,0))
+                steps(10, ['Up']); self.assertEqual(wire.state,(255,255))
+                wire.exchange('@tick 501')  # Entire host freezes, including heartbeat worker.
+                self.assertEqual(wire.state,(0,0))
+                link.tick(); self.assertFalse(link.ready)
+                wire.exchange('DRIVE 255 255'); self.assertEqual(wire.state,(0,0))
+            finally: wire.finish()
 
-if __name__=='__main__':unittest.main()
+if __name__ == '__main__': unittest.main()

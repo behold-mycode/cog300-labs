@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1460" viewBox="0 0 1500 1460"><rect width="1500" height="1460" fill="#f4f7fa"/><style>text{font-family:Arial,sans-serif;fill:#183044} .title{font-size:34px;font-weight:700} .head{font-size:24px;font-weight:700} .body{font-size:21px} .small{font-size:18px}</style>
+<text x="50" y="55" class="title">COG300 • Front + right ultrasonic wiring</text>
+<text x="50" y="92" class="body">UNO R4 WiFi / two standard 5 V HC-SR04 sensors / L298N • 21 Oct 2026</text>
+<text x="50" y="126" class="small">Connection schematic: follow printed pin names, not the physical positions drawn below.</text>
+<rect x="50" y="160" width="400" height="580" rx="14" fill="#e5f2f1" stroke="#b5c6d3" stroke-width="2"/>
+<text x="75" y="200" class="head">UNO R4 WiFi</text>
+<text x="75" y="232" class="small">Main headers (5 V logic)</text>
+<rect x="1000" y="160" width="450" height="280" rx="14" fill="#fff" stroke="#b5c6d3" stroke-width="2"/>
+<text x="1025" y="200" class="head">FRONT HC-SR04</text>
+<text x="1025" y="232" class="small">Face forward; keep existing connections</text>
+<text x="345" y="277" class="body">5V</text>
+<path d="M450 270 L1000 270" stroke="#c2410c" stroke-width="4" fill="none"/>
+<text x="650" y="260" class="small">5 V rail</text>
+<text x="1025" y="277" class="body">VCC</text>
+<text x="345" y="322" class="body">D4</text>
+<path d="M450 315 L1000 315" stroke="#a16b00" stroke-width="4" fill="none"/>
+<text x="650" y="305" class="small">Trigger →</text>
+<text x="1025" y="322" class="body">TRIG</text>
+<text x="345" y="367" class="body">D2</text>
+<path d="M450 360 L1000 360" stroke="#7046b0" stroke-width="4" fill="none"/>
+<text x="650" y="350" class="small">← Echo / interrupt</text>
+<text x="1025" y="367" class="body">ECHO</text>
+<text x="345" y="412" class="body">GND</text>
+<path d="M450 405 L1000 405" stroke="#344554" stroke-width="4" fill="none"/>
+<text x="650" y="395" class="small">Ground rail</text>
+<text x="1025" y="412" class="body">GND</text>
+<rect x="1000" y="460" width="450" height="280" rx="14" fill="#fff" stroke="#b5c6d3" stroke-width="2"/>
+<text x="1025" y="500" class="head">RIGHT HC-SR04 — NEW</text>
+<text x="1025" y="532" class="small">Face right, 90° to the front sensor</text>
+<text x="345" y="577" class="body">5V</text>
+<path d="M450 570 L1000 570" stroke="#c2410c" stroke-width="4" fill="none"/>
+<text x="650" y="560" class="small">5 V rail</text>
+<text x="1025" y="577" class="body">VCC</text>
+<text x="345" y="622" class="body">A0</text>
+<path d="M450 615 L1000 615" stroke="#a16b00" stroke-width="4" fill="none"/>
+<text x="650" y="605" class="small">Trigger →</text>
+<text x="1025" y="622" class="body">TRIG</text>
+<text x="345" y="667" class="body">D3</text>
+<path d="M450 660 L1000 660" stroke="#7046b0" stroke-width="4" fill="none"/>
+<text x="650" y="650" class="small">← Echo / interrupt</text>
+<text x="1025" y="667" class="body">ECHO</text>
+<text x="345" y="712" class="body">GND</text>
+<path d="M450 705 L1000 705" stroke="#344554" stroke-width="4" fill="none"/>
+<text x="650" y="695" class="small">Ground rail</text>
+<text x="1025" y="712" class="body">GND</text>
+<text x="75" y="725" class="small">A0 used as a digital output</text>
+<rect x="50" y="770" width="680" height="250" rx="14" fill="#fff" stroke="#b5c6d3" stroke-width="2"/>
+<text x="75" y="810" class="head">Existing motors + LEDs</text>
+<text x="75" y="845" class="small">D9 → ENA     D8 → IN1     D7 → IN2</text>
+<text x="75" y="873" class="small">D10 → ENB   D6 → IN3     D5 → IN4</text>
+<text x="75" y="901" class="small">OUT1 / OUT2 → left motor; OUT3 / OUT4 → right</text>
+<text x="75" y="929" class="small">D11 → 1 kΩ → green LED anode (+)</text>
+<text x="75" y="957" class="small">D12 → 1 kΩ → red LED anode (+)</text>
+<text x="75" y="985" class="small">Both LED cathodes (−) → GND</text>
+<rect x="760" y="770" width="690" height="250" rx="14" fill="#fff" stroke="#b5c6d3" stroke-width="2"/>
+<text x="785" y="810" class="head">Shared power + assembly</text>
+<text x="785" y="845" class="small">Uno 5V → +5 V rail → both sensor VCC pins</text>
+<text x="785" y="873" class="small">Uno GND → ground rail → both sensor GND pins</text>
+<text x="785" y="901" class="small">Ground rail → L298N GND + both LED cathodes</text>
+<text x="785" y="929" class="small">Use short sensor wires; bridge any split breadboard rails.</text>
+<text x="785" y="957" class="small">Remove ENA / ENB caps for PWM control.</text>
+<text x="785" y="985" class="small">Power off USB and motor supply before rewiring.</text>
+<rect x="50" y="1050" width="1400" height="225" rx="14" fill="#fff4de" stroke="#b5c6d3" stroke-width="2"/>
+<text x="75" y="1090" class="head">Battery transition — planned, not ready to connect</text>
+<text x="75" y="1128" class="body">Replace ONLY the Uno 5V → L298N VS motor-supply wire when adding a rated motor battery.</text>
+<text x="75" y="1157" class="body">Battery + → suitable fuse / switch → L298N VS; battery − → L298N GND / common ground.</text>
+<text x="75" y="1186" class="body">Keep sensors on regulated 5 V. Never connect raw battery + to sensor VCC or Arduino 5V.</text>
+<text x="75" y="1215" class="body">With the existing external-5V logic arrangement: 5V-EN removed; Uno 5V still feeds L298N logic 5V.</text>
+<text x="75" y="1244" class="body">Battery voltage, motor rating and exact driver module must be confirmed before choosing power wiring.</text>
+<text x="50" y="1320" class="head">Firmware status: V2 currently measures FRONT only. Right sensor needs a separate software update.</text>
+<text x="50" y="1355" class="small">Leave right VCC disconnected until dual-sensor firmware is installed. Future firmware must alternate pings.</text>
+<text x="50" y="1388" class="small">Current rebuild: keep the verified USB power arrangement. Fully battery-powered Arduino supply is still to be designed.</text>
+<text x="50" y="1422" class="small">Source links, rebuild sequence and complete pin table: ../front-right-wiring.md</text>
+</svg>

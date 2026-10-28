@@ -6,13 +6,18 @@
 #include <deque>
 #include <string>
 #include <sstream>
+#define A0 14
+#define A1 15
+#define A2 16
+#define A3 17
 #define HIGH 1
 #define LOW 0
 #define OUTPUT 1
 #define F(x) x
 static uint32_t nowMs = 0;
 static int modes[20] = {}, levels[20] = {}, pwm[20] = {};
-inline uint32_t millis() { return nowMs; }
+static uint32_t millisStep = 0;
+inline uint32_t millis() { uint32_t value = nowMs; nowMs += millisStep; return value; }
 inline void pinMode(int pin, int mode) { modes[pin] = mode; }
 inline void digitalWrite(int pin, int value) { levels[pin] = value; }
 inline void analogWrite(int pin, int value) { pwm[pin] = value; }
@@ -36,3 +41,4 @@ inline int digitalPinToInterrupt(int pin) { return pin; }
 inline void attachInterrupt(int, void (*)(), int) {}
 inline void noInterrupts() {}
 inline void interrupts() {}
+template<class T> inline T constrain(T x, T low, T high) { return x < low ? low : x > high ? high : x; }
