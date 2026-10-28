@@ -1,6 +1,6 @@
 # Programming and power reference
 
-The working sketch is [MyRobot-V2](src/MyRobot-V2/), protocol 4. The signal pin mapping is documented in the [current wiring guide](front-right-wiring.md), with motors on D5–D10 and sensors on A0–A3. No signal pins change in the controller cleanup.
+The working sketch is [Robot](../Robot/), protocol 4. The signal pin mapping is documented in the [current wiring guide](front-right-wiring.md), with motors on D5–D10 and sensors on A0–A3. No signal pins change in the controller cleanup.
 
 ## Power: course USB bench-test arrangement
 
@@ -25,4 +25,4 @@ Sources: [course power instructions](https://cogs-300.github.io/labs/lab03#2-pro
 
 ## Software calibration
 
-The [browser controller](controller/README.md) exposes independent left/right inversion and maximum PWM. Default power is 255, left inversion off, right inversion on. Confirm the actual wheel direction using bounded individual-wheel tests; see the [hardware test checklist](test-plan.md). Use [protocol.md](protocol.md) for current commands. The old proposed pin map and starter-code review are available in Git history.
+The [browser controller](../controller/README.md) exposes independent left/right inversion and maximum PWM. Default power is 255, left inversion off, right inversion on. Confirm the actual wheel direction using bounded individual-wheel tests; see the [hardware test checklist](test-plan.md). Use [protocol.md](protocol.md) for current commands. The old proposed pin map and starter-code review are available in Git history.

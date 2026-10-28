@@ -5,7 +5,7 @@
 **Goal:** Simplify keyboard control and provide maintainable object/wall following.
 **Architecture:** Python loopback HTTP/serial bridge, browser keyboard interface, modular Arduino firmware with a single motor-output owner.
 **Tech Stack:** Python 3.9+, pyserial 3.5, vanilla HTML/CSS/JS, Arduino C++ (UNO R4 WiFi).
-**Spec:** ../specs/2026-10-28-robot-cleanup-design.md
+**Spec:** cleanup-design.md
 
 ## Global Constraints
 Preserve pins D5–D10, A0–A3, D11; PWM maximum/default 255; separate manual/follow/wall modes; 500 ms firmware watchdog; 2 Hz readable telemetry; no Tk. Preserve untracked backups/diagnostics.

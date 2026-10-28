@@ -136,7 +136,7 @@ class RobotLink:
             self.phase = 'Applying settings'; self.last_rx = self.clock()
             self._config()
         elif line.startswith('ROBOT_READY ') and line != 'ROBOT_READY 4':
-            self.disconnect('Upload MyRobot-V2 firmware 4, then reconnect.')
+            self.disconnect('Upload Robot firmware 4, then reconnect.')
         elif line == 'OK CONFIG' and self.phase == 'Applying settings':
             self.ready = True; self.phase = 'Connected — hold arrows or WASD'
             self.last_rx = self.clock()

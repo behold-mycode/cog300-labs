@@ -4,7 +4,8 @@
 
 - Repository: `cog300-labs`.
 - Default branch: `main`.
-- Lab folders: `labs/lab-03/`, `labs/lab-04/`, etc., matching the course lab number.
+- Keep active robot files shallow: `Robot/`, `controller/`, `wiring/`, `docs/`, and `tests/`.
+- Put historical implementations in `archive/`; do not add nested lab/src/version folders for active code.
 - Work branches: `lab-03/short-description`; shared changes: `docs/short-description`.
 - Files: lowercase words separated by hyphens where practical.
 - Meeting notes: `docs/meetings/YYYY-MM-DD.md`.

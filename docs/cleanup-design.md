@@ -44,7 +44,7 @@ checks firmware compatibility before accepting motion commands.
 
 ## Firmware organization
 
-Keep MyRobot-V2 as the working sketch. Use clearly named modules for configuration,
+Keep Robot as the working sketch. Use clearly named modules for configuration,
 motor output, sensors, navigation, protocol, and telemetry. Keep main setup/loop
 short. Remove old single-letter command aliases, duplicated test scheduling,
 obsolete obstacle-stop code, and legacy GUI protocol paths. Replace affected

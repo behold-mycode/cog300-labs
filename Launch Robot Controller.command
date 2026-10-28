@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Double-click on macOS, or run from Terminal. No Tk installation is needed.
 set -e
-cd -- "${0:A:h}"
+cd -- "${0:A:h}/controller"
 trap 'print "\nLaunch failed. See the message above. Press Return to close."; read' ZERR
 if ! command -v python3 >/dev/null 2>&1; then
   print 'Python 3 is missing. Install Python 3.9 or newer from https://www.python.org/downloads/macos/ and run this launcher again.'

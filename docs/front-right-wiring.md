@@ -6,13 +6,13 @@ Signal wiring unchanged as of 2026-10-28. Target: UNO R4 WiFi, common L298N modu
 
 These replace the earlier separate sensor and motor diagrams as the current rebuild reference.
 
-![Complete robot wiring](diagrams/robot-complete-wiring.png)
+![Complete robot wiring](../wiring/robot-complete-wiring.png)
 
-[Full-size wiring SVG](diagrams/robot-complete-wiring.svg)
+[Full-size wiring SVG](../wiring/robot-complete-wiring.svg)
 
-![Two separate sensor breadboards](diagrams/robot-complete-breadboards.png)
+![Two separate sensor breadboards](../wiring/robot-complete-breadboards.png)
 
-[Full-size breadboard SVG](diagrams/robot-complete-breadboards.svg)
+[Full-size breadboard SVG](../wiring/robot-complete-breadboards.svg)
 
 ## Sensor connections
 
