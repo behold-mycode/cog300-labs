@@ -22,6 +22,10 @@ class LinkTests(unittest.TestCase):
         self.serial.feed('ROBOT_READY 4'); self.link.tick()
         self.serial.feed('OK CONFIG'); self.link.tick()
         self.assertTrue(self.link.ready)
+    def test_default_direction_calibration(self):
+        self.ready()
+        self.assertIn('CONFIG 255 255 1 0 20 12', self.serial.sent)
+
     def test_handshake_and_drive(self):
         self.ready(); self.link.frame(self.owner, 3, ['Up'], 'MANUAL'); self.now += .1; self.link.tick()
         self.assertIn('DRIVE 255 255', self.serial.sent)
@@ -44,7 +48,7 @@ class LinkTests(unittest.TestCase):
         self.link.frame(self.owner, 3, [], 'MANUAL'); self.link.tick()
         self.assertFalse(self.link.ready)
     def test_config_and_validation(self):
-        self.ready(); settings = dict(power=120, minimum=40, invertLeft=True, invertRight=False, followCm=25, wallCm=30)
+        self.ready(); settings = dict(power=120, minimum=40, invertA=True, invertB=False, followCm=25, wallCm=30)
         self.link.configure(self.owner, 3, settings)
         self.assertFalse(self.link.ready)
         self.assertIn('CONFIG 120 40 1 0 25 30', self.serial.sent)

@@ -29,3 +29,7 @@ venv/
 
 # JavaScript dependencies
 node_modules/
+
+# Launcher-managed Python/tooling and preserved unusable environments
+.runtime/
+.venv.old.*/

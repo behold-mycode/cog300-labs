@@ -2,6 +2,13 @@
 
 Signal wiring unchanged as of 2026-10-28. Target: UNO R4 WiFi, common L298N module and two standard 5 V HC-SR04 sensors. This is a connection schematic, not a physical breadboard layout. Confirm component labels before connecting.
 
+## Motor-side calibration (2026-10-28)
+
+Driving feedback showed that channel A (OUT1/OUT2) drives the right wheel and B
+(OUT3/OUT4) drives the left. The older diagram wheel-side labels predate this
+calibration; use the corrected table below. Pin numbers and connections have not
+changed. Polarity defaults are A reversed, B normal.
+
 ## Complete diagrams
 
 These replace the earlier separate sensor and motor diagrams as the current rebuild reference.
@@ -35,8 +42,8 @@ Mount the front sensor facing straight ahead. Mount the right sensor facing dire
 | --- | --- |
 | D5 / D6 / D7 | L298N ENA / IN1 / IN2 |
 | D8 / D9 / D10 | L298N IN3 / IN4 / ENB |
-| OUT1 + OUT2 | Left motor pair |
-| OUT3 + OUT4 | Right motor pair |
+| OUT1 + OUT2 | Right motor pair (channel A) |
+| OUT3 + OUT4 | Left motor pair (channel B) |
 | D11 | 1 kΩ resistor → green LED anode |
 | Green LED cathode | GND |
 | Uno GND | Both sensors, green LED return and L298N GND |

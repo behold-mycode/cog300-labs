@@ -1,0 +1,29 @@
+name: Robot checks
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python3 -m unittest discover -s controller -v
+      - run: node controller/test_app.js
+      - name: Firmware host tests
+        run: |
+          for test in firmware sensors protocol motor_mapping wall; do
+            c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_$test.cpp -o /tmp/cog300-$test
+            /tmp/cog300-$test
+          done
+      - name: Fresh launcher setup
+        run: zsh 'Launch Robot Controller.command' --help
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Compile UNO R4 WiFi
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:renesas_uno@1.6.0
+          arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi Robot

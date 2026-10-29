@@ -4,10 +4,13 @@ UNO R4 WiFi + L298N + front/right HC-SR04 sensors. **Use `Robot` and the browser
 
 ## Start
 
-1. Open [Robot.ino](Robot/Robot.ino) in Arduino IDE. Keep **all files in that folder** together (`.ino`, `.h`, `.cpp`). Select UNO R4 WiFi and upload.
-2. Close Arduino Serial Monitor/Plotter.
-3. Double-click [Launch Robot Controller.command](Launch%20Robot%20Controller.command). Python 3.9+ is required; the launcher installs the sole Python dependency, pyserial, in `.venv`. **Tk is no longer needed.**
-4. Select the USB port, then **Connect**. After the firmware check, hold arrow keys or WASD to drive. Release to stop. Space/Esc stops every mode.
+1. Download this repository with **Code → Download ZIP** and extract it into a writable folder, or clone it. No Git installation is needed for the ZIP route.
+2. To program the robot, install [Arduino IDE](https://www.arduino.cc/en/software/). In Boards Manager install **Arduino UNO R4 Boards**, then open [Robot.ino](Robot/Robot.ino). Keep every file in `Robot/` together. Select **Arduino UNO R4 WiFi** and the USB port, then Upload. If this version is already on the robot, skip this step.
+3. Close Arduino Serial Monitor/Plotter.
+4. Double-click [Launch Robot Controller.command](Launch%20Robot%20Controller.command). **No preinstalled Python, pip, Homebrew, Node, or Xcode is required to run the controller.** The first launch downloads private tooling/Python as needed and pyserial. Internet is required for first setup; later launches reuse the local installation.
+5. Select the USB port, then **Connect**. After the firmware check, hold arrow keys or WASD to drive. Release to stop. Space/Esc stops every mode.
+
+If macOS blocks double-clicking, open Terminal, type `zsh `, drag the launcher into the window, and press Return. Do not run from inside the ZIP. Keep Terminal open while driving. See [Mac setup](controller/README.md) for details and manual installation alternatives.
 
 [Controller setup/troubleshooting](controller/README.md) · [Modes and tuning](docs/autonomous-modes.md) · [Serial protocol](docs/protocol.md) · [Hardware checks](docs/test-plan.md)
 
@@ -19,14 +22,14 @@ UNO R4 WiFi + L298N + front/right HC-SR04 sensors. **Use `Robot` and the browser
 - Settings: maximum PWM, minimum object-follow PWM, independent wheel inversion, and separate target distances.
 - Leaving the window, opening/editing settings, or losing the connection stops movement. New input is required to resume.
 
-Maximum and minimum moving PWM default to **255**. Default inversion is left off/right on. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
+Battery defaults are **255 maximum PWM**, **255 minimum follow PWM**, and **12 cm wall distance**. These are starting values for floor calibration. Default inversion is motor A on / motor B off, matching the user-tested forward direction. Channel A drives the right wheel and B the left. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
 
 ## Wiring — unchanged by this cleanup
 
 | UNO R4 pin | Connection |
 | --- | --- |
-| D5 / D6 / D7 | L298N ENA / IN1 / IN2 (left) |
-| D8 / D9 / D10 | L298N IN3 / IN4 / ENB (right) |
+| D5 / D6 / D7 | L298N ENA / IN1 / IN2 (right wheel) |
+| D8 / D9 / D10 | L298N IN3 / IN4 / ENB (left wheel) |
 | A0 / A1 | Front TRIG / ECHO |
 | A2 / A3 | Right TRIG / ECHO |
 | D11 | Green LED via resistor |
@@ -78,6 +81,8 @@ c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_sensors.cpp -o /tmp/cog
 /tmp/cog300-sensors
 c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_protocol.cpp -o /tmp/cog300-protocol
 /tmp/cog300-protocol
+c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_wall.cpp -o /tmp/cog300-wall
+/tmp/cog300-wall
 arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi Robot
 ```
 
@@ -91,3 +96,7 @@ The complete software cleanup and earlier working changes were merged into `main
 in [PR #8](https://github.com/behold-mycode/cog300-labs/pull/8). The active sketch is
 now `Robot/Robot.ino`; the launcher is at the project root. Local backups and
 old diagnostics are preserved under `archive/` and remain untracked.
+
+## Saved wall-following baseline
+
+`wall-following-baseline-2026-10-29` preserves the mostly working hardware version before further tuning: full power (255), a 12 cm target, P wall steering, bounded search, close-front backup, and committed left turns. The user reports it mostly works; consistent 10–15 cm clearance remains a floor-test goal. With minimum and maximum both 255, corner-spin power is saturated at full output. Wiring and wheel polarity are specific to this robot and must be checked on another build.

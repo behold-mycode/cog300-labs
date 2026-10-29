@@ -12,13 +12,13 @@ This intentionally replaces protocol 3 and its legacy aliases; update firmware a
 | `MODE MANUAL` | Stop and return to keyboard control |
 | `MODE FOLLOW` | Straight-line front-distance control |
 | `MODE WALL` | Right-wall tracking with front clearance |
-| `CONFIG power minimum invertLeft invertRight followCm wallCm` | Stop, validate and apply all settings atomically; replies `OK CONFIG` |
+| `CONFIG power minimum invertA invertB followCm wallCm` | Stop, validate and apply all settings atomically; replies `OK CONFIG` |
 | `TEST left right ms` | Standalone bounded wheel test; duration 1…5000 ms, signed wheel values −255…255 |
 | `STATUS` | One telemetry snapshot |
 | `LOG ON` / `LOG OFF` | Enable/disable periodic telemetry (on by default) |
 | `HELP` | Print command reference without changing motion |
 
-Configuration example: `CONFIG 255 255 0 1 20 20`.
+Configuration example: `CONFIG 255 255 1 0 20 20`.
 Power: 1…255; minimum: 0…power; inversion: 0/1; object target: 5…100 cm; wall target: 5…80 cm. Minimum applies only to object following; wall steering may slow the inside wheel below it. Configuration changes enforce a 250 ms unpowered settling interval before later motion.
 
 `TEST` duration begins when motor output actually starts (after any reversal pause). It emits `TEST_START` and `TEST_DONE`; these mean commanded execution, not physical success. A zero/zero test stops. The GUI uses live drive commands, not timed tests.

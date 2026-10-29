@@ -137,7 +137,7 @@ $('settingsForm').addEventListener('submit', async event => {
   clearError(); localStop();
   const form = event.target.elements;
   const settings = Object.fromEntries(['power','minimum','followCm','wallCm'].map(k => [k, Number(form[k].value)]));
-  settings.invertLeft = form.invertLeft.checked; settings.invertRight = form.invertRight.checked;
+  settings.invertA = form.invertA.checked; settings.invertB = form.invertB.checked;
   const requestSeq = ++seq;
   configurationPending = true; ready = false; modeUI();
   try {

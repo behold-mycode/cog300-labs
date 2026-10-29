@@ -30,8 +30,10 @@ static void output(int left, int right) {
   if (left) lastLeftSign = sign(left);
   if (right) lastRightSign = sign(right);
   motorLeft = left; motorRight = right;
-  writeMotor(ENA, IN1, IN2, left, settings.invertLeft);
-  writeMotor(ENB, IN3, IN4, right, settings.invertRight);
+  // On this car A drives the physical right wheel, B drives the left.
+  // Keep logical wheel commands independent of channel polarity calibration.
+  writeMotor(ENA, IN1, IN2, right, settings.invertA);
+  writeMotor(ENB, IN3, IN4, left, settings.invertB);
 }
 void setupMotor() {
   const uint8_t pins[] = {ENA, IN1, IN2, IN3, IN4, ENB};

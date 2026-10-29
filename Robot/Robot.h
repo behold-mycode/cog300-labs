@@ -10,13 +10,16 @@ const uint32_t SETTLE_MS = 250, CONTROL_TIMEOUT_MS = 500;
 const uint32_t PING_MS = 70, ECHO_TIMEOUT_US = 30000, STALE_MS = 350;
 const uint32_t LOG_MS = 500, TURN_LIMIT_MS = 2500;
 const float FOLLOW_KP = 6.0f, WALL_KP = 8.0f, DEADBAND_CM = 2.0f;
+const uint32_t BACKUP_MS = 250, TURN_MIN_MS = 550, SEARCH_LIMIT_MS = 4000;
+const float FRONT_BACKUP_CM = 10, FRONT_TURN_CM = 20, FRONT_CLEAR_CM = 35;
+const float TURN_KP = 8.0f; // PWM per cm of front-clearance error.
 const float FOLLOW_MAX_CM = 150.0f, WALL_MAX_CM = 100.0f;
 
 struct Settings {
   int power = 255;
-  int minimum = 255; // Lower this along with power when switching to batteries.
-  bool invertLeft = false, invertRight = true;
-  int followCm = 20, wallCm = 20;
+  int minimum = 255; // Full starting power requested for this robot.
+  bool invertA = true, invertB = false; // User-tested forward polarity: A reversed, B normal.
+  int followCm = 20, wallCm = 12;
 };
 enum Mode { MANUAL, FOLLOW, WALL };
 extern Settings settings;
