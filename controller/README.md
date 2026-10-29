@@ -4,13 +4,15 @@ A small local browser interface for keyboard driving and two autonomous modes. P
 
 ## Mac setup
 
-1. Install **Python 3.9+** from [python.org](https://www.python.org/downloads/macos/) if `python3 --version` is missing or older.
-2. Upload the complete `../Robot` sketch to UNO R4 WiFi. This controller requires **firmware 4**.
+1. Download and extract the repository into a writable folder on your Mac (Intel or Apple Silicon). Do not copy `.venv` or `.runtime` from another computer.
+2. If needed, install Arduino IDE and **Arduino UNO R4 Boards** through Boards Manager, and upload the complete `../Robot` sketch to UNO R4 WiFi. This controller requires **firmware 4**.
 3. Close Arduino Serial Monitor and Serial Plotter.
-4. Double-click **Launch Robot Controller.command** in the project root. It creates `.venv`, installs `pyserial==3.5` on first use, starts a loopback server, and opens your browser. First-time dependency installation needs internet.
+4. Double-click **Launch Robot Controller.command** in the project root. It downloads uv 0.13.6 into `.runtime`, provisions Python 3.12 if no working project environment exists, installs `pyserial==3.5` into `.venv`, starts a loopback server, and opens your browser. **Python, pip, Homebrew, Xcode, and Node need not be preinstalled.** First-time setup needs internet and a macOS version supported by the downloaded runtime. macOS 13+ is the recommended baseline; older releases are not validated.
 5. Select the `/dev/cu.usbmodem…` port and click Connect. Wait about two seconds for reset/handshake, then drive.
 
-If macOS prevents double-click launch, run `zsh '../Launch Robot Controller.command'` from this folder in Terminal. If a copied `.venv` fails, rename/remove that generated `.venv` folder and rerun the launcher; virtual environments should not be copied between computers. Keep Terminal open while using the controller; Ctrl+C shuts it down and stops the robot. If the browser does not open, use the full local URL printed in Terminal, including its `#token=…` fragment.
+If macOS prevents double-click launch, open Terminal, type `zsh `, drag the launcher into Terminal, and press Return. The launcher does not require administrator access or change shell profiles. Downloads use [Astral's official installer](https://docs.astral.sh/uv/reference/installer/) and [managed Python distributions](https://docs.astral.sh/uv/guides/install-python/). A working environment is reused without reinstalling dependencies. An unusable environment is preserved as `.venv.old.*` before rebuilding. Generated runtime folders are excluded from Git.
+
+Keep Terminal open while using the controller; Ctrl+C shuts it down and stops the robot. If the browser does not open, use the full local URL printed in Terminal, including its `#token=…` fragment. Setup failures leave an error in Terminal; check internet access and that the extracted folder is writable, then rerun. To try the interface without a robot, run the launcher with `--demo` from Terminal.
 
 Manual setup, also usable on Windows/Linux:
 

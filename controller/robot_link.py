@@ -5,7 +5,7 @@ import secrets
 import time
 
 DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
-                followCm=20, wallCm=20)
+                followCm=20, wallCm=12)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
 MODES = {'MANUAL', 'FOLLOW', 'WALL'}
 BROWSER_TIMEOUT = .6

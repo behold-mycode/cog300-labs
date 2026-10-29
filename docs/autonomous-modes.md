@@ -11,13 +11,21 @@ Only the front sensor affects motion. Default target: **20 cm**, deadband: **±2
 - Inside the deadband: stop.
 - Invalid/stale reading or object farther than **150 cm**: hold stopped.
 
-The command magnitude is `clamp(6 × abs(distance − target), minimumPWM, maximumPWM)` outside the deadband. Both default PWM limits are 255, so the weak-supply configuration runs at full output when moving. Lower minimum and maximum in Settings after switching to batteries; this enables proportional slowing near the target. A minimum of zero removes the motor-starting floor. At full output the car may overshoot/oscillate; tune on the real robot using a broad flat target, measured distance and short trials. No turning, object identification or rear sensing is provided.
+The command magnitude is `clamp(6 × abs(distance − target), minimumPWM, maximumPWM)` outside the deadband. Battery defaults are maximum 255 and minimum 255 PWM. A minimum of zero removes the motor-starting floor. At full output the car may overshoot/oscillate; tune on the real robot using a broad flat target, measured distance and short trials. No turning, object identification or rear sensing is provided.
 
 ## Follow right wall
 
-Default wall target: **20 cm**, ±2 cm deadband. Base output is maximum PWM. Right-distance error produces a proportional steering correction (gain 8 PWM/cm), limited to the configured power. When too far from the right wall, slow the right wheel; when too close, slow the left. The outer wheel stays at the configured maximum. Actual trajectories depend on traction and wheel speed.
+Default wall target: **12 cm**. The intended floor-test band is 10–15 cm; this is not yet physically verified. Set the wall distance in the controller. The right sensor is assumed to point sideways.
 
-Front distance ≤20 cm starts a left spin. It ends when front distance reaches 25 cm. If it cannot clear within **2.5 seconds**, stop and exit the mode. The controller reports the timeout and requires reconnecting. Invalid front/right readings stop output; right distance above **100 cm** is treated as a lost wall and stops. Valid readings resume the selected mode unless Stop or the turn timeout has cancelled it. This handles local wall tracking and bounded left corners, not arbitrary mazes or searching around missing walls.
+Tracking uses pure P control: `error = right_cm - target_cm`, `correction = 8 * error` PWM, limited to half the maximum PWM. There is no integral or derivative term and no deadband jump. Twice the distance error produces twice the steering correction until saturation. The outer wheel runs at maximum PWM and the inner wheel never drops below half that value. This helps avoid a stalled inner wheel; calibrate the maximum on the floor. Minimum follow PWM applies only to object following.
+
+Front distance at or below 10 cm starts a **250 ms powered backup**, followed by a left spin. Front distance at or below 20 cm starts a left spin directly. Front recovery takes priority over missing right readings. A turn requires at least **550 ms of powered rotation**, front clearance of **35 cm**, and a valid right wall within 100 cm before tracking resumes. Left-spin magnitude also uses P control: `8 * (35 - front_cm)` PWM, clamped between the configured minimum (at least 1) and maximum. With minimum and maximum both set to 255, corner turns stay at full power. Lowering the minimum enables proportional slowing as clearance increases; the minimum keeps the wheels moving during turn commitment and reacquisition. This controls clearance, not measured heading. Motor reversal downtime does not count toward powered motion. Each backup/turn phase has a 2.5-second elapsed timeout that stops and exits wall mode. A timeout requires selecting the mode again, not reconnecting.
+
+A valid right reading beyond 100 cm starts a gentle forward-right search, bounded to four seconds. Invalid echoes are not treated as open space: invalid front readings hold stopped; invalid side readings hold tracking/search stopped but do not prevent front recovery. Persistent invalid readings during a maneuver lead to its timeout. A search timeout also exits wall mode. Stop and connection-loss handling remain active throughout.
+
+### First battery floor trial
+
+Restart the controller server to load the new defaults, upload the firmware, and apply `CONFIG 255 255 1 0 20 12`. Start parallel to a long flat wall, 12 cm away. Check that too-far readings steer right and too-close readings steer left. Then test a front corner and a start farther from the side wall. Record telemetry and measured clearance. Adjust maximum PWM if wheels stall or motion is too fast; tune `TURN_MIN_MS` from observed turns. There are no encoders to confirm a 90-degree turn and no rear sensor, so leave space behind the robot for the short backup.
 
 ## Sensors and motor timing
 
@@ -30,7 +38,7 @@ Wheel reversal inserts a 250 ms unpowered interval. Repeated requests do not res
 After resetting the board, at 115200 baud / Newline:
 
 ```text
-CONFIG 255 255 1 0 20 20
+CONFIG 255 255 1 0 20 12
 MODE FOLLOW
 STOP
 MODE WALL

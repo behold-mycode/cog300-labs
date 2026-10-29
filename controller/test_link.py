@@ -24,7 +24,7 @@ class LinkTests(unittest.TestCase):
         self.assertTrue(self.link.ready)
     def test_default_direction_calibration(self):
         self.ready()
-        self.assertIn('CONFIG 255 255 1 0 20 20', self.serial.sent)
+        self.assertIn('CONFIG 255 255 1 0 20 12', self.serial.sent)
 
     def test_handshake_and_drive(self):
         self.ready(); self.link.frame(self.owner, 3, ['Up'], 'MANUAL'); self.now += .1; self.link.tick()

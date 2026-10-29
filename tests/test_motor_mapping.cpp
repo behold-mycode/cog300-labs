@@ -10,6 +10,7 @@ void drive(int left, int right) {
   requestMotor(left, right); serviceMotor(); nowMs += SETTLE_MS; serviceMotor();
 }
 int main() {
+  settings.power = 255; // Exercise full-range commands independently of battery defaults.
   setupMotor();
   drive(255,255); assert(leftWheel()==255 && rightWheel()==255);
   drive(-255,255); assert(leftWheel()==-255 && rightWheel()==255); // Left arrow.

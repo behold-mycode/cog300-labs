@@ -12,6 +12,7 @@ void feed(const std::string& text) {
   while(Serial.available()) readCommands();
 }
 int main() {
+  settings.power = 255; // Exercise full-range commands independently of battery defaults.
   setup(); command("HELLO");
   command("DRIVE 255 255"); serviceMotor(); assert(motorLeft==255);
   command("CONFIG 255 255 0 0 20 20"); command("DRIVE 255 255"); serviceMotor();
