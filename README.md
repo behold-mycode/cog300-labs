@@ -22,7 +22,7 @@ If macOS blocks double-clicking, open Terminal, type `zsh `, drag the launcher i
 - Settings: maximum PWM, minimum object-follow PWM, independent wheel inversion, and separate target distances.
 - Leaving the window, opening/editing settings, or losing the connection stops movement. New input is required to resume.
 
-Battery defaults are **255 maximum PWM**, **255 minimum follow PWM**, and **12 cm wall distance**. These are starting values for floor calibration. Default inversion is motor A on / motor B off, matching the user-tested forward direction. Channel A drives the right wheel and B the left. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
+Battery defaults are **255 maximum PWM**, **255 minimum follow PWM**, and **15 cm wall distance**. These are starting values for floor calibration. Default inversion is motor A on / motor B off, matching the user-tested forward direction. Channel A drives the right wheel and B the left. Settings last while the Python server runs and are reapplied on connection; firmware reset restores defaults. Maximum PWM is a duty-cycle limit, not a guarantee of torque or speed. Power-supply and mechanical limitations still require hardware testing.
 
 ## Wiring — unchanged by this cleanup
 
@@ -61,7 +61,7 @@ cog300-labs/
 | `Robot/Motor.cpp` | PWM, inversion, reversal pause, bounded timed tests |
 | `Robot/Sensors.cpp` | Alternating interrupt-based echo measurements and validity |
 | `Robot/Navigation.cpp` | Object-distance and right-wall control |
-| `Robot/Protocol.cpp` | Strict command parsing, watchdog, 2 Hz telemetry |
+| `Robot/Protocol.cpp` | Strict command parsing, watchdog, 10 Hz telemetry |
 | `controller/robot_link.py` | Serial connection, browser ownership, liveness |
 | `controller/controller.py` | Loopback HTTP server and launcher entry point |
 | `controller/index.html`, `app.js`, `style.css` | Minimal browser UI |
@@ -83,6 +83,8 @@ c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_protocol.cpp -o /tmp/co
 /tmp/cog300-protocol
 c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_wall.cpp -o /tmp/cog300-wall
 /tmp/cog300-wall
+c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_corner_motion.cpp -o /tmp/cog300-corner
+/tmp/cog300-corner
 arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi Robot
 ```
 
@@ -100,3 +102,7 @@ old diagnostics are preserved under `archive/` and remain untracked.
 ## Saved wall-following baseline
 
 `wall-following-baseline-2026-10-29` preserves the mostly working hardware version before further tuning: full power (255), a 12 cm target, P wall steering, bounded search, close-front backup, and committed left turns. The user reports it mostly works; consistent 10–15 cm clearance remains a floor-test goal. With minimum and maximum both 255, corner-spin power is saturated at full output. Wiring and wheel polarity are specific to this robot and must be checked on another build.
+
+### Checkpoint 2 — smooth PD tracking and earlier corner exit
+
+Tag: `checkpoint-2-pd-wall-following-2026-10-30`. This preserves the uploaded tuning version: 15 cm right-wall target, full outer-wheel power, timestamp-based PD tracking, forward left arcs, bounded echo-loss handling, and a corner-clearance ratio reduced from 4 to 2.5. The user reported smooth motion with the preceding ratio but approximately 120-degree turns; the reduced ratio is uploaded and software-tested, with its physical angle still to be confirmed. Sensor-based approach/heading estimation and continuously adapted corner geometry are the next development direction, not features claimed by this checkpoint.

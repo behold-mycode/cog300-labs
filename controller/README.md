@@ -32,7 +32,7 @@ The side buttons choose **Follow object** or **Follow right wall**. Any new driv
 
 Settings are collapsed by default. Opening/editing them stops motion. Apply power, minimum follow PWM, independent wheel reversal and target distances there. The server retains applied settings during reconnects; closing it restores defaults on the next launch. A firmware reset also restores firmware defaults until the controller reconnects and applies its settings. Settings may be adjusted only when connected.
 
-Diagnostics shows a bounded recent log (600 lines); Download log saves that recent history. Front/right distances update twice per second. A dash means invalid/unavailable, not zero distance.
+Diagnostics shows a bounded recent log (600 lines); Download log saves that recent history. Front/right telemetry is reported ten times per second (each sensor measures about seven times per second). A dash means invalid/unavailable, not zero distance.
 
 ## Connection behavior
 
