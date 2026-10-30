@@ -34,5 +34,16 @@ int main() {
   activeSensor = FRONT_SENSOR; pingPending = true; echoReady = true; echoWidthUs = 1740;
   serviceSensor(); assert(samples[0].valid && samples[0].cm == 30);
   millisStep = 0;
+  SensorReading first = sensorReading(0);
+  assert(first.cm > 0 && first.sampledMs == samples[0].sampledMs);
+  nowMs += 10;
+  SensorReading repeated = sensorReading(0);
+  assert(repeated.sequence == first.sequence && repeated.sampledMs == first.sampledMs);
+  acceptReading(0,31,1798);
+  SensorReading next = sensorReading(0);
+  assert(next.sequence != first.sequence && next.sampledMs == nowMs && next.cm == 31);
+  acceptReading(0,-1,0);
+  assert(sensorReading(0).cm == -1 && sensorReading(0).sequence != next.sequence);
+  assert(sensorReading(2).cm == -1);
   std::cout << "PASS sensors: alternating pings, crosstalk, timeout, stale data, range, rollover\n";
 }

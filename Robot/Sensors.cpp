@@ -9,6 +9,7 @@ struct DistanceSample {
   int cm = -1;
   uint32_t echoUs = 0;
   uint32_t sampledMs = 0;
+  uint32_t sequence = 0;
 };
 DistanceSample samples[2];
 uint8_t nextSensor = FRONT_SENSOR;
@@ -32,6 +33,7 @@ void echoChanged() { captureEcho(FRONT_SENSOR); }
 void rightEchoChanged() { captureEcho(RIGHT_SENSOR); }
 
 void acceptReading(uint8_t sensor, int cm, uint32_t width) {
+  ++samples[sensor].sequence;
   samples[sensor].sampledMs = millis();
   samples[sensor].valid = cm >= 2 && cm <= 400;
   samples[sensor].cm = samples[sensor].valid ? cm : -1;
@@ -87,4 +89,10 @@ float sensorDistanceCm(uint8_t sensor) {
   if (sensor >= 2 || !samples[sensor].valid ||
       (uint32_t)(millis() - samples[sensor].sampledMs) >= STALE_MS) return -1;
   return samples[sensor].echoUs / 58.0f;
+}
+
+// Expose acquisition time/identity so control never differentiates loop repeats.
+SensorReading sensorReading(uint8_t sensor) {
+  if (sensor >= 2) return {-1, 0, 0};
+  return {sensorDistanceCm(sensor), samples[sensor].sampledMs, samples[sensor].sequence};
 }

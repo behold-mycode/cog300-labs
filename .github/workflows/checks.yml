@@ -15,7 +15,7 @@ jobs:
       - run: node controller/test_app.js
       - name: Firmware host tests
         run: |
-          for test in firmware sensors protocol motor_mapping wall; do
+          for test in firmware sensors protocol motor_mapping wall corner_motion; do
             c++ -std=c++11 -Wall -Wextra -Werror -I tests tests/test_$test.cpp -o /tmp/cog300-$test
             /tmp/cog300-$test
           done
