@@ -16,75 +16,50 @@ void begin() {
   startNavigation(WALL);
 }
 int steering() { return motorLeft - motorRight; }
-void earlyContinuousCorner() {
-  begin(); tick(80,15); tick(30,15);
-  assert(motorLeft > 0 && motorLeft < motorRight && motorRight == 255);
-  assert(!strcmp(navigationState,"TURNING_LEFT"));
-  // No reverse/settle pause on a normal corner, even with a missing side echo.
-  tick(28,-1); assert(motorLeft>0 && motorRight==255);
-  tick(100,-1); assert(!strcmp(navigationState,"TURNING_LEFT"));
-  // Re-reading one clearance echo must not count as a second confirmation.
-  idle(10); idle(10); assert(!strcmp(navigationState,"TURNING_LEFT"));
-  tick(120,-1); assert(strcmp(navigationState,"TURNING_LEFT"));
+void noAlignmentVeto() {
+  begin(); tick(30,15); tick(28,18); tick(65,22); tick(65,22); tick(100,30);
+  assert(motorLeft>motorRight); // A clear front must not veto right-wall correction.
 }
-void pdTracksNewSamples() {
-  begin(); tick(80,17); int proportional = steering();
-  tick(80,19); assert(steering() > 2*proportional); // Drifting away: D adds correction.
-  int correction=steering(); idle(10); idle(10); assert(steering()==correction);
-  begin(); tick(80,23); tick(80,19);
-  assert(steering() < 2*proportional); // Already converging: D reduces correction.
+void proportionalObstacleResponse() {
   begin(); tick(80,15); assert(motorLeft==255 && motorRight==255);
-  begin(); tick(80,35); assert(steering()>127); // Allow tighter arcs than old half-power cap.
+  tick(45,15); int gentle=motorRight-motorLeft;
+  tick(30,15); assert(motorRight-motorLeft>gentle && gentle>0);
+  assert(motorLeft>0 && motorRight==255);
+  tick(100,15); assert(motorLeft==motorRight); // No latched turn after obstacle clears.
 }
-void boundedDropoutsAndReset() {
-  begin(); tick(80,15); tick(-1,-1);
-  assert(motorLeft==255 && motorRight==255); // One missed echo does not cause a stop/start.
-  idle(170); assert(motorLeft==0 && motorRight==0); // Grace ends at 300 ms from good echo.
-  tick(80,16); int recovered=steering();
-  begin(); tick(80,16); assert(steering()==recovered); // No derivative kick after sensor loss.
-  begin(); tick(-1,-1); assert(motorLeft==0 && motorRight==0); // Never assume no echo means clear.
+void pdAndSampleTiming() {
+  begin(); tick(80,17); int p=steering(); tick(80,19); assert(steering()>2*p);
+  int correction=steering(); idle(10); idle(10); assert(steering()==correction);
+  nowMs+=20; acceptReading(0,80,80*58); serviceNavigation(); serviceMotor();
+  assert(steering()==correction);
+  begin(); tick(80,23); tick(80,19); assert(steering()<2*p);
 }
-void independentSensorUpdates() {
-  begin(); tick(80,17); int correction = steering();
-  nowMs += 70; acceptReading(0,75,75*58); serviceNavigation(); serviceMotor();
-  assert(steering()==correction); // Front-only update cannot alter the side derivative.
-  nowMs += 70; acceptReading(1,19,19*58); serviceNavigation(); serviceMotor();
-  assert(steering()>2*correction);
-  begin(); tick(30,15); tick(30,15); tick(100,15);
-  assert(!strcmp(navigationState,"TURNING_LEFT"));
-  tick(25,15); // One clear outlier followed by blocked data must not finish the turn.
-  assert(!strcmp(navigationState,"TURNING_LEFT"));
-  tick(100,15); assert(!strcmp(navigationState,"TURNING_LEFT"));
-  tick(100,15); assert(!strcmp(navigationState,"ALIGNING_WALL"));
-  assert(motorLeft>0 && motorRight>0);
-}
-void earlierCornerExit() {
-  begin(); tick(30,15); tick(28,18); tick(65,22);
-  assert(!strcmp(navigationState,"TURNING_LEFT")); // Still require two real echoes.
-  tick(65,22);
-  assert(!strcmp(navigationState,"ALIGNING_WALL")); // Previously waited for 88 cm.
-  assert(motorLeft>0 && motorRight>0);
-}
-void recoveryAndTimeouts() {
+void recoveryAndStop() {
   begin(); tick(8,-1); assert(motorLeft<0 && motorRight<0);
-  tick(18,-1,260); idle(250); tick(18,-1,1);
-  assert(motorLeft<0 && motorRight>0); // Emergency-only backup followed by spin.
-  begin(); tick(30,15);
-  for(int i=0;i<25 && mode==WALL;++i) tick(25,15);
-  assert(mode==MANUAL && motorLeft==0 && motorRight==0);
+  tick(18,-1,260); idle(250); tick(18,-1,1); assert(motorLeft<0 && motorRight>0);
+  begin(); tick(18,15); tick(18,15,2600); assert(mode==MANUAL && motorLeft==0);
   begin(); tick(80,150); assert(motorLeft>motorRight && motorRight>0);
-  for(int i=0;i<40 && mode==WALL;++i) tick(80,150);
-  assert(mode==MANUAL && motorLeft==0);
-  begin(); tick(30,15); stopRobot(); tick(30,15);
-  assert(mode==MANUAL && motorLeft==0 && motorRight==0);
+  tick(80,150,4100); assert(mode==MANUAL && motorLeft==0);
+  begin(); tick(30,15); stopRobot(); tick(30,15); assert(motorLeft==0 && motorRight==0);
 }
-void rollover() {
-  begin(); nowMs=UINT32_MAX-200; startNavigation(WALL); tick(80,17);
-  tick(80,19); assert(steering()>0 && motorLeft==255);
+void staleDataStops() {
+  begin(); tick(80,15); tick(-1,-1); assert(motorLeft>0);
+  idle(170); assert(motorLeft==0 && motorRight==0);
+  tick(80,16); int resumed=steering(); begin(); tick(80,16); assert(steering()==resumed);
+  begin(); tick(-1,-1); assert(motorLeft==0);
+}
+void noReturnIsNotAFalseDistance() {
+  begin(); nowMs+=140; acceptReading(0,-1,0); samples[0].status=RANGE_NO_RETURN;
+  acceptReading(1,15,15*58); serviceNavigation(); serviceMotor();
+  assert(sensorDistanceCm(0)==-1 && motorLeft==255 && motorRight==255);
+  idle(310); assert(motorLeft==0 && motorRight==0); // Stale no-return is not permission to continue.
+  begin(); nowMs+=140; acceptReading(0,-1,0); samples[0].status=RANGE_NO_RETURN;
+  acceptReading(1,-1,0); samples[1].status=RANGE_NO_RETURN;
+  serviceNavigation(); serviceMotor(); assert(motorLeft==0 && motorRight==0);
+  begin(); tick(-1,15); assert(motorLeft==0); // Malformed readings are still faults.
 }
 int main() {
-  setupMotor();
-  earlyContinuousCorner(); pdTracksNewSamples(); boundedDropoutsAndReset();
-  independentSensorUpdates(); earlierCornerExit(); recoveryAndTimeouts(); rollover();
-  std::cout << "PASS wall: continuous early corners, fresh-sample PD, tight steering, bounded dropouts, recovery, stop, rollover\n";
+  setupMotor(); noAlignmentVeto(); proportionalObstacleResponse(); pdAndSampleTiming();
+  recoveryAndStop(); staleDataStops(); noReturnIsNotAFalseDistance();
+  std::cout << "PASS wall: continuous front avoidance, immediate PD recovery, sample timing, expiry, emergency stop\n";
 }

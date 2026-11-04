@@ -106,3 +106,7 @@ old diagnostics are preserved under `archive/` and remain untracked.
 ### Checkpoint 2 — smooth PD tracking and earlier corner exit
 
 Tag: `checkpoint-2-pd-wall-following-2026-10-30`. This preserves the uploaded tuning version: 15 cm right-wall target, full outer-wheel power, timestamp-based PD tracking, forward left arcs, bounded echo-loss handling, and a corner-clearance ratio reduced from 4 to 2.5. The user reported smooth motion with the preceding ratio but approximately 120-degree turns; the reduced ratio is uploaded and software-tested, with its physical angle still to be confirmed. Sensor-based approach/heading estimation and continuously adapted corner geometry are the next development direction, not features claimed by this checkpoint.
+
+### Simplified wall controller
+
+Current development removes the speculative wall geometry and timed alignment veto. Side-distance PD and a proportional front-obstacle term produce one continuous steering command. Sensor acquisition distinguishes a completed out-of-range/no-return pulse from invalid data. See [behavior and battery calibration](docs/autonomous-modes.md). Checkpoint tags preserve the earlier versions.
