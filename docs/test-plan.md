@@ -1,6 +1,6 @@
 # Hardware verification checklist
 
-Software tests are not physical results. Record observed behavior and configuration in `docs/test-results.csv`; all new hardware trials remain NOT TESTED until performed.
+Software tests are not physical results. Record observed behavior and configuration with your team; mark hardware trials complete only after testing the physical robot.
 
 ## 1. Pins, wheel polarity and power
 
