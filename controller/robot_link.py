@@ -5,7 +5,7 @@ import secrets
 import time
 
 DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
-                followCm=20, wallCm=12)
+                followCm=20, wallCm=15)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
 MODES = {'MANUAL', 'FOLLOW', 'WALL'}
 BROWSER_TIMEOUT = .6
@@ -156,8 +156,8 @@ class RobotLink:
                 self.telemetry = dict(ms=int(parts[1]), mode=parts[2], state=parts[3],
                                       front=values[0], right=values[1], left=values[2], motorRight=values[3])
             except ValueError: return
-            if parts[3] == 'TURN_TIMEOUT':
-                self.disconnect('Wall turn timed out — check the path, then reconnect.')
+            if parts[3] in ('TURN_TIMEOUT', 'SEARCH_TIMEOUT', 'ALIGN_TIMEOUT'):
+                self.disconnect('Wall navigation timed out — check the path, then reconnect.')
 
     def tick(self):
         if not self.serial: return

@@ -39,7 +39,7 @@ int main() {
   readings(50,30); command("MODE WALL"); serviceNavigation(); nowMs += 250; readings(50,30); serviceNavigation(); serviceMotor();
   assert(motorLeft > motorRight && motorLeft == 255);
   readings(50,10); serviceNavigation(); serviceMotor(); assert(motorRight > motorLeft);
-  readings(18,20); serviceNavigation(); serviceMotor(); nowMs += 250; readings(18,20); serviceNavigation(); serviceMotor(); assert(motorLeft < 0 && motorRight > 0);
+  readings(18,20); serviceNavigation(); serviceMotor(); nowMs += 250; readings(18,20); serviceNavigation(); serviceMotor(); assert(motorLeft > 0 && motorLeft < motorRight); // Forward-arc corner, no reversal.
   nowMs += TURN_LIMIT_MS; readings(18,20); serviceNavigation(); serviceMotor(); assert(mode == MANUAL && motorLeft == 0);
   command("HELLO"); command("DRIVE 255 255"); nowMs += 500; serviceControlTimeout(); serviceMotor(); assert(motorLeft == 0);
   command("DRIVE 255 255"); serviceMotor(); assert(motorLeft == 0);

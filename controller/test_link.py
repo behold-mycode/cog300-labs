@@ -24,7 +24,7 @@ class LinkTests(unittest.TestCase):
         self.assertTrue(self.link.ready)
     def test_default_direction_calibration(self):
         self.ready()
-        self.assertIn('CONFIG 255 255 1 0 20 12', self.serial.sent)
+        self.assertIn('CONFIG 255 255 1 0 20 15', self.serial.sent)
 
     def test_handshake_and_drive(self):
         self.ready(); self.link.frame(self.owner, 3, ['Up'], 'MANUAL'); self.now += .1; self.link.tick()
@@ -59,6 +59,16 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(self.link.telemetry['front'], 25.5)
         self.serial.incoming.extend(b'x' * 5000); self.link.tick(); self.link.tick()
         self.assertFalse(self.link.ready)
+    def test_navigation_timeouts_disconnect(self):
+        for state in ['TURN_TIMEOUT', 'SEARCH_TIMEOUT', 'ALIGN_TIMEOUT']:
+            with self.subTest(state=state):
+                self.setUp(); self.ready()
+                self.serial.feed('DATA,100,MANUAL,%s,60,15,0,0' % state)
+                self.link.tick()
+                self.assertFalse(self.link.ready)
+                self.assertTrue(self.serial.closed)
+                self.assertIn('STOP', self.serial.sent)
+
     def test_keyboard_mapping(self):
         self.assertEqual(wheel_command(['Up','Left'],255),(127,255))
         self.assertEqual(wheel_command(['Down'],255),(-255,-255))

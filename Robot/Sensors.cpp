@@ -6,9 +6,11 @@ const uint8_t triggerPins[] = {TRIG_PIN, RIGHT_TRIG_PIN};
 const uint8_t echoPins[] = {ECHO_PIN, RIGHT_ECHO_PIN};
 struct DistanceSample {
   bool valid = false;
+  RangeStatus status = RANGE_INVALID;
   int cm = -1;
   uint32_t echoUs = 0;
   uint32_t sampledMs = 0;
+  uint32_t sequence = 0;
 };
 DistanceSample samples[2];
 uint8_t nextSensor = FRONT_SENSOR;
@@ -32,8 +34,10 @@ void echoChanged() { captureEcho(FRONT_SENSOR); }
 void rightEchoChanged() { captureEcho(RIGHT_SENSOR); }
 
 void acceptReading(uint8_t sensor, int cm, uint32_t width) {
+  ++samples[sensor].sequence;
   samples[sensor].sampledMs = millis();
   samples[sensor].valid = cm >= 2 && cm <= 400;
+  samples[sensor].status = samples[sensor].valid ? RANGE_VALID : RANGE_INVALID;
   samples[sensor].cm = samples[sensor].valid ? cm : -1;
   samples[sensor].echoUs = samples[sensor].valid ? width : 0;
   if (sensor == FRONT_SENSOR) {
@@ -62,8 +66,13 @@ void serviceSensor() {
   if (pingPending && ready) {
     pingPending = false;
     acceptReading(activeSensor, width >= 116 && width <= 23200 ? (int)(width / 58) : -1, width);
+    // HC-SR04 reports no obstacle with a completed ~38 ms pulse. Wait for
+    // its falling edge; a missing/stuck signal is not a no-obstacle reading.
+    if (width > 23200 && width <= 40000) samples[activeSensor].status = RANGE_NO_RETURN;
   } else if (pingPending && (uint32_t)(micros() - pingStartUs) >= ECHO_TIMEOUT_US) {
-    noInterrupts(); echoArmed = false; echoReady = false; interrupts();
+    noInterrupts();
+    echoArmed = false; echoReady = false;
+    interrupts();
     pingPending = false; acceptReading(activeSensor, -1, 0);
   }
   for (uint8_t sensor = 0; sensor < 2; ++sensor) {
@@ -87,4 +96,11 @@ float sensorDistanceCm(uint8_t sensor) {
   if (sensor >= 2 || !samples[sensor].valid ||
       (uint32_t)(millis() - samples[sensor].sampledMs) >= STALE_MS) return -1;
   return samples[sensor].echoUs / 58.0f;
+}
+
+// Expose acquisition time/identity so control never differentiates loop repeats.
+SensorReading sensorReading(uint8_t sensor) {
+  if (sensor >= 2) return {-1, 0, 0, RANGE_INVALID};
+  RangeStatus status = (uint32_t)(millis()-samples[sensor].sampledMs) >= STALE_MS ? RANGE_STALE : samples[sensor].status;
+  return {sensorDistanceCm(sensor), samples[sensor].sampledMs, samples[sensor].sequence, status};
 }

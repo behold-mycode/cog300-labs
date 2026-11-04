@@ -29,7 +29,7 @@ Malformed/oversized commands stop the robot and emit ERROR. Partial input expire
 
 ## Telemetry
 
-Default cadence: one line per 500 ms; no per-ping/per-control-tick prints.
+Default cadence: one line per 100 ms; no per-ping/per-control-tick prints.
 
 ```text
 DATA,ms,mode,state,front_cm,right_cm,left_pwm,right_pwm

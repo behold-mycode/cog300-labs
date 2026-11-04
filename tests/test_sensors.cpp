@@ -15,10 +15,12 @@ int main() {
   pulse(FRONT_SENSOR,1752); serviceSensor(); assert(samples[0].cm == 30);
   nowMs = 69; serviceSensor(); assert(!pingPending);
   slot(70,RIGHT_SENSOR); pulse(RIGHT_SENSOR,2900); serviceSensor(); assert(samples[1].cm == 50);
-  slot(140,FRONT_SENSOR); nowMs = 171; serviceSensor();
+  slot(140,FRONT_SENSOR); nowMs = 186; serviceSensor();
   assert(!samples[0].valid && samples[1].valid);
+  assert(sensorReading(0).status == RANGE_INVALID);
   slot(210,RIGHT_SENSOR); pulse(RIGHT_SENSOR,1160); serviceSensor();
   levels[ECHO_PIN] = HIGH; nowMs = 280; serviceSensor(); assert(!pingPending);
+  assert(sensorReading(0).status == RANGE_INVALID);
   slot(350,RIGHT_SENSOR); pulse(RIGHT_SENSOR,5800); serviceSensor();
   levels[ECHO_PIN] = LOW; nowMs = 701; acceptReading(0,30,1740); serviceSensor();
   assert(samples[0].valid && !samples[1].valid);
@@ -34,5 +36,22 @@ int main() {
   activeSensor = FRONT_SENSOR; pingPending = true; echoReady = true; echoWidthUs = 1740;
   serviceSensor(); assert(samples[0].valid && samples[0].cm == 30);
   millisStep = 0;
+  SensorReading first = sensorReading(0);
+  assert(first.cm > 0 && first.sampledMs == samples[0].sampledMs);
+  nowMs += 10;
+  SensorReading repeated = sensorReading(0);
+  assert(repeated.sequence == first.sequence && repeated.sampledMs == first.sampledMs);
+  acceptReading(0,31,1798);
+  SensorReading next = sensorReading(0);
+  assert(next.sequence != first.sequence && next.sampledMs == nowMs && next.cm == 31);
+  acceptReading(0,-1,0);
+  assert(sensorReading(0).cm == -1 && sensorReading(0).sequence != next.sequence);
+  assert(sensorReading(2).cm == -1);
+  nowMs += 70; activeSensor=FRONT_SENSOR; pingPending=true;
+  echoReady=true; echoWidthUs=38000; serviceSensor();
+  assert(sensorReading(0).status==RANGE_NO_RETURN && sensorDistanceCm(0)==-1);
+  nowMs += 70; activeSensor=FRONT_SENSOR; pingPending=true;
+  echoReady=true; echoWidthUs=50; serviceSensor();
+  assert(sensorReading(0).status==RANGE_INVALID);
   std::cout << "PASS sensors: alternating pings, crosstalk, timeout, stale data, range, rollover\n";
 }

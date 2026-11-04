@@ -13,32 +13,53 @@ Only the front sensor affects motion. Default target: **20 cm**, deadband: **±2
 
 The command magnitude is `clamp(6 × abs(distance − target), minimumPWM, maximumPWM)` outside the deadband. Battery defaults are maximum 255 and minimum 255 PWM. A minimum of zero removes the motor-starting floor. At full output the car may overshoot/oscillate; tune on the real robot using a broad flat target, measured distance and short trials. No turning, object identification or rear sensing is provided.
 
-## Follow right wall
+## Follow right wall — simplified controller
 
-Default wall target: **12 cm**. The intended floor-test band is 10–15 cm; this is not yet physically verified. Set the wall distance in the controller. The right sensor is assumed to point sideways.
+Target: **15 cm** from the right sensor. Maximum PWM: **255**. Normal motion uses one command combining side-wall PD with front-obstacle avoidance:
 
-Tracking uses pure P control: `error = right_cm - target_cm`, `correction = 8 * error` PWM, limited to half the maximum PWM. There is no integral or derivative term and no deadband jump. Twice the distance error produces twice the steering correction until saturation. The outer wheel runs at maximum PWM and the inner wheel never drops below half that value. This helps avoid a stalled inner wheel; calibrate the maximum on the floor. Minimum follow PWM applies only to object following.
+```text
+side_error = right_cm - target_cm
+side = clamp(14 * side_error + 12 * filtered_right_rate, -limit, limit)
+front_avoidance = 12 * max(0, 55 - front_cm)
+steering = clamp(side - front_avoidance, -limit, limit)
+```
 
-Front distance at or below 10 cm starts a **250 ms powered backup**, followed by a left spin. Front distance at or below 20 cm starts a left spin directly. Front recovery takes priority over missing right readings. A turn requires at least **550 ms of powered rotation**, front clearance of **35 cm**, and a valid right wall within 100 cm before tracking resumes. Left-spin magnitude also uses P control: `8 * (35 - front_cm)` PWM, clamped between the configured minimum (at least 1) and maximum. With minimum and maximum both set to 255, corner turns stay at full power. Lowering the minimum enables proportional slowing as clearance increases; the minimum keeps the wheels moving during turn commitment and reacquisition. This controls clearance, not measured heading. Motor reversal downtime does not count toward powered motion. Each backup/turn phase has a 2.5-second elapsed timeout that stops and exits wall mode. A timeout requires selecting the mode again, not reconnecting.
+Positive steering slows the right wheel; negative steering slows the left wheel. The outer wheel keeps the configured maximum. As a front obstacle gets closer, the leftward term grows continuously. Once front clearance returns, the side loop has immediate control in either direction. There is no inferred heading, wall-plane assumption, timed alignment phase, corner-clearance ratio, or minimum turn duration.
 
-A valid right reading beyond 100 cm starts a gentle forward-right search, bounded to four seconds. Invalid echoes are not treated as open space: invalid front readings hold stopped; invalid side readings hold tracking/search stopped but do not prevent front recovery. Persistent invalid readings during a maneuver lead to its timeout. A search timeout also exits wall mode. Stop and connection-loss handling remain active throughout.
+The derivative updates only with a new side measurement and uses its acquisition timestamp. Limit measured rate to ±50 cm/s, then filter with coefficient 0.65 (less delay than the previous 0.4). A held observation does not repeatedly recompute D. Short invalid intervals can retain the last good distance for less than 300 ms; an expired observation stops motion.
 
-### First battery floor trial
+### Motor limits and calibration
 
-Restart the controller server to load the new defaults, upload the firmware, and apply `CONFIG 255 255 1 0 20 12`. Start parallel to a long flat wall, 12 cm away. Check that too-far readings steer right and too-close readings steer left. Then test a front corner and a start farther from the side wall. Record telemetry and measured clearance. Adjust maximum PWM if wheels stall or motion is too fast; tune `TURN_MIN_MS` from observed turns. There are no encoders to confirm a 90-degree turn and no rear sensor, so leave space behind the robot for the short backup.
+`limit = maximumPWM - WALL_INNER_PWM`, floored at zero. `WALL_INNER_PWM` is provisionally **90**, taken from the earlier smooth corner output; it is **not a measured battery-powered running threshold**. Both wheels receive positive forward commands during normal navigation. Object-follow minimum PWM does not control wall steering.
+
+The previous need for PWM 255 on the 5 V supply does not establish the battery-powered minimum. Before tuning gains further, use the controller's manual drive/standalone `TEST` commands to measure both wheels under floor load. In Serial Monitor after reset (controller disconnected), `TEST 120 120 500` commands a half-second straight test; test several values and record the lowest reliably rolling PWM for each wheel. Choose a wall inner limit above the higher running threshold. Check starting behavior separately. If the limit is too near maximum there is little steering authority; that is a motor/power constraint, not something a larger PD gain can solve. Actual testing requires the car on its driving surface with room to move.
+
+### No-return and invalid measurements
+
+The HC-SR04 can report no obstacle with a completed approximately 38 ms pulse ([supplier datasheet](https://www.elecrow.com/download/HC_SR04%20Datasheet.pdf)). Acquisition now waits up to 45 ms so this pulse can finish. Completed pulses longer than the 4 m measurement range and up to 40 ms are marked `RANGE_NO_RETURN`, not a fabricated distance. Too-short pulses, an echo line high before triggering, and unfinished/no-response pings are invalid. Samples expire independently.
+
+With a fresh front no-return and a valid/recent right wall, tracking continues without a front repulsion term (`TRACKING_NO_FRONT_ECHO`). A front fault still stops after the bounded last-good allowance. A side no-return with a measured front distance starts bounded search; missing both usable directions stops (`NO_WALL_RETURN`). Raw DATA distance remains -1 for non-range results. This classification describes observed pulses, not a guarantee that hardware is healthy; a module that never produces a completed no-return pulse still stops as invalid.
+
+### Recovery
+
+A measured front distance at or below 10 cm triggers a 250 ms commanded backup and an escape spin until front clearance reaches 55 cm or a fresh no-return arrives. These are emergency actions, separate from ordinary forward steering. Each emergency phase has a 2.5 s limit. Front distance remaining at or below 20 cm for 2.5 s also stops the robot. Searching for a side wall beyond 100 cm or a side no-return is limited to four seconds. Stop and the connection watchdog remain active.
+
+### Validation limits
+
+The kinematic test exercises three wheel tracks (12, 14, 16 cm) at three idealized speeds (20, 30, 40 cm/s), sensor offsets 8/6 cm, and alternating 70 ms samples. It checks maximum heading throughout the corner (under 110 degrees), body clearance, and 10–20 cm wall distance after y=70 cm. It checks model wheel motion, not only positive PWM commands. The default model has linear PWM speed and no slip/inertia; an optional deadband argument demonstrates how a stalled inner wheel violates the motion requirement. This remains a software model, not battery calibration or a guarantee of exact 90-degree turns.
 
 ## Sensors and motor timing
 
-Sensors alternate one ping every 70 ms (each sensor about 7 Hz), with 30 ms echo timeout. Echo timing uses interrupts on A1/A3 for UNO R4 WiFi. Accepted range is 2–400 cm. Samples expire after 350 ms. Sensor acquisition is separate from navigation and never blocks manual driving.
+Sensors alternate one ping every 70 ms (each sensor about 7 Hz), with 45 ms echo timeout. Echo timing uses interrupts on A1/A3 for UNO R4 WiFi. Accepted range is 2–400 cm. Samples expire after 350 ms. Sensor acquisition is separate from navigation and never blocks manual driving.
 
-Wheel reversal inserts a 250 ms unpowered interval. Repeated requests do not restart that interval. Stops cancel pending output. Configuration changes also pause before later movement. Logs run at 2 Hz independently of control/sensor updates.
+Wheel reversal inserts a 250 ms unpowered interval. Repeated requests do not restart that interval. Stops cancel pending output. Configuration changes also pause before later movement. Logs run at 10 Hz independently of control/sensor updates.
 
 ## Serial Monitor examples
 
 After resetting the board, at 115200 baud / Newline:
 
 ```text
-CONFIG 255 255 1 0 20 12
+CONFIG 255 255 1 0 20 15
 MODE FOLLOW
 STOP
 MODE WALL
