@@ -1,0 +1,41 @@
+// Deterministic host serial transport around the actual firmware.
+#include <iostream>
+#include <sstream>
+#include "../Robot/Robot.h"
+#include "../Robot/Motor.cpp"
+#include "../Robot/Sensors.cpp"
+#include "../Robot/Line.cpp"
+#include "../Robot/Encoders.cpp"
+#include "../Robot/MapTelemetry.cpp"
+#include "../Robot/Navigation.cpp"
+#include "../Robot/Protocol.cpp"
+#include "../Robot/Robot.ino"
+int front = 100, right = 20;
+void step() {
+  acceptReading(0,front,front > 0 ? front * 58UL : 0);
+  acceptReading(1,right,right > 0 ? right * 58UL : 0);
+  serviceOdometry();serviceObservation(); serviceControlTimeout(); readCommands(); serviceNavigation(); serviceMotor(); serviceTelemetry(); serviceMapExport();
+}
+int main() {
+  setup(); Serial.output.str("");
+  std::string line;
+  while (std::getline(std::cin,line)) {
+    if (line.rfind("@tick ",0) == 0) { nowMs += std::stoul(line.substr(6)); step(); }
+    else if (line.rfind("@counts ",0) == 0) {
+      std::istringstream values(line.substr(8));
+      uint32_t l,r; values>>l>>r;leftTicks=l;rightTicks=r;step();
+    }
+    else if (line.rfind("@ir ",0) == 0) {
+      std::istringstream values(line.substr(4));
+      values >> levels[LINE_LEFT_PIN] >> levels[LINE_CENTER_PIN] >> levels[LINE_RIGHT_PIN]; step();
+    }
+    else if (line.rfind("@distance ",0) == 0) {
+      std::istringstream values(line.substr(10)); values >> front >> right; step();
+    } else {
+      for (char c : line + "\n") Serial.input.push_back(c);
+      while (Serial.available()) step();
+    }
+    std::cout << Serial.output.str(); Serial.output.str(""); Serial.output.clear();
+    std::cout << "@state " << motorLeft << ' ' << motorRight << '\n' << "@end" << std::endl;
+  }
+}

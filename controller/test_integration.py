@@ -33,7 +33,7 @@ class IntegrationTests(unittest.TestCase):
         lab = Path(__file__).resolve().parent.parent
         with tempfile.TemporaryDirectory() as directory:
             binary = str(Path(directory) / 'bridge')
-            subprocess.run(['c++', '-std=c++11', '-Wall', '-Wextra', '-Werror', '-I', str(lab/'tests'),
+            subprocess.run(['c++', '-std=c++14', '-Wall', '-Wextra', '-Werror', '-I', str(lab/'tests'),
                             str(lab/'tests/firmware_bridge.cpp'), '-o', binary], check=True)
             wire = FirmwareSerial(binary)
             try:
@@ -42,23 +42,26 @@ class IntegrationTests(unittest.TestCase):
                 owner = link.connect('test')
                 def steps(count=1, keys=None, mode='MANUAL'):
                     nonlocal now, seq
+                    observed = []
                     for _ in range(count):
                         now += .05; seq += 1
                         link.frame(owner, seq, keys or [], mode)
                         wire.exchange('@tick 50'); link.tick()
+                        observed.append(wire.state)
+                    return observed
                 steps(50); self.assertTrue(link.ready)
                 steps(10, ['Up']); self.assertEqual(wire.state, (255,255))
                 wire.exchange('@distance -1 -1')
                 steps(5, ['Up']); self.assertEqual(wire.state, (255,255))
                 steps(5); self.assertEqual(wire.state, (0,0))
                 wire.exchange('@distance 35 20')
-                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(255,255))
+                steps(20, mode='FOLLOW'); self.assertEqual(wire.state,(255,255))
                 wire.exchange('@distance 15 20')
-                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(-255,-255))
+                steps(20, mode='FOLLOW'); self.assertEqual(wire.state,(-255,-255))
                 wire.exchange('@distance -1 20')
                 steps(3, mode='FOLLOW'); self.assertEqual(wire.state,(0,0))
-                wire.exchange('@distance 50 30')
-                steps(10, mode='WALL'); self.assertGreater(wire.state[0],wire.state[1])
+                wire.exchange('@distance 50 20')
+                steps(20, mode='WALL'); self.assertEqual(wire.state,(255,0))
                 steps(3); self.assertEqual(wire.state,(0,0))
                 steps(10, ['Up']); self.assertEqual(wire.state,(255,255))
                 wire.exchange('@tick 501')  # Entire host freezes, including heartbeat worker.

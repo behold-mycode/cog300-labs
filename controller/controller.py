@@ -57,6 +57,9 @@ def make_server(link, demo=False, port=0):
                 with lock: state = link.snapshot()
                 state['demo'] = demo
                 self.respond(200, state)
+            elif path == '/api/trace':
+                with lock: result = {'csv':link.trace_csv()}
+                self.respond(200, result)
             elif path == '/api/ports':
                 if demo: ports = [{'device': 'DEMO', 'description': 'Demo — no robot'}]
                 else:
@@ -88,6 +91,9 @@ def make_server(link, demo=False, port=0):
                         result = link.snapshot()
                     elif path == '/api/settings':
                         link.configure(body['owner'], body['seq'], body['settings'])
+                        result = link.snapshot()
+                    elif path == '/api/navigation':
+                        link.action(body['owner'], body['seq'], body['action'], body.get('values',{}))
                         result = link.snapshot()
                     elif path == '/api/disconnect':
                         link._authorize(body['owner'], body['seq'])
