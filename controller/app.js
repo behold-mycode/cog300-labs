@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
 // Keep the token in this tab's URL so reload works; it is never sent as a Referer.
 let owner = null, seq = 0, renderedSeq = -1, ready = false, mode = 'MANUAL';
+let navStatus = {}, mapDownloadPending = false, mapExporting = false;
 let framePending = false, configurationPending = false, settingsLoaded = false, lastLog = '';
 const pressed = new Set();
 const mapping = {ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',
@@ -34,9 +35,9 @@ function modeUI() {
     const selected = button.dataset.mode === mode;
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
-    button.disabled = !ready;
+    button.disabled = !ready || mapExporting || (button.dataset.mode === 'MAZE' && !(navStatus.encoders && navStatus.odometry && navStatus.geometry && navStatus.localized && navStatus.dynamics));
   });
-  $('modeLabel').textContent = {MANUAL:'Manual driving',FOLLOW:'Following object',WALL:'Following right wall'}[mode];
+  $('modeLabel').textContent = {MANUAL:'Manual driving',FOLLOW:'Following object',WALL:'Following right wall',LINE:'Following tape',MAZE:'Exploring maze',STOP_ON_TAPE:'Stop on tape',STOP_AT_END:'Stop at tape end'}[mode];
 }
 function render(state) {
   if (!settingsLoaded && state.settings) {
@@ -45,7 +46,7 @@ function render(state) {
       if (typeof value === 'boolean') fields[name].checked = value;
       else fields[name].value = value;
     }
-    settingsLoaded = true;
+    settingsLoaded = Boolean(state.ready);
   }
   ready = Boolean(state.ready && owner);
   if (!ready) { pressed.clear(); mode = 'MANUAL'; paintKeys(); }
@@ -55,8 +56,23 @@ function render(state) {
   $('connect').disabled = Boolean(state.connected && !owner);
   $('settingsForm').querySelector('button').disabled = !ready;
   const t = state.telemetry || {};
+  navStatus = {...(state.navigation || {}), dynamics:Boolean(t.dynamics)};
+  mapExporting = Boolean(state.mapExporting);
+  if (!state.connected) mapDownloadPending = false;
+  if (state.mode === 'MANUAL' && t.mode === 'MANUAL' && !['STOPPED','DRIVING','TIMED_TEST'].includes(t.state)) mode = 'MANUAL';
+  $('navReadiness').textContent = !state.connected ? 'Connect to read navigation readiness.' :
+    `Encoders: ${navStatus.encoders ? 'enabled' : 'not enabled'} · Wheel scale: ${navStatus.odometry ? 'set' : 'required'} · Geometry: ${navStatus.geometry ? 'set' : 'required'} · Localization: ${navStatus.localized ? 'valid' : 'new map or relocalization required'}`;
+  $('traceStatus').textContent = `${state.traceRecording?'Recording':'Recorded'}: ${state.traceRows || 0} / 20,000 observation samples`;
+  $('beliefStatus').textContent = t.belief ? `Tape hypotheses L / centre / R / wide / missing: ${t.belief.map(v=>(100*v).toFixed(0)+'%').join(' / ')} · Braking model: ${t.dynamics?'set':'required'} · Nominal sensor probabilities: validate on robot` : 'Waiting for estimator telemetry';
+  $('encoderCounts').textContent = t.encoderCounts ? `Counts — left: ${t.encoderCounts[0]} · right: ${t.encoderCounts[1]}` : 'Encoder counts: waiting';
+  $('mapStatus').textContent = `Nodes: ${navStatus.nodes || 0} / 64 · Edges: ${navStatus.edges || 0} / 128 · Current node: ${navStatus.current ?? '—'} · Candidate revisit: ${navStatus.candidate ?? '—'}`;
+  if (mapDownloadPending && state.mazeMap?.complete) {
+    mapDownloadPending = false;
+    downloadText(JSON.stringify(state.mazeMap,null,2)+'\n','robot-maze.json','application/json');
+  }
   const distance = value => Number.isFinite(value) && value >= 0 ? value.toFixed(1)+' cm' : '—';
   $('front').textContent = state.connected ? distance(t.front) : '—';
+  $('lineSensors').textContent = state.connected && t.ir ? t.ir.map(v => t.tapeLevel < 0 ? String(v) : v === t.tapeLevel ? 'TAPE' : 'ground').join(' / ') : '—';
   $('right').textContent = state.connected ? distance(t.right) : '—';
   $('robotState').textContent = state.connected ? (t.state || 'Waiting').replaceAll('_',' ').toLowerCase() : 'Not connected';
   if (state.demo) $('demo').textContent = 'DEMO · NO HARDWARE';
@@ -101,6 +117,7 @@ $('connect').addEventListener('click', async () => {
       const closing = owner; localStop(); owner = null; ready = false;
       const state = await api('disconnect', {owner:closing, seq:++seq}); render(state);
     } else {
+      settingsLoaded=false;
       const data = await api('connect', {port:$('port').value});
       owner = data.owner; seq = 0; renderedSeq = -1; localStop();
       await sendFrame(); $('drive').focus();
@@ -110,7 +127,7 @@ $('connect').addEventListener('click', async () => {
 });
 $('stop').addEventListener('click', stop);
 document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
-  if (!ready) return;
+  if (!ready || mapExporting || button.disabled) return;
   pressed.clear(); paintKeys(); mode = button.dataset.mode; modeUI();
   void sendFrame(); $('drive').focus();
 }));
@@ -120,7 +137,7 @@ window.addEventListener('keydown', event => {
   }
   if (!mapping[event.code] || event.target.closest('input,select,textarea') || event.metaKey || event.ctrlKey || event.altKey) return;
   event.preventDefault();
-  if (!ready || event.repeat || !document.hasFocus()) return;
+  if (!ready || mapExporting || event.repeat || !document.hasFocus()) return;
   pressed.add(event.code); mode = 'MANUAL'; paintKeys(); modeUI(); void sendFrame();
 });
 window.addEventListener('keyup', event => {
@@ -136,7 +153,7 @@ $('settingsForm').addEventListener('submit', async event => {
   event.preventDefault(); if (!owner || !ready) return;
   clearError(); localStop();
   const form = event.target.elements;
-  const settings = Object.fromEntries(['power','minimum','followCm','wallCm'].map(k => [k, Number(form[k].value)]));
+  const settings = Object.fromEntries(['power','minimum','followCm','wallCm','lineTapeLevel'].map(k => [k, Number(form[k].value)]));
   settings.invertA = form.invertA.checked; settings.invertB = form.invertB.checked;
   const requestSeq = ++seq;
   configurationPending = true; ready = false; modeUI();
@@ -147,6 +164,39 @@ $('settingsForm').addEventListener('submit', async event => {
   } catch (error) { showError(error); }
   finally { configurationPending = false; }
 });
+function downloadText(text, filename, mime) {
+  const url=URL.createObjectURL(new Blob([text],{type:mime}));
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function navigationAction(action, values={}) {
+  if (!owner || !ready) { showError(new Error('Connect before configuring navigation.')); return; }
+  localStop();configurationPending=true;clearError();
+  const requestSeq=++seq;
+  try {
+    const state=await api('navigation',{owner,seq:requestSeq,action,values});
+    if(requestSeq>=renderedSeq) { renderedSeq=requestSeq;render(state); }
+  } catch(error) { mapDownloadPending=false;showError(error); }
+  finally { configurationPending=false; }
+}
+for(const [id,action,fields] of [
+  ['dynamicsForm','dynamics',['deceleration','reaction','margin']],
+  ['modelForm','model',['hit','falsePositive','change']],
+  ['encoderForm','encoders',['kind','invertL','invertR']],
+  ['odometryForm','odometry',['left','right','track']],
+  ['geometryForm','geometry',['offset','width','match','clearance']],
+  ['confirmForm','map_confirm',['node']]]) {
+  $(id).addEventListener('submit',event=>{
+    event.preventDefault();
+    const values=Object.fromEntries(fields.map(name=>[name,Number(event.target.elements[name].value)]));
+    void navigationAction(action,values);
+  });
+}
+$('exportMap').addEventListener('click',()=>{mapDownloadPending=true;void navigationAction('map_export');});
+$('resetMap').addEventListener('click',()=>{
+  if(window.confirm('Clear the current maze graph and set the current position as the new origin?')) void navigationAction('map_reset');
+});
+$('navigation').addEventListener('toggle',()=>{if($('navigation').open) stop();});
 $('diagnostics').addEventListener('toggle', () => { $('log').textContent = lastLog; });
 $('download').addEventListener('click', () => {
   stop();
@@ -164,3 +214,10 @@ setInterval(async () => {
   finally { framePending = false; }
 }, 100);
 void refresh(); modeUI();
+
+$('startTrace').addEventListener('click',()=>void navigationAction('trace',{enabled:1}));
+$('stopTrace').addEventListener('click',()=>void navigationAction('trace',{enabled:0}));
+$('downloadTrace').addEventListener('click',async()=>{
+  stop();try { const data=await api('trace');downloadText(data.csv,'robot-observations.csv','text/csv'); }
+  catch(error) { showError(error); }
+});
