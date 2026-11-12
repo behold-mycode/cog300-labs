@@ -1,0 +1,10 @@
+.DS_Store
+.Rhistory
+__pycache__/
+*.py[cod]
+.runtime/
+.venv/
+.venv.old.*/
+
+# Per-robot access-point password
+Robot/WirelessSecrets.h

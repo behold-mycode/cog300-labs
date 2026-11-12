@@ -4,15 +4,21 @@
 void setup() {
   setupMotor();
   setupSensor();
+  setupLine();
   Serial.begin(115200);
-  Serial.println(F("ROBOT_BOOT 4 stopped; HELP for commands"));
+  configureHardware(hardware::CAR);loadCalibration();setupStandalone();setupWireless();
+  Serial.println(F("ROBOT_BOOT 7 stopped; HELP for commands"));
 }
 
 void loop() {
+  serviceButton();
   serviceSensor();
+  serviceOdometry();serviceObservation();
   serviceControlTimeout();
   readCommands();
   serviceNavigation();
   serviceMotor();
   serviceTelemetry();
+  serviceMapExport();
+  serviceWireless();
 }

@@ -33,7 +33,7 @@ class IntegrationTests(unittest.TestCase):
         lab = Path(__file__).resolve().parent.parent
         with tempfile.TemporaryDirectory() as directory:
             binary = str(Path(directory) / 'bridge')
-            subprocess.run(['c++', '-std=c++11', '-Wall', '-Wextra', '-Werror', '-I', str(lab/'tests'),
+            subprocess.run(['c++', '-std=c++14', '-Wall', '-Wextra', '-Werror', '-I', str(lab/'tests'),
                             str(lab/'tests/firmware_bridge.cpp'), '-o', binary], check=True)
             wire = FirmwareSerial(binary)
             try:
@@ -42,25 +42,49 @@ class IntegrationTests(unittest.TestCase):
                 owner = link.connect('test')
                 def steps(count=1, keys=None, mode='MANUAL'):
                     nonlocal now, seq
+                    observed = []
                     for _ in range(count):
                         now += .05; seq += 1
                         link.frame(owner, seq, keys or [], mode)
                         wire.exchange('@tick 50'); link.tick()
+                        observed.append(wire.state)
+                    return observed
                 steps(50); self.assertTrue(link.ready)
                 steps(10, ['Up']); self.assertEqual(wire.state, (255,255))
                 wire.exchange('@distance -1 -1')
                 steps(5, ['Up']); self.assertEqual(wire.state, (255,255))
                 steps(5); self.assertEqual(wire.state, (0,0))
                 wire.exchange('@distance 35 20')
-                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(255,255))
+                steps(20, mode='FOLLOW'); self.assertEqual(wire.state,(255,255))
                 wire.exchange('@distance 15 20')
-                steps(10, mode='FOLLOW'); self.assertEqual(wire.state,(-255,-255))
+                steps(20, mode='FOLLOW'); self.assertEqual(wire.state,(-255,-255))
                 wire.exchange('@distance -1 20')
                 steps(3, mode='FOLLOW'); self.assertEqual(wire.state,(0,0))
-                wire.exchange('@distance 50 30')
-                steps(10, mode='WALL'); self.assertGreater(wire.state[0],wire.state[1])
+                wire.exchange('@distance 50 20')
+                steps(20, mode='WALL'); self.assertEqual(wire.state,(255,0))
                 steps(3); self.assertEqual(wire.state,(0,0))
-                steps(10, ['Up']); self.assertEqual(wire.state,(255,255))
+                # Synthetic physical profile, then legacy protocol commissioning fixtures.
+                wire.exchange("@profile")
+                seq+=1;link.configure(owner,seq,dict(link.settings,lineTapeLevel=1));steps(3)
+                def action(name, values):
+                    nonlocal seq
+                    seq+=1;link.action(owner,seq,name,values);steps(3)
+                    self.assertTrue(link.ready, link.phase)
+                action('sonar',dict(enabled=1,interval=70))
+                action('encoders',dict(kind=1,invertL=0,invertR=0))
+                action('odometry',dict(left=1,right=1,track=120))
+                action('body',dict(front=90,rear=70,halfWidth=60,frontSensor=80,sideX=30,sideY=50))
+                action('wall_config',dict(cruise=60,turnSpeed=40,margin=15,deceleration=200,reaction=.15,matchRadius=60,corridorWidth=400))
+                action('speed_config',dict(fullLeft=200,fullRight=200,kp=.6,ki=.3,acceleration=150))
+                action('race_config',dict(speed=50,offset=100,angle=1.8))
+                action('save_calibration',{})
+                seq+=1;link.configure(owner,seq,dict(link.settings,power=200,minimum=200));steps(3)
+                action('load_calibration',{})
+                self.assertEqual(link.settings['power'],255)
+                self.assertEqual(link.telemetry['race']['speed'],50)
+                wire.exchange('@ir 0 1 0')
+                steps(6,mode='RACE');self.assertEqual(link.telemetry['mode'],'RACE')
+                self.assertGreater(wire.state[0],0);self.assertGreater(wire.state[1],0)
                 wire.exchange('@tick 501')  # Entire host freezes, including heartbeat worker.
                 self.assertEqual(wire.state,(0,0))
                 link.tick(); self.assertFalse(link.ready)
