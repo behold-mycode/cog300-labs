@@ -123,3 +123,5 @@ bool configureSonars(bool left,uint32_t interval){
   else pinMode(11,INPUT);
   lastPingMs=millis()-interval;return true;
 }
+
+uint32_t sonarInterval(){return pingInterval;}

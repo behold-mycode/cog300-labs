@@ -4,6 +4,8 @@
 #include "Odometry.h"
 #include "Explorer.h"
 #include "WallNavigator.h"
+#include "Race.h"
+#include "HardwareProfile.h"
 
 const uint8_t ENA=5,IN1=6,IN2=7,IN3=8,IN4=9,ENB=10;
 const uint8_t TRIG_PIN=A0,ECHO_PIN=A1,RIGHT_TRIG_PIN=A2,RIGHT_ECHO_PIN=A3;
@@ -21,7 +23,7 @@ struct NavigationConfig {
   float frontStopCm=20,wallBandCm=2;
   uint32_t stallMs=1500; // Failure deadline, never a movement duration.
 };
-enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE };
+enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE,RACE };
 extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
@@ -48,3 +50,21 @@ bool mapExportActive();void beginMapExport();void serviceMapExport();void report
 
 extern wall::Navigator wallNavigator;extern wall::Velocity wheelVelocity;
 void resetWallFeedback();void reportWallTrace();void resetWallCalibration();void pauseWall();bool startWall();void serviceWall();void reportWall();
+
+extern race::Config raceConfig;
+extern race::Navigator raceNavigator;
+extern bool standaloneActive,lastCommandOk;
+bool startRace();bool startStandalone();void serviceRace();void setupStandalone();void serviceButton();
+wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration();
+bool saveCalibration();bool loadCalibration();bool calibrationSaved();
+int encoderKind();bool encoderInvertLeft();bool encoderInvertRight();uint32_t sonarInterval();
+void setupWireless();void serviceWireless();void suspendWireless();
+
+bool motorDemandActive();
+
+void reportRace();
+
+bool configureHardware(const hardware::Profile&);uint32_t hardwareFingerprint();
+bool automaticSetupActive();void cancelAutomaticSetup();bool beginAutomaticSetup();void serviceAutomaticSetup();void clearSavedCalibrationStatus();
+
+bool hardwareMotorDirectionsMatch(bool invertA,bool invertB);

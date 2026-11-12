@@ -9,6 +9,10 @@
 #include "../Robot/WallMode.cpp"
 #include "../Robot/Navigation.cpp"
 #include "../Robot/Protocol.cpp"
+#include "../Robot/Persistence.cpp"
+#include "../Robot/AutoSetup.cpp"
+#include "../Robot/Standalone.cpp"
+#include "../Robot/Wireless.cpp"
 #include "../Robot/Robot.ino"
 void command(const char* text) { char buffer[96];strcpy(buffer,text);processCommand(buffer); }
 void tape(int mask) { levels[3]=(mask>>2)&1;levels[2]=(mask>>1)&1;levels[4]=mask&1; }
@@ -16,3 +20,5 @@ void tick(uint32_t ms,int front=60,int right=10) {
   nowMs+=ms;acceptReading(0,front,front>0?front*58U:0);acceptReading(1,right,right>0?right*58U:0);
   serviceOdometry();serviceObservation();serviceControlTimeout();serviceNavigation();serviceMotor();serviceMapExport();
 }
+
+hardware::Profile syntheticHardware(){hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;return p;}

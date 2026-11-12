@@ -51,3 +51,6 @@ void reportEncoders() {
   Serial.print(F("COUNTS,"));Serial.print(l);Serial.print(',');Serial.print(r);Serial.print(',');
   Serial.println(encEnabled?(encQuadrature?2:1):0);
 }
+
+int encoderKind(){return encEnabled?(encQuadrature?2:1):0;}
+bool encoderInvertLeft(){return encInvertL<0;}bool encoderInvertRight(){return encInvertR<0;}

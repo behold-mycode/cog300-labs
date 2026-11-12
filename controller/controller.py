@@ -89,12 +89,6 @@ def make_server(link, demo=False, port=0):
                     elif path == '/api/frame':
                         link.frame(body['owner'], body['seq'], body['keys'], body['mode'])
                         result = link.snapshot()
-                    elif path == '/api/settings':
-                        link.configure(body['owner'], body['seq'], body['settings'])
-                        result = link.snapshot()
-                    elif path == '/api/navigation':
-                        link.action(body['owner'], body['seq'], body['action'], body.get('values',{}))
-                        result = link.snapshot()
                     elif path == '/api/disconnect':
                         link._authorize(body['owner'], body['seq'])
                         link.disconnect(); result = link.snapshot()

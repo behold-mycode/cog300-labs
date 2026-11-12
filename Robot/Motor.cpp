@@ -76,3 +76,5 @@ void serviceMotor() {
     Serial.println(F("TEST_START"));
   }
 }
+
+bool motorDemandActive(){return wantedLeft||wantedRight||testPending||testRunning;}

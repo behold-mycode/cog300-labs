@@ -14,20 +14,21 @@ static void hold(const char* reason) { stopMotor();navigationState=reason; }
 static bool feedbackReady() { return encodersEnabled()&&odometry.configured&&odometry.sampled; }
 const char* modeName() {
   switch(mode) {
-    case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
+    case RACE:return "RACE";case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
     case MAZE:return "MAZE";case STOP_ON_TAPE:return "STOP_ON_TAPE";case STOP_AT_END:return "STOP_AT_END";
     default:return "MANUAL";
   }
 }
 void cancelNavigation() {
-  explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
+  cancelAutomaticSetup();raceNavigator.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
   navigationState="STOPPED";
 }
 void stopRobot() { cancelNavigation();stopMotor(); }
 void startNavigation(Mode selected) {
   stopRobot();
-  if(selected!=WALL_MAZE&&selected!=MANUAL)wallNavigator.invalidate();
-  if(selected==WALL_MAZE){if(!startWall())return;}
+  if(selected!=WALL_MAZE&&selected!=RACE&&selected!=MANUAL)wallNavigator.invalidate();
+  if(selected==RACE){if(!startRace())return;}
+  else if(selected==WALL_MAZE){if(!startWall())return;}
   else if(selected==MAZE) {
     if(wallNavigator.ownsGraph){navigationState="RESET_WALL_MAP_FIRST";return;}
     if(!feedbackReady()) { navigationState="ENCODERS_REQUIRED";return; }
@@ -90,12 +91,13 @@ static void followWall() {
 }
 void serviceNavigation() {
   if(mode==MANUAL) return;
-  if((mode==MAZE||mode==WALL_MAZE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
+  if((mode==MAZE||mode==WALL_MAZE||mode==RACE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
   if(feedbackReady() && !progress.check(odometry.pose,
       {(int8_t)(motorLeft>0?1:motorLeft<0?-1:0),(int8_t)(motorRight>0?1:motorRight<0?-1:0)},
       millis(),navigationConfig.stallMs)) {
     if(mode==WALL_MAZE)wallNavigator.fail("ENCODER_STALL");else explorer.fail("ENCODER_STALL");stopRobot();navigationState="ENCODER_STALL";return;
   }
+  if(mode==RACE){serviceRace();return;}
   if(mode==WALL_MAZE){serviceWall();return;}
   if(mode==WALL) { followWall();return; }
   if(mode==FOLLOW) {

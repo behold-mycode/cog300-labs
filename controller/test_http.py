@@ -34,6 +34,11 @@ class HttpTests(unittest.TestCase):
             self.request('/api/frame', dict(owner=owner,seq=0,keys=['Up'],mode='MANUAL'))
         self.request('/api/disconnect', dict(owner=owner,seq=2))
         self.assertIsNone(self.link.serial)
+    def test_configuration_endpoints_removed(self):
+        for path in ('/api/settings','/api/navigation'):
+            with self.assertRaises(HTTPError) as error:self.request(path, {})
+            self.assertEqual(error.exception.code,404)
+
     def test_cross_origin_and_rebinding_rejected(self):
         for headers in [{'Origin':'https://example.com'}, {'Host':'evil.example'}]:
             with self.assertRaises(HTTPError) as error: self.request('/api/state', **headers)

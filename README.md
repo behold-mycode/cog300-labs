@@ -1,3 +1,7 @@
+Current wiring and robot-owned startup: [Robot-Wiring.md](Robot-Wiring.md) · [complete diagram](Robot-Wiring.svg). Physical profile dimensions are still needed; no physical validation is claimed.
+
+Standalone line-to-maze operation and onboard Wi-Fi setup: see [Standalone-Setup.md](Standalone-Setup.md). This local addition is not yet uploaded or physically validated.
+
 # COGS 300 Robot
 
 ## Download and set up
@@ -12,4 +16,4 @@ Keep Terminal open while using the controller. For setup help and troubleshootin
 
 Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** This revision is not uploaded or physically validated.
 
-Legacy tape/lab modes remain. Their [firmware 6 guide](documentation/observation-first.md) describes the older tape navigator; its steering and limitations are unchanged. Automatic tape-to-wall transition, goal-room recognition and object-search behavior are not implemented in the new wall mode.
+Legacy tape/lab modes remain. Their [firmware 6 guide](documentation/observation-first.md) describes the older tape navigator; its steering and limitations are unchanged. The app exposes **Maze solver** and **Manual driving** only. Maze solver selects line or wall guidance onboard and retains the USB watchdog for laptop-controlled runs. Goal-room recognition is intentionally omitted; object-search behavior is not part of the new course controller.

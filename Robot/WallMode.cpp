@@ -17,16 +17,33 @@ static void readWallInput(){
   wallInput.leftSpeed=(odometry.pose.left-lastWheelL)/dt;wallInput.rightSpeed=(odometry.pose.right-lastWheelR)/dt;
   lastVelocity=now;lastWheelL=odometry.pose.left;lastWheelR=odometry.pose.right;
  }
- for(int n=0;n<3;++n){auto r=sensorReading(n);wallInput.ranges[n]={r.cm*10,r.sampledMs,r.sequence,r.status==RANGE_VALID,sensorPose(n)};}
+ for(int n=0;n<3;++n){auto r=sensorReading(n);wallInput.ranges[n]={r.cm*10,r.sampledMs,r.sequence,r.status==RANGE_VALID,sensorPose(n),r.status==RANGE_NO_RETURN};}
 }
-bool startWall(){
+bool prepareWallCalibration(){
  if(!leftSonarEnabled()){navigationState="LEFT_SONAR_REQUIRED";return false;}
  if(!encodersEnabled()||!odometry.configured||!odometry.sampled){navigationState="ENCODERS_REQUIRED";return false;}
  if(!wheelVelocity.config.valid()){navigationState="SPEED_CALIBRATION_REQUIRED";return false;}
  auto &c=wallNavigator.config;c.track=odometry.track;
  c.distanceTolerance=fmaxf(odometry.leftScale,odometry.rightScale)*1.5f;
  c.angleTolerance=fmaxf(.025f,2*c.distanceTolerance/c.track);
+ return c.valid();
+}
+wall::Input motionInput(){readWallInput();return wallInput;}
+void driveVelocity(wall::Speeds target){
+ readWallInput();uint32_t now=millis();if((uint32_t)(now-lastControlStep)<20)return;
+ float dt=(uint32_t)(now-lastControlStep)*.001f;lastControlStep=now;targets=target;
+ auto p=wheelVelocity.step(target.left,target.right,wallInput.leftSpeed,wallInput.rightSpeed,dt,settings.power);requestMotor(p.left,p.right);
+}
+bool startWall(){
+ if(!prepareWallCalibration())return false;
  readWallInput();wheelVelocity.reset();lastControlStep=millis();
+ // On a fresh autonomous wall map, measure the corridor rather than require
+ // its width as an app setting. Three rays are still required for navigation.
+ if(hardwareFingerprint()&&!explorer.graph.nodeCount){
+  float r=wall::corrected(wallNavigator.config,wallInput,1),l=wall::corrected(wallNavigator.config,wallInput,2);
+  float width=r+l+2*wallNavigator.config.sideY;
+  if(r>=0&&l>=0&&width>2*(wallNavigator.config.halfWidth+wallNavigator.config.margin))wallNavigator.config.corridorWidth=width;
+ }
  if(!wallNavigator.begin(wallInput)){navigationState=wallNavigator.reason;return false;}
  return true;
 }

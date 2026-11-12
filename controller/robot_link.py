@@ -7,7 +7,7 @@ import time
 DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
                 followCm=20, wallCm=10, lineTapeLevel=-1)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
-MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE'}
+MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE', 'RACE'}
 BROWSER_TIMEOUT = .6
 
 
@@ -133,6 +133,8 @@ class RobotLink:
 
     def action(self, owner, seq, action, values):
         commands = {
+            'race_config': ('RACECFG', [('speed',1,300),('offset',1,999),('angle',.5,2.4)]),
+            'save_calibration': ('SAVE', []), 'load_calibration': ('LOAD', []),
             'sonar': ('SONAR', [('enabled',0,1),('interval',25,100)]),
             'body': ('BODY', [('front',1,1000),('rear',1,1000),('halfWidth',1,1000),('frontSensor',0,1000),('sideX',-1000,1000),('sideY',0,1000)]),
             'wall_config': ('WALLCFG', [('cruise',1,500),('turnSpeed',1,300),('margin',1,200),('deceleration',1,10000),('reaction',.1,5),('matchRadius',1,500),('corridorWidth',10,5000)]),
@@ -232,7 +234,7 @@ class RobotLink:
 
     def _receive(self, line):
         if line != 'ALIVE' and not line.startswith('OBS,'): self.log('< ' + line)
-        if line.startswith('CONFIG_REPORT,') and self.phase == 'Waiting for firmware 7':
+        if line.startswith('CONFIG_REPORT,') and (self.phase == 'Waiting for firmware 7' or self.pending_navigation == 'OK LOAD'):
             try:
                 v=[int(x) for x in line.split(',')[1:]]
                 if len(v)!=7 or v[2] not in (0,1) or v[3] not in (0,1): return
@@ -243,8 +245,9 @@ class RobotLink:
         elif line.startswith('BUSY '):
             self.phase=line.replace('_',' ')
         elif line == 'ROBOT_READY 7' and self.phase == 'Waiting for firmware 7':
-            self.phase = 'Applying settings'; self.last_rx = self.clock()
-            self._config()
+            self.ready = True; self.phase = 'Connected'; self.last_rx = self.clock()
+            # Firmware owns calibration. Connecting must never overwrite it.
+            self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
         elif line.startswith('ROBOT_READY ') and line != 'ROBOT_READY 7':
             self.disconnect('Upload Robot firmware 7, then reconnect.')
         elif line == 'OK CONFIG' and self.phase == 'Applying settings':
@@ -273,6 +276,12 @@ class RobotLink:
                     if len(self.trace_rows)>=20000:
                         self.trace_recording=False;self._send('TRACE 0')
                         self.log('Trace stopped at 20,000 samples; download before starting another.')
+            except ValueError: pass
+        elif line.startswith('RACENAV,'):
+            try:
+                v=[float(x) for x in line.split(',')[1:]]
+                if len(v)==6 and all(math.isfinite(x) for x in v) and v[0] in (0,1) and v[1] in (0,1):
+                    self.telemetry['race']=dict(zip(('configured','saved','speed','offset','angle','stage'),v))
             except ValueError: pass
         elif line.startswith('WALLNAV,'):
             try:
@@ -307,7 +316,7 @@ class RobotLink:
                 self.telemetry.update(ms=int(parts[1]), mode=parts[2], state=parts[3],
                                       front=values[0], right=values[1], left=values[2], motorRight=values[3])
             except ValueError: return
-            if parts[2] == 'MANUAL' and parts[3] not in ('STOPPED','DRIVING','TIMED_TEST'):
+            if self.ready and parts[2] == 'MANUAL' and parts[3] not in ('STOPPED','DRIVING','TIMED_TEST'):
                 self.keys, self.mode = [], 'MANUAL'
                 self.sent_mode = 'MANUAL'
                 self.phase = 'Stopped: ' + parts[3].replace('_',' ').lower()
@@ -373,7 +382,9 @@ class DemoSerial:
         cmd = data.decode().strip()
         if cmd == 'HELLO': self.pending.extend(b'ROBOT_READY 7\n')
         elif cmd == 'MAP DUMP': self.pending.extend(b'MAP_BEGIN,0,0\nMAP_END\n')
-        elif cmd.startswith(('SONAR ','BODY ','WALLCFG ','SPEEDCFG ','ENC ','ODOM ','GEOMETRY ','DYNAMICS ','MODEL ','TRACE ','MAP ')):
+        elif cmd in ('SAVE','LOAD'):
+            self.pending.extend(('OK '+cmd+'\n').encode())
+        elif cmd.startswith(('RACECFG ','SONAR ','BODY ','WALLCFG ','SPEEDCFG ','ENC ','ODOM ','GEOMETRY ','DYNAMICS ','MODEL ','TRACE ','MAP ')):
             prefix=' '.join(cmd.split()[:2]) if cmd.startswith('MAP ') else cmd.split()[0]
             self.pending.extend(('OK '+prefix+'\n').encode())
         elif cmd.startswith('CONFIG '): self.pending.extend(b'OK CONFIG\n')

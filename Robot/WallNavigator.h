@@ -15,7 +15,7 @@ struct Config {
   return corridorWidth>2*(halfWidth+margin)&&front>0&&rear>0&&halfWidth>0&&frontSensor>=0&&frontSensor<=front&&fabsf(sideX)<=fmaxf(front,rear)&&sideY>=0&&sideY<=halfWidth&&margin>0&&deceleration>0&&reaction>0&&cruise>0&&turnSpeed>0&&track>0&&distanceTolerance>0&&distanceTolerance<margin&&angleTolerance>0&&angleTolerance<.25f&&matchRadius>distanceTolerance;
  }
 };
-struct Ray { float mm=-1;uint32_t stamp=0,sequence=0;bool valid=false;Pose pose; };
+struct Ray { float mm=-1;uint32_t stamp=0,sequence=0;bool valid=false;Pose pose;bool noReturn=false; };
 struct Input { uint32_t now=0;Pose pose;Ray ranges[3];float leftSpeed=0,rightSpeed=0; };
 inline bool fresh(const Ray&r,uint32_t now){return r.valid&&isfinite(r.mm)&&r.mm>=20&&(uint32_t)(now-r.stamp)<300;}
 inline float displacement(const Pose&a,const Pose&b){return hypotf(a.x-b.x,a.y-b.y);}
@@ -90,6 +90,12 @@ class Navigator {
  int current=maze::NONE,incoming=maze::NONE,departure=maze::NONE,candidate=maze::NONE;
  explicit Navigator(maze::Graph&g):graph(g){}
  void clear(){graph.clear();state=IDLE;localized=true;paused=true;ownsGraph=false;current=incoming=departure=candidate=maze::NONE;resetBeliefs();reason="WALL_IDLE";}
+ // Line guidance may temporarily steer within a corridor. Retain the graph,
+ // edge start and travelled distance; do not invent a new node at reacquisition.
+ bool resumeAfterLine(const Input&i){
+  if(state!=CORRIDOR||!localized)return false;
+  heading=i.pose.heading;resetBeliefs();paused=false;reason="WALL_RESUMING_CORRIDOR";return true;
+ }
  void pause(){paused=true;}
  void invalidate(){if(ownsGraph&&graph.nodeCount){localized=false;paused=true;reason="WALL_RELOCALIZE_REQUIRED";}}
  bool begin(const Input&i){

@@ -4,12 +4,19 @@
 #include <string.h>
 #include <math.h>
 
+bool lastCommandOk=true;
 bool controlSession = false, controlExpired = false;
 static uint32_t lastControl = 0, lastLog = 0, lastInput = 0;
 static bool logging = true, discardLine = false;
 static char input[96];
 static uint8_t inputLength = 0;
 
+static void reportConfiguration(){
+      Serial.print(F("CONFIG_REPORT,"));Serial.print(settings.power);Serial.print(',');
+      Serial.print(settings.minimum);Serial.print(',');Serial.print(settings.invertA?1:0);Serial.print(',');
+      Serial.print(settings.invertB?1:0);Serial.print(',');Serial.print(settings.followCm);Serial.print(',');
+      Serial.print(settings.wallCm);Serial.print(',');Serial.println(lineTapeLevel);
+}
 void serviceControlTimeout() {
   if (controlSession && (uint32_t)(millis() - lastControl) >= CONTROL_TIMEOUT_MS) {
     stopRobot(); controlSession = false; controlExpired = true;
@@ -27,11 +34,12 @@ void reportStatus() {
   Serial.print(','); Serial.println(motorRight);
 }
 void serviceTelemetry() {
+  if(standaloneActive&&!Serial)return;
   if (logging && (uint32_t)(millis() - lastLog) >= LOG_MS) {
-    lastLog = millis(); reportStatus(); reportLine(); reportNavigation(); reportEncoders();reportWall();
+    lastLog = millis(); reportStatus(); reportLine(); reportNavigation(); reportEncoders();reportWall();reportRace();
   }
 }
-static void invalid() { stopRobot(); Serial.println(F("ERROR invalid command; stopped")); }
+static void invalid() { lastCommandOk=false; stopRobot(); Serial.println(F("ERROR invalid command; stopped")); }
 static bool number(const char* text, int low, int high, int& value) {
   if (!*text || strlen(text) > 6) return false;
   char* end;
@@ -44,6 +52,7 @@ static bool realNumber(const char* text,float low,float high,float& value) {
   return *text && !*end && isfinite(value) && value>=low && value<=high;
 }
 void processCommand(char* line) {
+  lastCommandOk=true;
   char* args[8]; uint8_t count = 0;
   for (char* p = strtok(line, " \t"); p; p = strtok(NULL, " \t")) {
     if (count == 8) { invalid(); return; }
@@ -61,12 +70,7 @@ void processCommand(char* line) {
     lastControl = millis();
     // Reconnecting a different desktop must not overwrite the calibration of a
     // live map with its startup defaults.
-    if(explorer.graph.nodeCount) {
-      Serial.print(F("CONFIG_REPORT,"));Serial.print(settings.power);Serial.print(',');
-      Serial.print(settings.minimum);Serial.print(',');Serial.print(settings.invertA?1:0);Serial.print(',');
-      Serial.print(settings.invertB?1:0);Serial.print(',');Serial.print(settings.followCm);Serial.print(',');
-      Serial.print(settings.wallCm);Serial.print(',');Serial.println(lineTapeLevel);
-    }
+    reportConfiguration();
     Serial.println(F("ROBOT_READY 7")); return;
   }
   if (!strcmp(cmd, "HEARTBEAT") && count == 1) {
@@ -89,6 +93,7 @@ void processCommand(char* line) {
     Serial.println(F("GEOMETRY sensorOffsetMm tapeWidthMm nodeMatchRadiusMm turnClearanceMm"));
     Serial.println(F("DYNAMICS decelerationMmS2 reactionSeconds marginMm; MODEL hit falsePositive transitionMix"));
     Serial.println(F("MAP DUMP|RESET|CONFIRM node; geometry changes require empty map"));
+    Serial.println(F("RACECFG speedMmS sensorOffsetMm searchRadians; SAVE; LOAD; RUN START (standalone); MODE RACE (tethered)"));
     Serial.println(F("TRACE 0|1; LOG ON|OFF; STATUS. DATA,ms,mode,state,front_cm,right_cm,left_pwm,right_pwm"));
     return;
   }
@@ -100,7 +105,14 @@ void processCommand(char* line) {
   if (controlExpired) { invalid(); return; }
   // Keep streaming records a consistent snapshot; STOP and heartbeat above
   // remain available. Reject mutation until MAP_END, without clearing the map.
-  if(mapExportActive()) { stopRobot();Serial.println(F("BUSY MAP_EXPORT"));return; }
+  if(mapExportActive()) { stopRobot();Serial.println(F("BUSY MAP_EXPORT"));lastCommandOk=false;return; }
+  if(!strcmp(cmd,"RUN")&&count==2&&!strcmp(args[1],"START")){lastCommandOk=startStandalone();return;}
+  if(!strcmp(cmd,"SAVE")&&count==1){lastCommandOk=saveCalibration();Serial.println(lastCommandOk?F("OK SAVE"):F("ERROR SAVE"));return;}
+  if(!strcmp(cmd,"LOAD")&&count==1){lastCommandOk=loadCalibration();if(lastCommandOk){reportConfiguration();reportRace();}Serial.println(lastCommandOk?F("OK LOAD"):F("ERROR LOAD"));return;}
+  if(!strcmp(cmd,"RACECFG")&&count==4){
+    race::Config cfg;if(!realNumber(args[1],1,300,cfg.speed)||!realNumber(args[2],1,999,cfg.sensorOffset)||!realNumber(args[3],.5f,2.4f,cfg.searchAngle)){invalid();return;}
+    stopRobot();raceConfig=cfg;Serial.println(F("OK RACECFG"));return;
+  }
   int a, b, c, d, e, f, g = -1;
   if(!strcmp(cmd,"SONAR")&&count==3){
     if(explorer.graph.nodeCount||!number(args[1],0,1,a)||!number(args[2],25,100,b)||!configureSonars(a,b)){invalid();return;}
@@ -192,6 +204,7 @@ void processCommand(char* line) {
   if (!strcmp(cmd, "MODE") && count == 2) {
     if (!strcmp(args[1], "MANUAL")) startNavigation(MANUAL);
     else if (!strcmp(args[1], "FOLLOW")) startNavigation(FOLLOW);
+    else if (!strcmp(args[1], "RACE")) startNavigation(RACE);
     else if (!strcmp(args[1], "WALL_MAZE")) startNavigation(WALL_MAZE);
     else if (!strcmp(args[1], "WALL")) startNavigation(WALL);
     else if (!strcmp(args[1], "LINE")) startNavigation(LINE);

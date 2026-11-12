@@ -15,17 +15,19 @@
 #define HIGH 1
 #define LOW 0
 #define OUTPUT 1
+#define INPUT_PULLUP 3
 #define F(x) x
 static uint32_t nowMs = 0;
 static int modes[20] = {}, levels[20] = {}, pwm[20] = {};
 static uint32_t millisStep = 0;
 inline uint32_t millis() { uint32_t value = nowMs; nowMs += millisStep; return value; }
-inline void pinMode(int pin, int mode) { modes[pin] = mode; }
+inline void pinMode(int pin, int mode) { modes[pin] = mode; if(mode==INPUT_PULLUP)levels[pin]=HIGH; }
 inline void digitalWrite(int pin, int value) { levels[pin] = value; }
 inline void analogWrite(int pin, int value) { pwm[pin] = value; }
 struct FakeSerial {
   std::deque<char> input;
   std::ostringstream output;
+  explicit operator bool() const {return true;}
   void begin(int) {}
   int available() { return input.size(); }
   int read() { char c = input.front(); input.pop_front(); return c; }

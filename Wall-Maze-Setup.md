@@ -45,7 +45,7 @@ The three sonar ECHO interrupts and two encoder interrupts use distinct R4 chann
 
 ## Calibration order
 
-All dimensions are millimetres, wheel speeds mm/s, acceleration/deceleration mm/s², and angles radians internally. No physical measurements below are filled in automatically. Use the browser's Maze setup forms or serial at 115200 baud/newline. Configuration stops motion. Calibration, graph and navigation state are RAM-only and are lost on reset/upload/power loss.
+All dimensions are millimetres, wheel speeds mm/s, acceleration/deceleration mm/s², and angles radians internally. No physical measurements below are filled in automatically. The app no longer has setup forms. The command sequence below is a legacy engineering/debug reference; current robot-owned startup is described in [Robot-Wiring.md](Robot-Wiring.md). Configuration stops motion. Wall-only calibration initially lives in RAM. The standalone extension can SAVE a complete race calibration and restore it at boot; graph and navigation state remain RAM-only. See [Standalone-Setup.md](Standalone-Setup.md).
 
 1. Verify motor directions with wheels lifted. The defaults retain the prior working channel polarities. Changing motor polarity invalidates wall calibration. Changing encoder mode or wheel scale also invalidates wall calibration; unchanged reconnect settings preserve it.
 2. Enable the left sonar after wiring: `SONAR 1 70`. Check each distance separately, including a cardboard corner. Compare single-sensor and multi-sensor recordings before reducing spacing.
@@ -74,7 +74,7 @@ MAP RESET
 
 ## Diagnostics and verification
 
-The browser exposes left range, three wall probabilities, requested/estimated wheel speeds and map information. `WALLNAV` telemetry carries those values; `OBS` CSV includes left range/age, wall beliefs, wheel targets/estimated speeds and numeric wall state in addition to existing pose/raw tape/front/right/PWM fields. Encoder speeds update over 100 ms windows; telemetry values are estimates, not ground truth. Start observation recording before selecting the mode, then download the CSV before closing the controller. The ordinary recent log is bounded and is not a full run archive.
+The firmware exposes left range, three wall probabilities, requested/estimated wheel speeds and map information in its diagnostic serial protocol. The simplified app does not expose diagnostic panels. `WALLNAV` telemetry carries those values; `OBS` CSV includes left range/age, wall beliefs, wheel targets/estimated speeds and numeric wall state in addition to existing pose/raw tape/front/right/PWM fields. Encoder speeds update over 100 ms windows; telemetry values are estimates, not ground truth. Start observation recording before selecting the mode, then download the CSV before closing the controller. The ordinary recent log is bounded and is not a full run archive.
 
 Run `python3 tests/run_checks.py`. New tests cover corner sweep rejection, unequal wheel feedback, settle/overshoot logic, invalid/stale ranges, duplicate evidence, actual three-sonar echo scheduling, calibration gates, controller actions, route export, uncertain loop confirmation, capacity/ambiguity failures and wider corridors. Firmware-in-loop simulations include the real motor reversal interlock and coast dynamics, staggered synthetic range readings, rectangular-body collision checks, a dead-end return, a T-junction with two explored branches, 2% unobserved wheel slip, faster travel/weaker deceleration, and large reaction allowance with tight node tolerance.
 
@@ -82,7 +82,7 @@ These simulations do **not** model sonar beam width, multipath/crosstalk, real e
 
 ## Remaining tournament work
 
-This revision focuses on the wall section and its motion failures. It does not automatically switch from tape to wall navigation, recognize the goal room, or implement Lab 08 object search/boundary behavior. Select the existing tape mode and new wall mode separately for initial validation. Transition/goal rules require a distinguishable course feature; tape loss or a wide room alone is not proof. Legacy tape modes retain their previous limitations and must not be confused with the new regulated wall controller.
+The standalone extension now provides combined `RACE` navigation and a laptop **Run line → maze** button; see [Standalone-Setup.md](Standalone-Setup.md). It searches for lost tape and checks corridor evidence before handing off to this wall controller. Validate the transition on the real course. Goal recognition is intentionally omitted, and Lab 08 object-search behavior is not implemented by this mode. Separate line and wall modes remain useful for initial tests. Legacy tape modes retain their previous limitations.
 
 ### Verification recorded for this revision
 

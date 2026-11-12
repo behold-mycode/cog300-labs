@@ -5,3 +5,6 @@ __pycache__/
 .runtime/
 .venv/
 .venv.old.*/
+
+# Per-robot access-point password
+Robot/WirelessSecrets.h

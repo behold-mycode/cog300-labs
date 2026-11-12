@@ -10,11 +10,16 @@
 #include "../Robot/WallMode.cpp"
 #include "../Robot/Navigation.cpp"
 #include "../Robot/Protocol.cpp"
+#include "../Robot/Persistence.cpp"
+#include "../Robot/AutoSetup.cpp"
+#include "../Robot/Standalone.cpp"
+#include "../Robot/Wireless.cpp"
 #include "../Robot/Robot.ino"
-int front = 100, right = 20;
+int front = 100, right = 20, left = 20;
 void step() {
   acceptReading(0,front,front > 0 ? front * 58UL : 0);
   acceptReading(1,right,right > 0 ? right * 58UL : 0);
+  if(leftSonarEnabled())acceptReading(2,left,left>0?left*58UL:0);
   serviceOdometry();serviceObservation(); serviceControlTimeout(); readCommands(); serviceNavigation(); serviceMotor(); serviceTelemetry(); serviceMapExport();
 }
 int main() {
@@ -22,6 +27,9 @@ int main() {
   std::string line;
   while (std::getline(std::cin,line)) {
     if (line.rfind("@tick ",0) == 0) { nowMs += std::stoul(line.substr(6)); step(); }
+    else if(line=="@profile"){
+      hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;configureHardware(p);step();
+    }
     else if (line.rfind("@counts ",0) == 0) {
       std::istringstream values(line.substr(8));
       uint32_t l,r; values>>l>>r;leftTicks=l;rightTicks=r;step();

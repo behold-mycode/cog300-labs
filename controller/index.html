@@ -1,77 +1,18 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>COGS 300 · Robot</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script></head>
-<body>
-<main>
-  <header><div><p class="eyebrow">COGS 300 / LAB ROBOT</p><h1>Take the wheel.</h1></div><span id="badge">Disconnected</span></header>
-  <div class="connection"><label for="port">Robot</label><select id="port" aria-label="Robot serial port"></select><button id="refresh" title="Refresh serial ports">Refresh</button><button id="connect" class="primary">Connect</button></div>
-  <p id="status" role="status">Close Arduino Serial Monitor, then connect.</p>
-  <p id="error" role="alert" hidden></p>
-  <div class="workspace">
-    <section id="drive" tabindex="0" aria-label="Keyboard driving area">
-      <div class="drive-heading"><span id="modeLabel">Manual driving</span><span class="hint">ARROWS OR WASD</span></div>
-      <div class="keys" aria-hidden="true"><kbd id="keyUp">↑</kbd><div><kbd id="keyLeft">←</kbd><kbd id="keyDown">↓</kbd><kbd id="keyRight">→</kbd></div></div>
-      <p class="instruction">Hold to drive. Release to stop.</p><p class="hint">Combine forward + left or right for a moving turn.</p>
-      <button id="stop">Stop <span>SPACE / ESC</span></button>
-      <div class="sensors"><div><span>FRONT</span><strong id="front">—</strong></div><div><span>RIGHT</span><strong id="right">—</strong></div><div><span>LINE · LEFT / CENTRE / RIGHT</span><strong id="lineSensors">—</strong></div><div><span>ROBOT STATE</span><strong id="robotState">Not connected</strong></div></div>
-    </section>
-    <aside aria-label="Driving modes"><p class="eyebrow">DRIVING MODE</p><button data-mode="MANUAL" class="selected">Manual<span>Keyboard control</span></button><button data-mode="FOLLOW">Follow object<span>Hold a distance, straight ahead</span></button><button data-mode="WALL_MAZE">Explore wall maze<span>Wheel feedback · chassis clearance · route memory</span></button><button data-mode="WALL">Legacy right wall<span>Right distance + front clearance</span></button><button data-mode="LINE">Follow line<span>Basic tracking · stops on loss or junction</span></button><button data-mode="MAZE">Legacy tape maze<span>Measured turns · persistent route graph</span></button><button data-mode="STOP_ON_TAPE">Stop on tape<span>Lab demonstration</span></button><button data-mode="STOP_AT_END">Stop at tape end<span>Start on tape · lab demonstration</span></button><p class="hint">Space stops any mode.<br>Leaving this window stops the robot.</p></aside>
-  </div>
-  <details id="settings"><summary>Settings <span>Power, wheel direction & distances</span></summary>
-    <form id="settingsForm"><div class="fields">
-      <label>Maximum PWM<input name="power" type="number" min="1" max="255" required value="255"></label>
-      <label>Minimum follow PWM<input name="minimum" type="number" min="0" max="255" required value="255"></label>
-      <label>Object distance · cm<input name="followCm" type="number" min="5" max="100" required value="20"></label>
-      <label>Wall distance · cm<input name="wallCm" type="number" min="5" max="80" required value="10"></label>
-      <label>Tape sensor reading<select name="lineTapeLevel"><option value="-1">Not calibrated</option><option value="1">HIGH (1) on tape</option><option value="0">LOW (0) on tape</option></select></label>
-    </div><div class="checks"><label><input name="invertA" type="checkbox" checked> Reverse motor A (right wheel)</label><label><input name="invertB" type="checkbox"> Reverse motor B (left wheel)</label></div>
-    <p class="hint">255 is full output. Legacy line and wall modes use continuous wheel commands at Maximum PWM. Wall maze regulates wheel speed independently. Settings below the motors’ reliable running power can stall them. A live map preserves its existing direction and tape calibration when reconnecting.</p><button type="submit">Apply settings</button></form>
-  </details>
-  <details id="navigation"><summary>Maze setup <span>Encoders, measured geometry & route memory</span></summary>
-    <h2>Wall maze</h2><p id="wallStatus">Waiting for wall-maze telemetry</p>
-    <p class="hint">Measure first: footprint includes wheels and protrusions. Side sonar units must share the entered forward and lateral offsets. Goal recognition is not configured. Stop and inspect any clearance or localization fault.</p>
-<form id="sonarForm"><div class="fields"><label>Left sonar enabled (0 or 1)<input name="enabled" type="number" min="0" max="1" step="any" required></label><label>Ping spacing · ms<input name="interval" type="number" min="25" max="100" step="any" required></label></div><button type="submit">Enable third sonar</button></form>
-<form id="bodyForm"><div class="fields"><label>Axle to front · mm<input name="front" type="number" min="1" max="1000" step="any" required></label><label>Axle to rear · mm<input name="rear" type="number" min="1" max="1000" step="any" required></label><label>Half chassis width · mm<input name="halfWidth" type="number" min="1" max="1000" step="any" required></label><label>Front sonar forward offset · mm<input name="frontSensor" type="number" min="0" max="1000" step="any" required></label><label>Side sonar forward offset · mm<input name="sideX" type="number" min="-1000" max="1000" step="any" required></label><label>Side sonar lateral offset · mm<input name="sideY" type="number" min="0" max="1000" step="any" required></label></div><button type="submit">Set chassis measurements</button></form>
-<form id="wallForm"><div class="fields"><label>Cruise speed · mm/s<input name="cruise" type="number" min="1" max="500" step="any" required></label><label>Pivot wheel speed · mm/s<input name="turnSpeed" type="number" min="1" max="300" step="any" required></label><label>Clearance margin · mm<input name="margin" type="number" min="1" max="200" step="any" required></label><label>Measured coast deceleration · mm/s²<input name="deceleration" type="number" min="1" max="10000" step="any" required></label><label>Reaction allowance · s<input name="reaction" type="number" min="0.1" max="5" step="any" required></label><label>Junction match tolerance · mm<input name="matchRadius" type="number" min="1" max="500" step="any" required></label><label>Nominal corridor width · mm<input name="corridorWidth" type="number" min="10" max="5000" step="any" required></label></div><button type="submit">Set wall navigation</button></form>
-<form id="speedForm"><div class="fields"><label>Left speed at PWM255 · mm/s<input name="fullLeft" type="number" min="1" max="3000" step="any" required></label><label>Right speed at PWM255 · mm/s<input name="fullRight" type="number" min="1" max="3000" step="any" required></label><label>Speed proportional gain<input name="kp" type="number" min="0" max="10" step="any" required></label><label>Speed integral gain<input name="ki" type="number" min="0" max="10" step="any" required></label><label>Acceleration limit · mm/s²<input name="acceleration" type="number" min="1" max="3000" step="any" required></label></div><button type="submit">Set wheel control</button></form>
-<p class="hint">Third sonar uses D0 TRIG and D11 ECHO: disconnect the D11 LED before enabling. Start with 70 ms spacing; 25 ms is an experimental stagger that needs an interference check. Set encoder type and wheel scale before wall calibration. Calibration and maps are not persistent across power loss.</p>
-    <p id="encoderCounts">Encoder counts: waiting</p>
-      <p id="navReadiness">Connect to read navigation readiness.</p>
-    <p class="hint">Encoder wiring is not yet verified. Configure only after checking module voltage and pins. Maze mode requires all measured fields; no timed estimate is substituted.</p>
-    <button id="startTrace">Start observation recording</button><button id="stopTrace">Stop recording</button><button id="downloadTrace">Download observation CSV</button><p id="traceStatus"></p>
-    <p id="beliefStatus">Waiting for estimator telemetry</p>
-    <form id="dynamicsForm"><div class="fields">
-      <label>Measured deceleration · mm/s²<input name="deceleration" type="number" min="1" max="10000" step="any" required></label>
-      <label>Reaction latency · seconds<input name="reaction" type="number" min="0.001" max="5" step="any" required></label>
-      <label>Stopping margin · mm<input name="margin" type="number" min="1" max="500" step="any" required></label>
-    </div><button type="submit">Set measured braking model</button></form>
-    <form id="modelForm"><div class="fields">
-      <label>Tape detection probability<input name="hit" type="number" min="0.501" max="0.999" step="any" required value="0.85"></label>
-      <label>False positive probability<input name="falsePositive" type="number" min="0.001" max="0.499" step="any" required value="0.15"></label>
-      <label>State transition mixing<input name="change" type="number" min="0.001" max="0.999" step="any" required value="0.12"></label>
-    </div><p class="hint">Initial probabilities are engineering priors, not measured accuracy. Fit sensor values from labelled tape/floor recordings.</p><button type="submit">Set sensor model</button></form>
-    <form id="encoderForm"><div class="fields">
-      <label>Encoder type<select name="kind"><option value="0">Disabled</option><option value="1">Single-channel (inferred direction)</option><option value="2">Quadrature (two channels)</option></select></label>
-      <label>Left count direction<select name="invertL"><option value="0">Normal</option><option value="1">Reversed</option></select></label>
-      <label>Right count direction<select name="invertR"><option value="0">Normal</option><option value="1">Reversed</option></select></label>
-    </div><button type="submit">Set encoder type</button></form>
-    <form id="odometryForm"><div class="fields">
-      <label>Left mm per counted edge<input name="left" type="number" min="0.001" max="100" step="any" required></label>
-      <label>Right mm per counted edge<input name="right" type="number" min="0.001" max="100" step="any" required></label>
-      <label>Wheel track · mm<input name="track" type="number" min="10" max="1000" step="any" required></label>
-    </div><button type="submit">Set wheel measurements</button></form>
-    <form id="geometryForm"><div class="fields">
-      <label>Axle to IR sensors · mm<input name="offset" type="number" min="1" max="1000" step="any" required></label>
-      <label>Tape width · mm<input name="width" type="number" min="1" max="500" step="any" required></label>
-      <label>Junction match radius · mm<input name="match" type="number" min="1" max="2000" step="any" required></label>
-      <label>Minimum front/right clearance for rotation · mm<input name="clearance" type="number" min="1" max="1000" step="any" required></label>
-    </div><button type="submit">Set course measurements</button></form>
-    <p class="hint">The match radius flags possible revisits for confirmation; it never automatically merges nodes. Changing encoder calibration requires starting a new map. Counts and maps are held in RAM; export before powering off.</p>
-    <button id="exportMap">Export full route graph</button><button id="resetMap">New map / reset origin</button>
-    <form id="confirmForm"><label>Confirm revisited node ID<input name="node" type="number" min="0" max="63" required></label><button type="submit">Confirm junction identity</button></form>
-    <pre id="mapStatus">No map loaded.</pre>
-  </details>
-  <details id="diagnostics"><summary>Diagnostics <span>Sensor readings & connection log</span></summary><button id="download">Download log</button><pre id="log"></pre></details>
-  <footer>USB SERIAL · UNO R4 WIFI <span id="demo"></span></footer>
-</main>
-</body></html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>COGS 300 · Robot</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script></head>
+<body><main>
+<header><h1>Robot controller</h1><span id="badge">Disconnected</span></header>
+<div class="connection"><label for="port">Robot</label><select id="port" aria-label="Robot serial port"></select><button id="refresh">Refresh</button><button id="connect">Connect</button></div>
+<p id="status" role="status">Connect to control the robot.</p><p id="error" role="alert" hidden></p>
+<section id="drive" tabindex="0" aria-label="Robot controls">
+<label for="mode">Mode</label><select id="mode">
+<option value="RACE">Maze solver</option><option value="MANUAL">Manual driving</option>
+</select>
+<div class="run-controls"><button id="start" class="primary" disabled>Start</button><button id="stop">Stop <span>SPACE / ESC</span></button></div>
+<p id="robotState" role="status">Stopped</p>
+<div class="keys" aria-hidden="true"><kbd id="keyUp">↑</kbd><div><kbd id="keyLeft">←</kbd><kbd id="keyDown">↓</kbd><kbd id="keyRight">→</kbd></div></div>
+<p class="instruction">Hold arrows or WASD for manual driving. Release to stop.</p>
+<p class="hint">Changing mode stops the robot. Press Start to run it.<br>USB control stops if this window loses focus or disconnects.</p>
+</section><footer>COGS 300 <span id="demo"></span></footer>
+</main></body></html>

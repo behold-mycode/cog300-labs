@@ -34,9 +34,43 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(self.link.telemetry['wall']['leftRange'], 17)
         self.assertEqual(self.link.telemetry['wall']['current'], 2)
 
+    def test_race_calibration_mode_and_watchdog(self):
+        self.ready()
+        self.link.action(self.owner, 3, 'race_config', dict(speed=50, offset=100, angle=1.8))
+        self.assertEqual(self.serial.sent[-1], 'RACECFG 50 100 1.8')
+        self.assertFalse(self.link.ready)
+        self.serial.feed('OK RACECFG'); self.link.tick()
+        self.assertTrue(self.link.ready)
+        self.serial.feed('RACENAV,1,1,50,100,1.8,1'); self.link.tick()
+        self.assertEqual(self.link.telemetry['race']['speed'], 50)
+        self.link.frame(self.owner, 4, [], 'RACE'); self.now += .11; self.link.tick()
+        self.assertIn('MODE RACE', self.serial.sent)
+        self.assertNotIn('RUN START', self.serial.sent)
+        self.serial.feed('DATA,100,RACE,RACE_SEARCHING_LINE,60,15,20,-20');self.link.tick()
+        self.assertEqual(self.link.telemetry['mode'], 'RACE')
+        self.now += .7;self.link.tick()
+        self.assertFalse(self.link.ready);self.assertEqual(self.serial.sent[-1], 'STOP')
+
+    def test_saved_calibration_actions(self):
+        self.ready()
+        self.link.action(self.owner, 3, 'save_calibration', {})
+        self.assertEqual(self.serial.sent[-2:], ['STOP','SAVE'])
+        self.serial.feed('OK SAVE');self.link.tick();self.assertTrue(self.link.ready)
+        self.link.action(self.owner, 4, 'load_calibration', {})
+        self.serial.feed('CONFIG_REPORT,200,100,0,1,25,15,0')
+        self.serial.feed('OK LOAD');self.link.tick()
+        self.assertTrue(self.link.ready);self.assertEqual(self.link.settings['power'],200)
+        self.assertEqual(self.link.settings['lineTapeLevel'],0)
+
+    def test_startup_status_cannot_interrupt_handshake(self):
+        self.serial.feed('DATA,10,MANUAL,HARDWARE_DIMENSIONS_REQUIRED,50,20,0,0')
+        self.link.tick()
+        self.assertEqual(self.link.phase,'Waiting for firmware 7')
+        self.ready()
+
     def test_default_direction_calibration(self):
         self.ready()
-        self.assertIn('CONFIG 255 255 1 0 20 10 -1', self.serial.sent)
+        self.assertFalse(any(cmd.startswith('CONFIG ') for cmd in self.serial.sent))
 
     def test_line_mode_telemetry_and_stop(self):
         self.ready()
@@ -142,7 +176,8 @@ class LinkTests(unittest.TestCase):
         self.link.frame(self.owner,2,[],'MANUAL');self.link.tick()
         self.serial.feed('CONFIG_REPORT,255,255,1,0,20,10,1')
         self.serial.feed('ROBOT_READY 7');self.link.tick()
-        self.assertIn('CONFIG 255 255 1 0 20 10 1',self.serial.sent)
+        self.assertFalse(any(cmd.startswith('CONFIG ') for cmd in self.serial.sent))
+        self.assertEqual(self.link.settings['lineTapeLevel'],1)
         self.serial.feed('OK CONFIG');self.link.tick();self.assertTrue(self.link.ready)
 
     def test_belief_and_observation_capture(self):
