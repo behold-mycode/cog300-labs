@@ -6,6 +6,7 @@
 #include "../Robot/Line.cpp"
 #include "../Robot/Encoders.cpp"
 #include "../Robot/MapTelemetry.cpp"
+#include "../Robot/WallMode.cpp"
 #include "../Robot/Navigation.cpp"
 #include "../Robot/Protocol.cpp"
 #include "../Robot/Robot.ino"

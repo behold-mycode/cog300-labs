@@ -20,7 +20,7 @@ static void rightEncoderChanged() {
 bool encodersEnabled() { return encEnabled; }
 bool configureEncoders(int kind,bool invertL,bool invertR) {
   if(kind<0||kind>2) return false;
-  stopRobot();
+  stopRobot();resetWallCalibration();
   if(encEnabled) { detachInterrupt(digitalPinToInterrupt(ENC_LA));detachInterrupt(digitalPinToInterrupt(ENC_RA)); }
   encEnabled=false;odometry.sampled=false;odometry.configured=false;explorer.geometry=maze::Geometry();explorer.dynamics=maze::Dynamics();explorer.world.reset();
   if(!kind) return true;

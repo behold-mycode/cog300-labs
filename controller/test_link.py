@@ -19,9 +19,21 @@ class LinkTests(unittest.TestCase):
     def ready(self):
         self.link.frame(self.owner, 1, [], 'MANUAL')
         self.now = 2.; self.link.frame(self.owner, 2, [], 'MANUAL'); self.link.tick()
-        self.serial.feed('ROBOT_READY 6'); self.link.tick()
+        self.serial.feed('ROBOT_READY 7'); self.link.tick()
         self.serial.feed('OK CONFIG'); self.link.tick()
         self.assertTrue(self.link.ready)
+    def test_wall_mode_and_calibration(self):
+        self.ready()
+        self.link.action(self.owner, 3, 'sonar', dict(enabled=1, interval=25))
+        self.assertEqual(self.serial.sent[-1], 'SONAR 1 25')
+        self.serial.feed('OK SONAR'); self.link.tick()
+        self.link.frame(self.owner, 4, [], 'WALL_MAZE'); self.now += .1; self.link.tick()
+        self.assertIn('MODE WALL_MAZE', self.serial.sent)
+        self.serial.feed('WALLNAV,1,1,1,1,2,-1,17,0.9,0.8,0.2,40,50,39,48')
+        self.link.tick()
+        self.assertEqual(self.link.telemetry['wall']['leftRange'], 17)
+        self.assertEqual(self.link.telemetry['wall']['current'], 2)
+
     def test_default_direction_calibration(self):
         self.ready()
         self.assertIn('CONFIG 255 255 1 0 20 10 -1', self.serial.sent)
@@ -129,7 +141,7 @@ class LinkTests(unittest.TestCase):
         self.link.frame(self.owner,1,[],'MANUAL');self.now=2
         self.link.frame(self.owner,2,[],'MANUAL');self.link.tick()
         self.serial.feed('CONFIG_REPORT,255,255,1,0,20,10,1')
-        self.serial.feed('ROBOT_READY 6');self.link.tick()
+        self.serial.feed('ROBOT_READY 7');self.link.tick()
         self.assertIn('CONFIG 255 255 1 0 20 10 1',self.serial.sent)
         self.serial.feed('OK CONFIG');self.link.tick();self.assertTrue(self.link.ready)
 
@@ -143,8 +155,11 @@ class LinkTests(unittest.TestCase):
         self.assertTrue(self.link.telemetry['dynamics'])
         self.assertEqual(self.link.telemetry['wheelSpeed'],[50,51])
         self.assertIn('100,1,2,',self.link.trace_csv())
+        self.assertEqual(len(self.link.trace_csv().splitlines()[1].split(',')),25)
+        self.serial.feed('OBS,200,2,2,0,0,0,5,5,300,200,10,20,255,255,1,150,20,0.9,0.8,0.7,40,40,39,41,1')
+        self.link.tick();self.assertEqual(len(self.link.trace_rows),2)
         self.link.action(self.owner,4,'trace',dict(enabled=0));self.serial.feed('OK TRACE');self.link.tick()
-        self.assertFalse(self.link.trace_recording);self.assertEqual(len(self.link.trace_rows),1)
+        self.assertFalse(self.link.trace_recording);self.assertEqual(len(self.link.trace_rows),2)
 
     def test_keyboard_mapping(self):
         self.assertEqual(wheel_command(['Up','Left'],255),(0,255))

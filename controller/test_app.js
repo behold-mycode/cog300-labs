@@ -11,9 +11,9 @@ function element(id) {
     querySelector(){return element(id+'button');}, replaceChildren(){}, append(){},
     focus(){}, click(){}, closest(){return null;}};
 }
-const buttons = ['MANUAL','FOLLOW','WALL','LINE','MAZE','STOP_ON_TAPE','STOP_AT_END'].map(mode => Object.assign(element(mode),{dataset:{mode}}));
+const buttons = ['MANUAL','FOLLOW','WALL','LINE','MAZE','STOP_ON_TAPE','STOP_AT_END','WALL_MAZE'].map(mode => Object.assign(element(mode),{dataset:{mode}}));
 element('settingsForm').elements = Object.fromEntries(['power','minimum','followCm','wallCm','lineTapeLevel','invertA','invertB'].map(k=>[k,element(k)]));
-let state = {connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertA:true,invertB:false,followCm:20,wallCm:10,lineTapeLevel:-1},navigation:{encoders:1,odometry:1,geometry:1,localized:1},telemetry:{dynamics:true},log:[]};
+let state = {connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertA:true,invertB:false,followCm:20,wallCm:10,lineTapeLevel:-1},navigation:{encoders:1,odometry:1,geometry:1,localized:1},telemetry:{dynamics:true,wall:{sonar:1,calibrated:1,localized:1,leftRange:15,frontWall:.1,rightWall:.9,leftWall:.9,targetL:50,targetR:50,speedL:49,speedR:51}},log:[]};
 const document = {getElementById:element, querySelectorAll:()=>buttons, createElement:()=>element('new'),
   hasFocus:()=>true, hidden:false, addEventListener:(name,fn)=>events['doc:'+name]=fn};
 const context = vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},
@@ -35,6 +35,8 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   await buttons[1].handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'FOLLOW');
   await buttons[3].handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'LINE');
   await buttons[4].handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'MAZE');
+  await buttons[7].handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'WALL_MAZE');
+  assert.ok(element('wallStatus').textContent.includes('15.0 cm'));
   events.keydown(key('Space'));await flush();assert.equal(frames().at(-1).body.mode,'MANUAL');
   events.keydown(key('ArrowUp'));await flush();events.blur();await flush();
   events.keydown(key('ArrowUp',true));await flush();assert.deepEqual(frames().at(-1).body.keys,[]);

@@ -7,9 +7,9 @@ void beginMapExport() { stopRobot();exporting=true;record=0; }
 void reportNavigation() {
   Serial.print(F("NAV,"));Serial.print(encodersEnabled()?1:0);Serial.print(',');
   Serial.print(odometry.configured?1:0);Serial.print(',');Serial.print(explorer.geometry.valid()?1:0);Serial.print(',');
-  Serial.print(explorer.localized?1:0);Serial.print(',');Serial.print(explorer.graph.nodeCount);Serial.print(',');
-  Serial.print(explorer.graph.edgeCount);Serial.print(',');Serial.print(explorer.current);Serial.print(',');
-  Serial.print(explorer.candidate);Serial.print(',');Serial.print(odometry.pose.x);Serial.print(',');
+  Serial.print((wallNavigator.ownsGraph?wallNavigator.localized:explorer.localized)?1:0);Serial.print(',');Serial.print(explorer.graph.nodeCount);Serial.print(',');
+  Serial.print(explorer.graph.edgeCount);Serial.print(',');Serial.print(wallNavigator.ownsGraph?wallNavigator.current:explorer.current);Serial.print(',');
+  Serial.print(wallNavigator.ownsGraph?wallNavigator.candidate:explorer.candidate);Serial.print(',');Serial.print(odometry.pose.x);Serial.print(',');
   Serial.print(odometry.pose.y);Serial.print(',');Serial.println(odometry.pose.heading);
   Serial.print(F("BELIEF,"));Serial.print(explorer.dynamics.valid()?1:0);
   for(float probability:explorer.world.belief) { Serial.print(',');Serial.print(probability); }

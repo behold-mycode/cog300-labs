@@ -7,7 +7,7 @@ import time
 DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
                 followCm=20, wallCm=10, lineTapeLevel=-1)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
-MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END'}
+MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE'}
 BROWSER_TIMEOUT = .6
 
 
@@ -75,7 +75,7 @@ class RobotLink:
         self.serial = self.serial_factory(port)
         self.owner = secrets.token_urlsafe(24)
         self.ready = False
-        self.phase = 'Waiting for firmware 6'
+        self.phase = 'Waiting for firmware 7'
         self.keys, self.mode = [], 'MANUAL'
         self.buffer.clear(); self.telemetry = {}; self.navigation = {}
         self.map_exporting = False
@@ -133,6 +133,10 @@ class RobotLink:
 
     def action(self, owner, seq, action, values):
         commands = {
+            'sonar': ('SONAR', [('enabled',0,1),('interval',25,100)]),
+            'body': ('BODY', [('front',1,1000),('rear',1,1000),('halfWidth',1,1000),('frontSensor',0,1000),('sideX',-1000,1000),('sideY',0,1000)]),
+            'wall_config': ('WALLCFG', [('cruise',1,500),('turnSpeed',1,300),('margin',1,200),('deceleration',1,10000),('reaction',.1,5),('matchRadius',1,500),('corridorWidth',10,5000)]),
+            'speed_config': ('SPEEDCFG', [('fullLeft',1,3000),('fullRight',1,3000),('kp',0,10),('ki',0,10),('acceleration',1,3000)]),
             'encoders': ('ENC', [('kind',0,2),('invertL',0,1),('invertR',0,1)]),
             'odometry': ('ODOM', [('left',.001,100),('right',.001,100),('track',10,1000)]),
             'geometry': ('GEOMETRY', [('offset',1,1000),('width',1,500),('match',1,2000),('clearance',1,1000)]),
@@ -150,9 +154,13 @@ class RobotLink:
             v=values[name]
             if type(v) not in (int,float) or not math.isfinite(v) or not low <= v <= high:
                 raise ValueError(name + ' is outside its valid range.')
-            if action in ('encoders','map_confirm','trace') and type(v) is not int:
+            if action in ('encoders','map_confirm','trace','sonar') and type(v) is not int:
                 raise ValueError(name + ' must be an integer.')
             args.append(format(v,'.6g'))
+        if action=='sonar' and values['enabled']==0 and values['interval']<35:
+            raise ValueError('Two sensors need at least 35 ms spacing.')
+        if action=='body' and (values['frontSensor']>values['front'] or values['sideY']>values['halfWidth'] or not -values['rear']<=values['sideX']<=values['front']):
+            raise ValueError('Sonar offsets must lie within the measured footprint.')
         command=' '.join([prefix]+args)
         if len(command)>90: raise ValueError('Calibration command too long.')
         self._authorize(owner,seq)
@@ -224,7 +232,7 @@ class RobotLink:
 
     def _receive(self, line):
         if line != 'ALIVE' and not line.startswith('OBS,'): self.log('< ' + line)
-        if line.startswith('CONFIG_REPORT,') and self.phase == 'Waiting for firmware 6':
+        if line.startswith('CONFIG_REPORT,') and self.phase == 'Waiting for firmware 7':
             try:
                 v=[int(x) for x in line.split(',')[1:]]
                 if len(v)!=7 or v[2] not in (0,1) or v[3] not in (0,1): return
@@ -234,11 +242,11 @@ class RobotLink:
             self.pending_navigation=None;self.ready=True;self.phase='Navigation settings applied'
         elif line.startswith('BUSY '):
             self.phase=line.replace('_',' ')
-        elif line == 'ROBOT_READY 6' and self.phase == 'Waiting for firmware 6':
+        elif line == 'ROBOT_READY 7' and self.phase == 'Waiting for firmware 7':
             self.phase = 'Applying settings'; self.last_rx = self.clock()
             self._config()
-        elif line.startswith('ROBOT_READY ') and line != 'ROBOT_READY 6':
-            self.disconnect('Upload Robot firmware 6, then reconnect.')
+        elif line.startswith('ROBOT_READY ') and line != 'ROBOT_READY 7':
+            self.disconnect('Upload Robot firmware 7, then reconnect.')
         elif line == 'OK CONFIG' and self.phase == 'Applying settings':
             self.ready = True; self.phase = 'Connected — hold arrows or WASD'
             self.last_rx = self.clock()
@@ -260,11 +268,17 @@ class RobotLink:
         elif line.startswith('OBS,'):
             try:
                 fields=line.split(',')[1:];values=[float(x) for x in fields]
-                if self.trace_recording and len(values)==15 and all(math.isfinite(x) for x in values):
-                    self.trace_rows.append(','.join(fields))
+                if self.trace_recording and len(values) in (15,25) and all(math.isfinite(x) for x in values):
+                    self.trace_rows.append(','.join(fields)+(','*10 if len(fields)==15 else ''))
                     if len(self.trace_rows)>=20000:
                         self.trace_recording=False;self._send('TRACE 0')
                         self.log('Trace stopped at 20,000 samples; download before starting another.')
+            except ValueError: pass
+        elif line.startswith('WALLNAV,'):
+            try:
+                v=[float(x) for x in line.split(',')[1:]]
+                if len(v)==14 and all(math.isfinite(x) for x in v):
+                    self.telemetry['wall']=dict(zip(('sonar','calibrated','localized','ownsMap','current','candidate','leftRange','frontWall','rightWall','leftWall','targetL','targetR','speedL','speedR'),v))
             except ValueError: pass
         elif line.startswith('BELIEF,'):
             try:
@@ -311,15 +325,15 @@ class RobotLink:
             for _ in range(40):
                 if b'\n' not in self.buffer: break
                 raw, _, self.buffer = self.buffer.partition(b'\n')
-                if len(raw) > 256:
+                if len(raw) > 384:
                     self.disconnect('Invalid serial line — reconnect.'); return
                 self._receive(raw.decode('ascii', errors='replace').strip())
                 if not self.serial: return
-            if len(self.buffer) > 256 and b'\n' not in self.buffer:
+            if len(self.buffer) > 384 and b'\n' not in self.buffer:
                 self.disconnect('Invalid serial line — reconnect.'); return
-            if self.phase == 'Waiting for firmware 6':
+            if self.phase == 'Waiting for firmware 7':
                 if now - self.started > 10:
-                    self.disconnect('No firmware 6 response — upload the sketch and reconnect.'); return
+                    self.disconnect('No firmware 7 response — upload the sketch and reconnect.'); return
                 if now - self.started >= 2 and now - self.last_hello >= .5:
                     self._send('HELLO'); self.last_hello = now
                 return
@@ -341,7 +355,7 @@ class RobotLink:
             self.disconnect('Serial error: ' + str(error))
 
     def trace_csv(self):
-        header='ms,sequence,tapeMask,xMm,yMm,headingRad,leftMm,rightMm,frontMm,rightMmRange,frontAgeMs,rightAgeMs,leftPWM,rightPWM,odometryConfigured'
+        header='ms,sequence,tapeMask,xMm,yMm,headingRad,leftMm,rightMm,frontMm,rightMmRange,frontAgeMs,rightAgeMs,leftPWM,rightPWM,odometryConfigured,leftRangeMm,leftAgeMs,frontWallProbability,rightWallProbability,leftWallProbability,targetLeftMmS,targetRightMmS,measuredLeftMmS,measuredRightMmS,wallState'
         return header+'\n'+'\n'.join(self.trace_rows)+'\n'
 
     def snapshot(self):
@@ -357,9 +371,9 @@ class DemoSerial:
         self.last_log = 0.
     def write(self, data):
         cmd = data.decode().strip()
-        if cmd == 'HELLO': self.pending.extend(b'ROBOT_READY 6\n')
+        if cmd == 'HELLO': self.pending.extend(b'ROBOT_READY 7\n')
         elif cmd == 'MAP DUMP': self.pending.extend(b'MAP_BEGIN,0,0\nMAP_END\n')
-        elif cmd.startswith(('ENC ','ODOM ','GEOMETRY ','DYNAMICS ','MODEL ','TRACE ','MAP ')):
+        elif cmd.startswith(('SONAR ','BODY ','WALLCFG ','SPEEDCFG ','ENC ','ODOM ','GEOMETRY ','DYNAMICS ','MODEL ','TRACE ','MAP ')):
             prefix=' '.join(cmd.split()[:2]) if cmd.startswith('MAP ') else cmd.split()[0]
             self.pending.extend(('OK '+prefix+'\n').encode())
         elif cmd.startswith('CONFIG '): self.pending.extend(b'OK CONFIG\n')

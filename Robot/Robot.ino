@@ -6,7 +6,7 @@ void setup() {
   setupSensor();
   setupLine();
   Serial.begin(115200);
-  Serial.println(F("ROBOT_BOOT 6 stopped; HELP for commands"));
+  Serial.println(F("ROBOT_BOOT 7 stopped; HELP for commands"));
 }
 
 void loop() {

@@ -5,7 +5,7 @@ A small local browser interface for keyboard driving, lab demonstrations and cal
 ## Mac setup
 
 1. Download and extract the repository into a writable folder on your Mac (Intel or Apple Silicon). Do not copy `.venv` or `.runtime` from another computer.
-2. If needed, install Arduino IDE and **Arduino UNO R4 Boards** through Boards Manager, and upload the complete `../Robot` sketch to UNO R4 WiFi. This controller requires **firmware 6**.
+2. If needed, install Arduino IDE and **Arduino UNO R4 Boards** through Boards Manager, and upload the complete `../Robot` sketch to UNO R4 WiFi. This controller requires **firmware 7**.
 3. Close Arduino Serial Monitor and Serial Plotter.
 4. Double-click **Launch Robot Controller.command** in the project root. It downloads uv 0.13.6 into `.runtime`, provisions Python 3.12 if no working project environment exists, installs `pyserial==3.5` into `.venv`, starts a loopback server, and opens your browser. **Python, pip, Homebrew, Xcode, and Node need not be preinstalled.** First-time setup needs internet and a macOS version supported by the downloaded runtime. macOS 13+ is the recommended baseline; older releases are not validated.
 5. Select the `/dev/cu.usbmodem…` port and click Connect. Wait about two seconds for reset/handshake, then drive.
@@ -28,11 +28,11 @@ On Windows use `.venv\Scripts\python` for the last two commands. Linux users nee
 
 Hold arrows or WASD. Left/right alone spins; combine with forward/reverse to curve. Release to stop. Opposing directions stop. Space/Esc cancels any mode. Keyboard input only drives while this page is focused, and never while editing a settings field. Switching windows/tabs stops; held-key repeat cannot restart motion after stopping.
 
-The side buttons select object/wall following, basic tape following, the lab stop demonstrations or calibrated maze exploration. Any new driving key returns to Manual. See [behavior, wiring and calibration](../documentation/observation-first.md).
+The side buttons select object/wall following, basic tape following, the lab stop demonstrations or calibrated maze exploration. Any new driving key returns to Manual. See [wall-maze behavior, wiring and calibration](../Wall-Maze-Setup.md). Legacy tape navigation is documented separately in [the firmware 6 guide](../documentation/observation-first.md).
 
 Settings are collapsed by default. Opening/editing them stops motion. Apply power, minimum follow PWM, independent wheel reversal and target distances there. The server retains applied settings during reconnects; closing it restores defaults on the next launch. A firmware reset also restores firmware defaults until the controller reconnects and applies its settings. Settings may be adjusted only when connected.
 
-Diagnostics shows a bounded recent log (600 lines); Download log saves that recent history. Front/right telemetry is reported ten times per second (each sensor measures about seven times per second). A dash means invalid/unavailable, not zero distance.
+Diagnostics shows a bounded recent log (600 lines); Download log saves that recent history. Telemetry is reported ten times per second. Actual sonar acquisition rates depend on enabled sensors, configured stagger and echo timeouts; the UI update rate is not the measurement rate. A dash means invalid/unavailable, not zero distance.
 
 ## Connection behavior
 
@@ -44,7 +44,7 @@ Requests use increasing sequence numbers so delayed requests cannot overwrite a 
 
 - **No ports:** check USB cable/board power and Refresh. Charge-only cables do not carry serial data.
 - **Port busy:** close Serial Monitor/Plotter and other controller instances.
-- **No firmware 6 response:** upload the current complete sketch. Old Tk/firmware 3 code is incompatible.
+- **No firmware 7 response:** upload the current complete sketch. Old Tk/firmware 3 code is incompatible.
 - **Browser stopped responding:** return to the page and reconnect. No automatic motion resume.
 - **Weak/no movement:** verify individual wheel direction with the [calibration guide](../documentation/observation-first.md); software PWM cannot fix a loose wire or inadequate supply.
 

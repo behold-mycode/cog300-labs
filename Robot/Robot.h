@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "Odometry.h"
 #include "Explorer.h"
+#include "WallNavigator.h"
 
 const uint8_t ENA=5,IN1=6,IN2=7,IN3=8,IN4=9,ENB=10;
 const uint8_t TRIG_PIN=A0,ECHO_PIN=A1,RIGHT_TRIG_PIN=A2,RIGHT_ECHO_PIN=A3;
@@ -20,7 +21,7 @@ struct NavigationConfig {
   float frontStopCm=20,wallBandCm=2;
   uint32_t stallMs=1500; // Failure deadline, never a movement duration.
 };
-enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END };
+enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE };
 extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
@@ -32,6 +33,8 @@ extern maze::Explorer explorer;
 void setupMotor();void requestMotor(int left,int right);void stopMotor();void settleMotor();void serviceMotor();
 void startTest(int left,int right,uint32_t duration);
 void setupSensor();void serviceSensor();
+bool configureSonars(bool left,uint32_t interval);bool leftSonarEnabled();
+maze::Pose sensorPose(uint8_t sensor);
 enum RangeStatus { RANGE_VALID,RANGE_NO_RETURN,RANGE_INVALID,RANGE_STALE };
 struct SensorReading { float cm;uint32_t sampledMs,sequence;RangeStatus status; };
 SensorReading sensorReading(uint8_t sensor);float sensorDistanceCm(uint8_t sensor);
@@ -42,3 +45,6 @@ void readCommands();void processCommand(char* line);void serviceControlTimeout()
 bool configureEncoders(int kind,bool invertL,bool invertR);bool encodersEnabled();
 void reportEncoders();void serviceOdometry();void resetOdometry();
 bool mapExportActive();void beginMapExport();void serviceMapExport();void reportNavigation();
+
+extern wall::Navigator wallNavigator;extern wall::Velocity wheelVelocity;
+void resetWallFeedback();void reportWallTrace();void resetWallCalibration();void pauseWall();bool startWall();void serviceWall();void reportWall();

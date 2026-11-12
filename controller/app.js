@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
 // Keep the token in this tab's URL so reload works; it is never sent as a Referer.
 let owner = null, seq = 0, renderedSeq = -1, ready = false, mode = 'MANUAL';
-let navStatus = {}, mapDownloadPending = false, mapExporting = false;
+let wallStatus = {}, navStatus = {}, mapDownloadPending = false, mapExporting = false;
 let framePending = false, configurationPending = false, settingsLoaded = false, lastLog = '';
 const pressed = new Set();
 const mapping = {ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',
@@ -35,9 +35,9 @@ function modeUI() {
     const selected = button.dataset.mode === mode;
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
-    button.disabled = !ready || mapExporting || (button.dataset.mode === 'MAZE' && !(navStatus.encoders && navStatus.odometry && navStatus.geometry && navStatus.localized && navStatus.dynamics));
+    button.disabled = !ready || mapExporting || (button.dataset.mode === 'WALL_MAZE' && !(wallStatus.sonar && wallStatus.calibrated && wallStatus.localized && navStatus.encoders && navStatus.odometry)) || (button.dataset.mode === 'MAZE' && !(navStatus.encoders && navStatus.odometry && navStatus.geometry && navStatus.localized && navStatus.dynamics));
   });
-  $('modeLabel').textContent = {MANUAL:'Manual driving',FOLLOW:'Following object',WALL:'Following right wall',LINE:'Following tape',MAZE:'Exploring maze',STOP_ON_TAPE:'Stop on tape',STOP_AT_END:'Stop at tape end'}[mode];
+  $('modeLabel').textContent = {WALL_MAZE:'Exploring wall maze',MANUAL:'Manual driving',FOLLOW:'Following object',WALL:'Following right wall',LINE:'Following tape',MAZE:'Exploring maze',STOP_ON_TAPE:'Stop on tape',STOP_AT_END:'Stop at tape end'}[mode];
 }
 function render(state) {
   if (!settingsLoaded && state.settings) {
@@ -57,6 +57,8 @@ function render(state) {
   $('settingsForm').querySelector('button').disabled = !ready;
   const t = state.telemetry || {};
   navStatus = {...(state.navigation || {}), dynamics:Boolean(t.dynamics)};
+  wallStatus = t.wall || {};
+  $('wallStatus').textContent = t.wall ? `Left sonar: ${wallStatus.sonar?'enabled':'required'} · Wall calibration: ${wallStatus.calibrated?'set':'required'} · Left range: ${wallStatus.leftRange>=0?wallStatus.leftRange.toFixed(1)+' cm':'unknown'} · Wall belief front/right/left: ${[wallStatus.frontWall,wallStatus.rightWall,wallStatus.leftWall].map(v=>(100*v).toFixed(0)+'%').join(' / ')} · Wheel targets/actual mm/s: ${wallStatus.targetL.toFixed(0)},${wallStatus.targetR.toFixed(0)} / ${wallStatus.speedL.toFixed(0)},${wallStatus.speedR.toFixed(0)}` : 'Waiting for wall-maze telemetry';
   mapExporting = Boolean(state.mapExporting);
   if (!state.connected) mapDownloadPending = false;
   if (state.mode === 'MANUAL' && t.mode === 'MANUAL' && !['STOPPED','DRIVING','TIMED_TEST'].includes(t.state)) mode = 'MANUAL';
@@ -180,6 +182,10 @@ async function navigationAction(action, values={}) {
   finally { configurationPending=false; }
 }
 for(const [id,action,fields] of [
+  ['sonarForm','sonar',['enabled','interval']],
+  ['bodyForm','body',['front','rear','halfWidth','frontSensor','sideX','sideY']],
+  ['wallForm','wall_config',['cruise','turnSpeed','margin','deceleration','reaction','matchRadius','corridorWidth']],
+  ['speedForm','speed_config',['fullLeft','fullRight','kp','ki','acceleration']],
   ['dynamicsForm','dynamics',['deceleration','reaction','margin']],
   ['modelForm','model',['hit','falsePositive','change']],
   ['encoderForm','encoders',['kind','invertL','invertR']],

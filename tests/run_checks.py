@@ -9,6 +9,9 @@ with tempfile.TemporaryDirectory() as directory:
         binary = str(Path(directory)/source.stem)
         subprocess.run(['c++','-std=c++14','-Wall','-Wextra','-Werror','-I',str(root/'tests'),str(source),'-o',binary],check=True,cwd=root)
         subprocess.run([binary],check=True,cwd=root)
+        if source.stem == 'test_wall_replay':
+            for scenario in ('1', '2', '3'):
+                subprocess.run([binary,scenario],check=True,cwd=root)
         print('PASS', source.name, flush=True)
 subprocess.run(['python3','-m','unittest','discover','-s','controller','-p','test*.py'],check=True,cwd=root)
 subprocess.run(['node','controller/test_app.js'],check=True,cwd=root)
