@@ -10,8 +10,8 @@ int main(){
  float room=35+c.frontSensor-c.front-c.margin;
  assert(d.left*c.reaction+d.left*d.left/(2*c.deceleration)<=room+.01f);
  i.ranges[0].mm=500;i.ranges[1].mm=100;
- d=n.step(r,c,i,4);assert(d.left>0&&d.right>d.left&&d.right<81);
- assert(fabsf(d.left/d.right-.65f/1.35f)<.001f);
+ d=n.step(r,c,i,4);assert(d.left<0&&d.right>0&&d.right<=45);
+ assert(fabsf(d.left+d.right)<.001f);
  room=100+c.sideY-c.radius()-c.margin;
  assert(d.right*c.reaction+d.right*d.right/(2*c.deceleration)<=room+.01f);
  // Existing momentum that already consumes clearance demands a stop, not a slow command.

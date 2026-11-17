@@ -3,6 +3,7 @@
 #include "Velocity.h"
 namespace wall {
 using maze::Pose;
+constexpr float SIDE_RANGE_MM=400; // Beyond 40 cm is an opening, not a distant wall.
 struct Config {
  // Measured footprint extents from axle centre; sonar origins in body coordinates.
  float front=0,rear=0,halfWidth=0,frontSensor=0,sideX=0,sideY=0;
@@ -15,7 +16,7 @@ struct Config {
   return corridorWidth>2*(halfWidth+margin)&&front>0&&rear>0&&halfWidth>0&&frontSensor>=0&&frontSensor<=front&&fabsf(sideX)<=fmaxf(front,rear)&&sideY>=0&&sideY<=halfWidth&&margin>0&&deceleration>0&&reaction>0&&cruise>0&&turnSpeed>0&&track>0&&distanceTolerance>0&&distanceTolerance<margin&&angleTolerance>0&&angleTolerance<.25f&&matchRadius>distanceTolerance;
  }
 };
-struct Ray { float mm=-1;uint32_t stamp=0,sequence=0;bool valid=false;Pose pose;bool noReturn=false; };
+struct Ray { float mm=-1;uint32_t stamp=0,sequence=0;bool valid=false;Pose pose;bool noReturn=false;bool openBeyond=false; };
 struct Input { uint32_t now=0;Pose pose;Ray ranges[3];float leftSpeed=0,rightSpeed=0; };
 inline bool fresh(const Ray&r,uint32_t now){return r.valid&&isfinite(r.mm)&&r.mm>=20&&(uint32_t)(now-r.stamp)<300;}
 inline float displacement(const Pose&a,const Pose&b){return hypotf(a.x-b.x,a.y-b.y);}
@@ -44,7 +45,7 @@ struct Belief {
   // At most one likelihood per 75ms while stationary; no duplicate loop evidence.
   if(sampled&&(uint32_t)(r.stamp-stamp)<75&&displacement(r.pose,evidence)<10)return;
   float prior=.9f*wallProbability+.05f; // process uncertainty prevents locked certainty
-  float hit=limit(.8f-.6f*(r.mm-wallLimit)/(openLimit-wallLimit),.2f,.8f);
+  float hit=r.openBeyond?.2f:limit(.8f-.6f*(r.mm-wallLimit)/(openLimit-wallLimit),.2f,.8f);
   wallProbability=limit(hit*prior/(hit*prior+(1-hit)*(1-prior)),.02f,.98f);
   evidence=r.pose;stamp=r.stamp;sampled=true;
  }
@@ -131,7 +132,7 @@ class Navigator {
    float remaining=e==maze::NONE?INFINITY:graph.edges[e].length-(i.pose.path-segmentStart);
    if(e!=maze::NONE&&remaining<=config.distanceTolerance)expected=true;
    if(e!=maze::NONE&&!expected&&remaining<=braking){reason="WALL_BRAKING_RETURN";return {};}
-   bool sideFeature=e==maze::NONE&&i.pose.path>=exitUntil&&(l>open||r>open);
+   bool sideFeature=e==maze::NONE&&i.pose.path>=exitUntil&&(i.ranges[2].openBeyond||i.ranges[1].openBeyond||l>open||r>open);
    float stopAt=config.radius()+2*config.margin-config.frontSensor;
    if(expected||f<=stopAt+braking){assess(i);return {};}
    if(sideFeature){
@@ -201,7 +202,7 @@ class Navigator {
  void resetBeliefs(){for(auto&b:beliefs)b.reset();}
  void assess(const Input&i){state=ASSESS;assessedAt=i.now;recorded=false;rearEvidence=i.pose.path-segmentStart;resetBeliefs();reason="WALL_ASSESSING";}
  Speeds corridor(const Input&i,float f,float r,float l,float speed){
-  bool rw=r<opening(),lw=l<opening();
+  bool rw=!i.ranges[1].openBeyond&&r<opening(),lw=!i.ranges[2].openBeyond&&l<opening();
   float error=0;
   // Centring when both walls exist; do not chase an opening as a distant wall.
   float desired=config.corridorWidth*.5f-config.sideY;

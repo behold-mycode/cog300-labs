@@ -1,6 +1,6 @@
 #include "firmware_fixture.h"
 int main() {
-  setup();lineTapeLevel=1;tape(2);
+  setupUnconfigured();lineTapeLevel=1;tape(2);
   startNavigation(MAZE);assert(mode==MANUAL&&!strcmp(navigationState,"ENCODERS_REQUIRED"));
   command("ENC 2 0 0");command("ODOM 1 1 100");tick(1);
   startNavigation(MAZE);assert(mode==MANUAL&&!strcmp(navigationState,"GEOMETRY_REQUIRED"));

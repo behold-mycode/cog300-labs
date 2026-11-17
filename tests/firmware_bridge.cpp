@@ -28,7 +28,7 @@ int main() {
   while (std::getline(std::cin,line)) {
     if (line.rfind("@tick ",0) == 0) { nowMs += std::stoul(line.substr(6)); step(); }
     else if(line=="@profile"){
-      hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;configureHardware(p);step();
+      hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.floorSensorOffset=90;p.leftSonarInstalled=true;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;configureHardware(p);step();
     }
     else if (line.rfind("@counts ",0) == 0) {
       std::istringstream values(line.substr(8));

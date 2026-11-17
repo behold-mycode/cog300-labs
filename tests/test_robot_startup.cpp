@@ -1,7 +1,8 @@
+#define ROBOT_ENABLE_STANDALONE 1
 #include "firmware_fixture.h"
 int main(){
- setup();assert(mode==MANUAL);assert(!startStandalone());
- hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
+ setupUnconfigured();assert(mode==MANUAL);assert(!startStandalone());
+ hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.floorSensorOffset=90;p.leftSonarInstalled=true;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
  assert(configureHardware(p));serviceOdometry();tape(2);
  for(int n=0;n<3;++n)acceptReading(n,80,4640);
  assert(startStandalone());assert(mode==RACE&&automaticSetupActive());

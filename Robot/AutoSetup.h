@@ -22,13 +22,13 @@ class Setup {
   if(state==IDLE||state==DONE||state==FAULT)return {};
   float dt=(uint32_t)(i.now-lastAt)*.001f;
   if(dt>.3f){fail("SETUP_LOOP_DELAY");return {};}
-  for(const auto&r:i.ranges)if(!wall::fresh(r,i.now)){fail("SETUP_SENSOR_UNKNOWN");return {};}
+  for(int n=0;n<(profile.leftSonarInstalled?3:2);++n)if(!wall::fresh(i.ranges[n],i.now)){fail("SETUP_SENSOR_UNKNOWN");return {};}
   float dl=i.left-originL,dr=i.right-originR;
   if(!isfinite(dl)||!isfinite(dr)||dl<-profile.leftMmPerEdge||dr<-profile.rightMmPerEdge){fail("SETUP_ENCODER_DIRECTION");return {};}
   if(fabsf(dl-dr)>profile.track*.18f){fail("SETUP_WHEEL_IMBALANCE");return {};}
   float radius=hypotf(fmaxf(profile.front,profile.rear),profile.halfWidth);
   float front=i.ranges[0].mm+profile.frontSonar-profile.front;
-  if(front<350||i.ranges[1].mm+profile.sideSonarY<radius+30||i.ranges[2].mm+profile.sideSonarY<radius+30){fail("SETUP_NEEDS_CLEAR_STRAIGHT_SPACE");return {};}
+  if(front<350||i.ranges[1].mm+profile.sideSonarY<radius+30||(profile.leftSonarInstalled&&i.ranges[2].mm+profile.sideSonarY<radius+30)){fail("SETUP_NEEDS_CLEAR_STRAIGHT_SPACE");return {};}
   if(fmaxf(dl,dr)>300){fail("SETUP_TRAVEL_LIMIT");return {};}
   if(state==MEASURE){exposureL+=last.left*dt;exposureR+=last.right*dt;}
   lastAt=i.now;
@@ -41,7 +41,7 @@ class Setup {
    if(raw==2||raw==0)result.tape=1;
    else if(raw==5||raw==7)result.tape=0;
    else{fail("SETUP_CENTRE_LINE_OR_BARE_FLOOR");return {};}
-   result.corridorWidth=i.ranges[1].mm+i.ranges[2].mm+2*profile.sideSonarY;
+   result.corridorWidth=profile.leftSonarInstalled?i.ranges[1].mm+i.ranges[2].mm+2*profile.sideSonarY:0;
    state=RAMP;since=i.now;reason="SETUP_MEASURING_WHEELS";
   }
   if(state==RAMP){

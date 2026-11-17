@@ -1,41 +1,33 @@
-// UNO R4 WiFi: middle IR module OUT -> D2, VCC -> regulated 5V, GND -> GND.
-// Serial Monitor: 115200 baud. Send T while over tape to label the readings.
-const uint8_t IR_PIN = 2;
+// UNO R4 WiFi: left/centre/right floor sensor OUT -> D3/D2/D4.
+// Motors remain disabled. Serial Monitor: 115200 baud, any line ending.
+const uint8_t IR_PINS[] = {3, 2, 4};
 const uint8_t MOTOR_PINS[] = {5, 6, 7, 8, 9, 10};
-int tapeLevel = -1;
+int tapeLevels[] = {-1, -1, -1};
 uint32_t lastLog = 0;
-
 void setup() {
-  // Disable both L298N channels and hold all direction inputs low.
-  for (uint8_t pin : MOTOR_PINS) {
-    digitalWrite(pin, LOW);
-    pinMode(pin, OUTPUT);
-  }
-  pinMode(IR_PIN, INPUT);
+  for (uint8_t pin : MOTOR_PINS) { digitalWrite(pin, LOW); pinMode(pin, OUTPUT); }
+  for (uint8_t pin : IR_PINS) pinMode(pin, INPUT);
   Serial.begin(115200);
-  Serial.println("IR calibration: motors OFF. Place sensor over tape and send T.");
+  Serial.println("All three sensors: put ALL over white tape, send T. Then ALL over floor, send G.");
 }
-
 void loop() {
   while (Serial.available()) {
     char command = Serial.read();
     if (command == 't' || command == 'T') {
-      tapeLevel = digitalRead(IR_PIN);
-      Serial.print("Tape recorded as ");
-      Serial.println(tapeLevel == HIGH ? "HIGH (1)" : "LOW (0)");
-      Serial.println("Move to ground: raw reading must change. Adjust sensor screw if needed.");
-    } else if (command == 'r' || command == 'R') {
-      tapeLevel = -1;
-      Serial.println("Labels reset. Place over tape and send T.");
+      for (int n=0;n<3;++n) tapeLevels[n]=digitalRead(IR_PINS[n]);
+      if(tapeLevels[0]!=tapeLevels[1]||tapeLevels[1]!=tapeLevels[2])
+        Serial.println("Tape levels differ: adjust/check modules. Robot expects matching tape polarity.");
+      else Serial.println("Tape recorded. Move ALL sensors over floor; send G.");
+    } else if (command == 'g' || command == 'G') {
+      for(int n=0;n<3;++n){
+        Serial.print("D");Serial.print(IR_PINS[n]);
+        Serial.println(tapeLevels[n]<0?": record tape with T first":digitalRead(IR_PINS[n])!=tapeLevels[n]?": tape/floor differ OK":": NO CONTRAST - adjust height/threshold/wiring");
+      }
     }
   }
-  if ((uint32_t)(millis() - lastLog) >= 200) {
-    lastLog = millis();
-    int raw = digitalRead(IR_PIN);
-    Serial.print("IR middle D2 | raw=");
-    Serial.print(raw);
-    Serial.print(raw == HIGH ? " HIGH | " : " LOW  | ");
-    if (tapeLevel < 0) Serial.println("UNLABELLED: place over tape, send T");
-    else Serial.println(raw == tapeLevel ? "TAPE" : "GROUND");
+  if ((uint32_t)(millis()-lastLog)>=200) {
+    lastLog=millis();Serial.print("Left D3 / Centre D2 / Right D4: ");
+    for(int n=0;n<3;++n){Serial.print(digitalRead(IR_PINS[n]));Serial.print(' ');}
+    Serial.println();
   }
 }

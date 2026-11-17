@@ -34,6 +34,9 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   element('mode').value='RACE';await element('mode').handlers.change();await flush();
   assert.equal(frames().at(-1).body.mode,'MANUAL'); // Selection never starts motion.
   await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'RACE');
+  element('mode').value='OBJECT';await element('mode').handlers.change();await flush();
+  assert.equal(frames().at(-1).body.mode,'MANUAL');
+  await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'OBJECT');
   element('mode').value='MANUAL';await element('mode').handlers.change();await flush();
   assert.equal(frames().at(-1).body.mode,'MANUAL');
   await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'MANUAL');
@@ -46,7 +49,7 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   assert.ok(frames().every((r,i,a)=>i===0||r.body.seq>a[i-1].body.seq));
   assert.ok(!requests.some(r=>r.url.endsWith('/settings')||r.url.endsWith('/navigation')));
   const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
-  assert.deepEqual([...html.matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]),['RACE','MANUAL']);
+  assert.deepEqual([...html.matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]),['LINE','STOP_ON_TAPE','STOP_AT_END','OBJECT','RACE','CALIBRATE','MANUAL']);
   assert.ok(!html.includes('<form')&&!html.includes('maintenance')&&!html.includes('Calibration'));
   console.log('PASS browser events: connect, keys, combinations, release, modes, stop, blur, repeat, fields, visibility, sequence');
 })().catch(error=>{console.error(error);process.exitCode=1;});

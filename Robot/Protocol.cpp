@@ -82,7 +82,7 @@ void processCommand(char* line) {
     Serial.println(F("Protocol 7 / 115200 baud / Newline. STOP always stops."));
     Serial.println(F("HELLO opens 500ms watchdog session; HEARTBEAT keeps it alive."));
     Serial.println(F("DRIVE left right (-255..255; session required)"));
-    Serial.println(F("MODE WALL_MAZE|MANUAL|FOLLOW|WALL|LINE|MAZE|STOP_ON_TAPE|STOP_AT_END; TEST left right ms (1..5000)"));
+    Serial.println(F("MODE LINE|STOP_ON_TAPE|STOP_AT_END|OBJECT|CALIBRATE|RACE|WALL_MAZE|MANUAL; TEST left right ms (1..5000)"));
     Serial.println(F("CONFIG power minimum invertA invertB followCm wallCm [tapeLevel: -1 unknown, 0 LOW, 1 HIGH]"));
     Serial.println(F("Example: CONFIG 255 255 1 0 20 10; power 1..255, minimum 0..power"));
     Serial.println(F("SONAR leftEnabled intervalMs (25..100; two sensors >=35); D0 TRIG/D11 ECHO replaces LED"));
@@ -110,7 +110,7 @@ void processCommand(char* line) {
   if(!strcmp(cmd,"SAVE")&&count==1){lastCommandOk=saveCalibration();Serial.println(lastCommandOk?F("OK SAVE"):F("ERROR SAVE"));return;}
   if(!strcmp(cmd,"LOAD")&&count==1){lastCommandOk=loadCalibration();if(lastCommandOk){reportConfiguration();reportRace();}Serial.println(lastCommandOk?F("OK LOAD"):F("ERROR LOAD"));return;}
   if(!strcmp(cmd,"RACECFG")&&count==4){
-    race::Config cfg;if(!realNumber(args[1],1,300,cfg.speed)||!realNumber(args[2],1,999,cfg.sensorOffset)||!realNumber(args[3],.5f,2.4f,cfg.searchAngle)){invalid();return;}
+    race::Config cfg;if(!realNumber(args[1],1,300,cfg.speed)||!realNumber(args[2],1,999,cfg.sensorOffset)||!realNumber(args[3],.5f,3.1f,cfg.searchAngle)){invalid();return;}
     stopRobot();raceConfig=cfg;Serial.println(F("OK RACECFG"));return;
   }
   int a, b, c, d, e, f, g = -1;
@@ -202,7 +202,10 @@ void processCommand(char* line) {
     Serial.println(F("OK CONFIG")); return;
   }
   if (!strcmp(cmd, "MODE") && count == 2) {
+    if(strcmp(args[1],"MANUAL")&&!controlSession){invalid();return;}
     if (!strcmp(args[1], "MANUAL")) startNavigation(MANUAL);
+    else if (!strcmp(args[1], "CALIBRATE")) startNavigation(CALIBRATE);
+    else if (!strcmp(args[1], "OBJECT")) startNavigation(OBJECT);
     else if (!strcmp(args[1], "FOLLOW")) startNavigation(FOLLOW);
     else if (!strcmp(args[1], "RACE")) startNavigation(RACE);
     else if (!strcmp(args[1], "WALL_MAZE")) startNavigation(WALL_MAZE);
@@ -224,6 +227,7 @@ void processCommand(char* line) {
     lastControl = millis(); return;
   }
   if (!strcmp(cmd, "TEST") && count == 4) {
+    if(!controlSession){invalid();return;}
     if (!number(args[1], -255, 255, a) || !number(args[2], -255, 255, b) ||
         !number(args[3], 1, 5000, c)) { invalid(); return; }
     if(a || b){explorer.invalidate();wallNavigator.invalidate();}

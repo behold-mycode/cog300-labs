@@ -1,10 +1,14 @@
 #pragma once
 #include <Arduino.h>
+#ifndef ROBOT_ENABLE_STANDALONE
+#define ROBOT_ENABLE_STANDALONE 0
+#endif
 #include <stdint.h>
 #include "Odometry.h"
 #include "Explorer.h"
 #include "WallNavigator.h"
 #include "Race.h"
+#include "ObjectSearch.h"
 #include "HardwareProfile.h"
 
 const uint8_t ENA=5,IN1=6,IN2=7,IN3=8,IN4=9,ENB=10;
@@ -23,7 +27,7 @@ struct NavigationConfig {
   float frontStopCm=20,wallBandCm=2;
   uint32_t stallMs=1500; // Failure deadline, never a movement duration.
 };
-enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE,RACE };
+enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE,RACE,OBJECT,CALIBRATE };
 extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
@@ -45,6 +49,7 @@ void serviceObservation();void setObservationTrace(bool enabled);
 void cancelNavigation();void stopRobot();void startNavigation(Mode selected);void serviceNavigation();const char* modeName();
 void readCommands();void processCommand(char* line);void serviceControlTimeout();void serviceTelemetry();void reportStatus();
 bool configureEncoders(int kind,bool invertL,bool invertR);bool encodersEnabled();
+void updateEncoderDirections(int left,int right);
 void reportEncoders();void serviceOdometry();void resetOdometry();
 bool mapExportActive();void beginMapExport();void serviceMapExport();void reportNavigation();
 
@@ -55,7 +60,7 @@ extern race::Config raceConfig;
 extern race::Navigator raceNavigator;
 extern bool standaloneActive,lastCommandOk;
 bool startRace();bool startStandalone();void serviceRace();void setupStandalone();void serviceButton();
-wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration();
+wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
 bool saveCalibration();bool loadCalibration();bool calibrationSaved();
 int encoderKind();bool encoderInvertLeft();bool encoderInvertRight();uint32_t sonarInterval();
 void setupWireless();void serviceWireless();void suspendWireless();
@@ -65,6 +70,6 @@ bool motorDemandActive();
 void reportRace();
 
 bool configureHardware(const hardware::Profile&);uint32_t hardwareFingerprint();
-bool automaticSetupActive();void cancelAutomaticSetup();bool beginAutomaticSetup();void serviceAutomaticSetup();void clearSavedCalibrationStatus();
+bool automaticSetupActive();void cancelAutomaticSetup();bool beginAutomaticSetup(Mode destination=RACE);void serviceAutomaticSetup();void clearSavedCalibrationStatus();
 
 bool hardwareMotorDirectionsMatch(bool invertA,bool invertB);

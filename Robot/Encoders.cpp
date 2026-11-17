@@ -33,11 +33,13 @@ bool configureEncoders(int kind,bool invertL,bool invertR) {
   attachInterrupt(digitalPinToInterrupt(ENC_RA),rightEncoderChanged,CHANGE);
   encEnabled=true;return true;
 }
+void updateEncoderDirections(int left,int right) {
+  // Called before enabling the bridge; retain direction while coasting.
+  if(left) leftDirection=left>0?1:-1;
+  if(right) rightDirection=right>0?1:-1;
+}
 void serviceOdometry() {
   if(!encEnabled) return;
-  // Single-channel direction is inferred, including same-direction coasting.
-  if(motorLeft) leftDirection=motorLeft>0?1:-1;
-  if(motorRight) rightDirection=motorRight>0?1:-1;
   noInterrupts();int32_t l=(int32_t)leftTicks,r=(int32_t)rightTicks;interrupts();
   odometry.update(l,r,millis());
 }

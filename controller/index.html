@@ -7,7 +7,13 @@
 <p id="status" role="status">Connect to control the robot.</p><p id="error" role="alert" hidden></p>
 <section id="drive" tabindex="0" aria-label="Robot controls">
 <label for="mode">Mode</label><select id="mode">
-<option value="RACE">Maze solver</option><option value="MANUAL">Manual driving</option>
+<option value="LINE">Line following · Lab 07</option>
+<option value="STOP_ON_TAPE">Drive until tape · Lab 07</option>
+<option value="STOP_AT_END">Stop at tape end · Lab 07</option>
+<option value="OBJECT">Object search · Lab 08</option>
+<option value="RACE">Line + wall maze · three sonars</option>
+<option value="CALIBRATE">Wheel calibration · clear floor</option>
+<option value="MANUAL">Manual driving</option>
 </select>
 <div class="run-controls"><button id="start" class="primary" disabled>Start</button><button id="stop">Stop <span>SPACE / ESC</span></button></div>
 <p id="robotState" role="status">Stopped</p>

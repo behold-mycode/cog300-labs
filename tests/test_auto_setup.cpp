@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cstring>
 int main(){
- hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
+ hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.floorSensorOffset=90;p.leftSonarInstalled=true;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
  commissioning::Input i;for(auto&s:i.ranges){s.valid=true;s.mm=800;}i.rawTape=2;
  commissioning::Setup c;assert(c.begin(p,i));
  float l=0,r=0,vl=0,vr=0;wall::Powers out;

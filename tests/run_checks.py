@@ -8,7 +8,8 @@ with tempfile.TemporaryDirectory() as directory:
     for source in sorted((root/'tests').glob('test_*.cpp')):
         binary = str(Path(directory)/source.stem)
         subprocess.run(['c++','-std=c++14','-Wall','-Wextra','-Werror','-I',str(root/'tests'),str(source),'-o',binary],check=True,cwd=root)
-        subprocess.run([binary],check=True,cwd=root)
+        for args in ([[]] if source.stem != "test_usb_review" else [[x] for x in ("lease","corner","wide","encoder","stop","two_sonar","range","boundary_setup","opening")]):
+            subprocess.run([binary]+args,check=True,cwd=root)
         if source.stem == 'test_wall_replay':
             for scenario in ('1', '2', '3'):
                 subprocess.run([binary,scenario],check=True,cwd=root)

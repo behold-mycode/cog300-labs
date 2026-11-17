@@ -25,7 +25,7 @@ int main(int argc,char** argv){
  if(scenario==2)command("WALLCFG 150 45 15 100 0.15 60 400");
  if(scenario==3)command("WALLCFG 150 45 15 100 0.5 40 400");
  serviceOdometry();maze::Pose actual;for(int n=0;n<3;++n)sonar(actual,n);
- command("MODE WALL_MAZE");assert(mode==WALL_MAZE);
+ command("HELLO");command("MODE WALL_MAZE");assert(mode==WALL_MAZE);
  float vl=0,vr=0;bool turned=false,complete=false;int sensor=0;
  for(int k=0;k<12000;++k){
   auto accelerate=[scenario](float v,float target){float a=scenario>=2?2:4;return v+wall::limit(target-v,-a,a);};

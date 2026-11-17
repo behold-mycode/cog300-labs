@@ -4,9 +4,9 @@
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
 maze::Explorer explorer;
+static object::Search objectSearch;
 const char* navigationState="STOPPED";
 static maze::ProgressGuard progress;
-static bool endArmed=false;
 static bool wallTurning=false;
 static maze::Motion wallMotion;
 static void drive(maze::Drive d) { requestMotor(d.left*settings.power,d.right*settings.power); }
@@ -14,19 +14,41 @@ static void hold(const char* reason) { stopMotor();navigationState=reason; }
 static bool feedbackReady() { return encodersEnabled()&&odometry.configured&&odometry.sampled; }
 const char* modeName() {
   switch(mode) {
-    case RACE:return "RACE";case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
+    case CALIBRATE:return "CALIBRATE";case OBJECT:return "OBJECT";case RACE:return "RACE";case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
     case MAZE:return "MAZE";case STOP_ON_TAPE:return "STOP_ON_TAPE";case STOP_AT_END:return "STOP_AT_END";
     default:return "MANUAL";
   }
 }
 void cancelNavigation() {
-  cancelAutomaticSetup();raceNavigator.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
+  cancelAutomaticSetup();raceNavigator.stop();objectSearch.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
   navigationState="STOPPED";
 }
 void stopRobot() { cancelNavigation();stopMotor(); }
 void startNavigation(Mode selected) {
   stopRobot();
   if(selected!=WALL_MAZE&&selected!=RACE&&selected!=MANUAL)wallNavigator.invalidate();
+  if(selected==CALIBRATE){
+    if(beginAutomaticSetup(CALIBRATE))mode=CALIBRATE;
+    return;
+  }
+  if(selected==OBJECT){
+    if(lineTapeLevel<0||!prepareWallCalibration(false)){
+      navigationState="CALIBRATE_WHEELS_FIRST";
+      return;
+    }
+    resetWallFeedback();objectSearch.begin(motionInput());
+  }
+  if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
+    if(lineTapeLevel<0||!raceConfig.valid()||!prepareWallCalibration(false)){
+      if(selected==LINE){if(beginAutomaticSetup(selected))mode=selected;}
+      else navigationState="CALIBRATE_WHEELS_FIRST";
+      return;
+    }
+    resetWallFeedback();
+    if(selected!=STOP_ON_TAPE&&!raceNavigator.begin(raceConfig,wallNavigator.config,motionInput(),lineMask(),false)){
+      navigationState=raceNavigator.reason;return;
+    }
+  }
   if(selected==RACE){if(!startRace())return;}
   else if(selected==WALL_MAZE){if(!startWall())return;}
   else if(selected==MAZE) {
@@ -37,10 +59,7 @@ void startNavigation(Mode selected) {
     if(!explorer.graph.nodeCount && lineMask()!=2) { navigationState="START_ON_CENTRE_TAPE";return; }
     if(!explorer.begin(odometry.pose)) { navigationState=explorer.reason;return; }
   } else if(selected!=MANUAL) explorer.invalidate();
-  if((selected==LINE||selected==STOP_ON_TAPE||selected==STOP_AT_END)&&lineTapeLevel<0) {
-    navigationState="LINE_NOT_CALIBRATED";return;
-  }
-  endArmed=lineMask()!=0;mode=selected;navigationState="WAITING_FOR_SENSOR";
+  mode=selected;navigationState="WAITING_FOR_SENSOR";
 }
 // Obstacle observation constrains all autonomous commands. No competing controller
 // can subtract this stop. A hold does not mark a graph edge explored or a goal found.
@@ -57,12 +76,6 @@ static bool frontClear(bool turning) {
   if(turning && explorer.geometry.valid()) required=explorer.geometry.turnClearance/10.0f;
   if(front.cm<=required) { hold("FRONT_BLOCKED");return false; }
   return true;
-}
-static void basicLine(uint8_t mask) {
-  if(mask==2) { drive({1,1});navigationState="LINE_TRACKING"; }
-  else if(mask==6||mask==4) { drive({0,1});navigationState="LINE_LEFT"; }
-  else if(mask==3||mask==1) { drive({1,0});navigationState="LINE_RIGHT"; }
-  else hold(mask==0?"LINE_LOST_USE_MAZE":"JUNCTION_USE_MAZE");
 }
 static void followWall() {
   SensorReading right=sensorReading(1),front=sensorReading(0);
@@ -91,11 +104,31 @@ static void followWall() {
 }
 void serviceNavigation() {
   if(mode==MANUAL) return;
-  if((mode==MAZE||mode==WALL_MAZE||mode==RACE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
+  if(automaticSetupActive()){serviceAutomaticSetup();return;}
+  if((mode==MAZE||mode==WALL_MAZE||mode==RACE||mode==LINE||mode==OBJECT||mode==STOP_AT_END||mode==STOP_ON_TAPE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
   if(feedbackReady() && !progress.check(odometry.pose,
       {(int8_t)(motorLeft>0?1:motorLeft<0?-1:0),(int8_t)(motorRight>0?1:motorRight<0?-1:0)},
       millis(),navigationConfig.stallMs)) {
     if(mode==WALL_MAZE)wallNavigator.fail("ENCODER_STALL");else explorer.fail("ENCODER_STALL");stopRobot();navigationState="ENCODER_STALL";return;
+  }
+  if(mode==OBJECT){
+    driveVelocity(objectSearch.step(wallNavigator.config,motionInput(),lineMask()));navigationState=objectSearch.reason;
+    if(objectSearch.state==object::Search::FAULT||objectSearch.state==object::Search::DONE||objectSearch.state==object::Search::BOUNDARY){
+      const char*why=objectSearch.reason;stopRobot();navigationState=why;
+    }
+    return;
+  }
+  if(mode==STOP_ON_TAPE){
+    if(lineMask()){stopRobot();navigationState="TAPE_REACHED";}
+    else if(frontClear(false)){driveVelocity({raceConfig.speed,raceConfig.speed});navigationState="SEEKING_TAPE";}
+    return;
+  }
+  if(mode==LINE||mode==STOP_AT_END){
+    if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
+    auto d=raceNavigator.step(raceConfig,wallNavigator.config,motionInput(),lineMask());
+    navigationState=raceNavigator.reason;driveVelocity(d);
+    if(raceNavigator.state==race::Navigator::FAULT){const char*why=raceNavigator.reason;stopRobot();navigationState=why;}
+    return;
   }
   if(mode==RACE){serviceRace();return;}
   if(mode==WALL_MAZE){serviceWall();return;}
@@ -110,18 +143,7 @@ void serviceNavigation() {
     if(error<0) power=-power;
     requestMotor(power,power);navigationState=error>0?"APPROACHING":"BACKING_AWAY";return;
   }
-  if(mode!=MAZE && !frontClear(false)) return;
-  uint8_t mask=lineMask();
-  if(lineTapeLevel<0) { hold("LINE_NOT_CALIBRATED");return; }
-  if(mode==STOP_ON_TAPE) {
-    if(mask) { stopRobot();navigationState="TAPE_REACHED"; }
-    else { drive({1,1});navigationState="SEEKING_TAPE"; }
-  } else if(mode==STOP_AT_END) {
-    if(!endArmed) { hold("START_ON_TAPE");return; }
-    if(!mask) { stopRobot();navigationState="TAPE_ENDED"; }
-    else basicLine(mask);
-  } else if(mode==LINE) basicLine(mask);
-  else if(mode==MAZE) {
+  if(mode==MAZE) {
     uint32_t now=millis();
     maze::Drive requested=explorer.step(now);
     maze::GuardResult guard=maze::guardMotion(requested,explorer.world,explorer.dynamics,now,

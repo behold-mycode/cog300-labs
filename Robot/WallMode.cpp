@@ -17,10 +17,15 @@ static void readWallInput(){
   wallInput.leftSpeed=(odometry.pose.left-lastWheelL)/dt;wallInput.rightSpeed=(odometry.pose.right-lastWheelR)/dt;
   lastVelocity=now;lastWheelL=odometry.pose.left;lastWheelR=odometry.pose.right;
  }
- for(int n=0;n<3;++n){auto r=sensorReading(n);wallInput.ranges[n]={r.cm*10,r.sampledMs,r.sequence,r.status==RANGE_VALID,sensorPose(n),r.status==RANGE_NO_RETURN};}
+ for(int n=0;n<3;++n){auto r=sensorReading(n);wallInput.ranges[n]={r.cm*10,r.sampledMs,r.sequence,r.status==RANGE_VALID,sensorPose(n),r.status==RANGE_NO_RETURN};
+  if(n>0&&(r.status==RANGE_VALID||r.status==RANGE_NO_RETURN)){
+   wallInput.ranges[n].mm=r.status==RANGE_NO_RETURN?wall::SIDE_RANGE_MM:fminf(r.cm*10,wall::SIDE_RANGE_MM);
+   wallInput.ranges[n].valid=true;wallInput.ranges[n].noReturn=false;
+   wallInput.ranges[n].openBeyond=r.status==RANGE_NO_RETURN||r.cm*10>=wall::SIDE_RANGE_MM;
+  }}
 }
-bool prepareWallCalibration(){
- if(!leftSonarEnabled()){navigationState="LEFT_SONAR_REQUIRED";return false;}
+bool prepareWallCalibration(bool requireLeft){
+ if(requireLeft&&!leftSonarEnabled()){navigationState="LEFT_SONAR_REQUIRED";return false;}
  if(!encodersEnabled()||!odometry.configured||!odometry.sampled){navigationState="ENCODERS_REQUIRED";return false;}
  if(!wheelVelocity.config.valid()){navigationState="SPEED_CALIBRATION_REQUIRED";return false;}
  auto &c=wallNavigator.config;c.track=odometry.track;
@@ -30,6 +35,7 @@ bool prepareWallCalibration(){
 }
 wall::Input motionInput(){readWallInput();return wallInput;}
 void driveVelocity(wall::Speeds target){
+ if(target.left==0&&target.right==0){stopMotor();wheelVelocity.reset();targets={};return;}
  readWallInput();uint32_t now=millis();if((uint32_t)(now-lastControlStep)<20)return;
  float dt=(uint32_t)(now-lastControlStep)*.001f;lastControlStep=now;targets=target;
  auto p=wheelVelocity.step(target.left,target.right,wallInput.leftSpeed,wallInput.rightSpeed,dt,settings.power);requestMotor(p.left,p.right);

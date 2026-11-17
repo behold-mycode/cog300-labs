@@ -1,6 +1,6 @@
 #include "Robot.h"
 #include "WirelessHttp.h"
-#if defined(ARDUINO_UNOR4_WIFI)
+#if defined(ARDUINO_UNOR4_WIFI) && ROBOT_ENABLE_STANDALONE
 #include <WiFiS3.h>
 #include "WirelessPage.h"
 #if __has_include("WirelessSecrets.h")
