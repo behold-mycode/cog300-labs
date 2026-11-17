@@ -1,7 +1,7 @@
 #define ROBOT_ENABLE_STANDALONE 1
 #include "firmware_fixture.h"
 int main(){
- setup();assert(mode==MANUAL);assert(!startStandalone());
+ setupUnconfigured();assert(mode==MANUAL);assert(!startStandalone());
  assert(configureHardware(syntheticHardware()));
  command("SONAR 1 70");command("ENC 1 0 0");command("ODOM 1 1 120");tick(10);
  command("BODY 90 70 60 80 30 50");command("WALLCFG 60 40 15 200 0.15 60 400");command("SPEEDCFG 200 200 0.6 0.3 150");

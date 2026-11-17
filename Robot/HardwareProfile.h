@@ -26,14 +26,15 @@ struct Profile {
 // these dimensions. Zero explicitly means unknown and prevents motion.
 inline Profile physicalCar(){
  Profile p;
- // Replace zero only with measurements from this car. No app configuration.
- p.leftMmPerEdge=0; p.rightMmPerEdge=0; // circumference / edges per revolution
- p.floorSensorOffset=0;             // axle to floor-sensor detection row
+ // Reported 2026-11-17: approx. 65 mm wheels, 20 slots on each disc.
+ // CHANGE interrupts count both slot edges: 40 edges per revolution.
+ p.leftMmPerEdge=p.rightMmPerEdge=65.0f*3.14159265358979323846f/40.0f;
+ p.floorSensorOffset=150;           // centre IR: 140 mm axle-to-body-front + 10 mm
  p.leftSonarInstalled=false;         // enable only after third sonar is installed
- p.track=0;                           // wheel contact-centre spacing
- p.front=0; p.rear=0; p.halfWidth=0;   // full chassis envelope from axle centre
- p.frontSonar=0;                     // forward sonar origin from axle
- p.sideSonarX=0; p.sideSonarY=0;      // shared forward and lateral side offsets
+ p.track=130;                         // reported wheel contact-centre spacing
+ p.front=150; p.rear=70; p.halfWidth=80; // 210 mm body; include 10 mm front protrusion
+ p.frontSonar=150;                   // front sonar 10 mm ahead of body
+ p.sideSonarX=45; p.sideSonarY=65;     // right sonar 15 mm inward from 80 mm half-width
  return p;
 }
 const Profile CAR=physicalCar();

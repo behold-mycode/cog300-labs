@@ -1,6 +1,6 @@
 #include "firmware_fixture.h"
 int main() {
- setup();command("HELLO");command("MODE LINE");assert(mode==MANUAL&&motorLeft==0);
+ setupUnconfigured();command("HELLO");command("MODE LINE");assert(mode==MANUAL&&motorLeft==0);
  assert(configureHardware(syntheticHardware()));serviceOdometry();
  command("BODY 90 70 60 80 30 50");command("WALLCFG 60 40 15 200 0.15 60 400");
  command("SPEEDCFG 200 200 0.6 0.3 150");command("RACECFG 50 90 1.8");

@@ -6,7 +6,7 @@ static void request(const char*command){
  for(char c:r)webBytes.push_back(c);pendingWeb=true;
 }
 int main(){
- setup();assert(apReady);
+ setupUnconfigured();assert(apReady);
  request("RUN START");serviceWireless();assert(mode==MANUAL&&!standaloneActive);assert(!strcmp(navigationState,"HARDWARE_DIMENSIONS_REQUIRED"));
  assert(configureHardware(syntheticHardware()));
  command("SONAR 1 70");command("ENC 1 0 0");command("ODOM 1 1 120");tick(10);

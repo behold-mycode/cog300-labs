@@ -1,6 +1,6 @@
 # COGS 300 Robot
 
-**Current build: laptop USB, Lab 07 with two sonars; Lab 08 object search available by explicit start.** Start with [USB-Lab-Setup.md](USB-Lab-Setup.md) and [USB-Code-Review.md](USB-Code-Review.md). Physical measurements remain unset; no physical validation is claimed. Standalone/Wi-Fi are disabled by default.
+**Current build: laptop USB, Lab 07 with two sonars; Lab 08 object search available by explicit start.** Start with [USB-Lab-Setup.md](USB-Lab-Setup.md) and [USB-Code-Review.md](USB-Code-Review.md). Reported physical measurements are entered; no physical validation is claimed. Standalone/Wi-Fi are disabled by default.
 
 
 ## Download and set up

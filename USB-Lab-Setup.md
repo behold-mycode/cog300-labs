@@ -19,7 +19,13 @@ Use millimetres, measured from the axle centre unless stated otherwise:
 - Front sonar forward offset; right sonar forward and lateral offsets.
 - Each IR module's raw tape and floor levels, plus confirmation of forward motor direction.
 
-`Robot/HardwareProfile.h` contains the compiled physical measurements. They remain zero pending measurement. `leftSonarInstalled=false` is deliberate. Adding the left sonar later requires its installation flag and symmetric mounting offsets to be checked. A changed physical profile invalidates saved calibration.
+`Robot/HardwareProfile.h` contains the compiled physical measurements. `leftSonarInstalled=false` is deliberate. Adding the left sonar later requires its installation flag and symmetric mounting offsets to be checked. A changed physical profile invalidates saved calibration.
+
+Measurements reported 2026-11-17: wheel spacing 130 mm, wheel diameter approximately 65 mm, 20 encoder slots, overall width 160 mm, and right sonar 15 mm inward from the rightmost edge. These give an initial wheel scale of approximately 5.105 mm per counted edge and a right-sonar lateral position 65 mm from the centreline. These values are entered; wheel scale still needs verification with actual travel/counts.
+
+Final body measurements: length approximately 210 mm, axle 140 mm behind the body front, front sonar and centre IR 10 mm ahead of the body, outer IR sensors approximately 5 mm ahead. The right sonar midpoint is 95 mm behind the body front. Therefore the entered axle-based profile is: front envelope 150 mm (including the protrusion), rear 70 mm, centre IR 150 mm, front sonar 150 mm, right sonar forward 45 mm and lateral 65 mm. Required profile dimensions are now populated.
+
+Outer IR positions were reported as 0 and 100 mm across the front. The expanded simulation assumes the centre IR is midway between them (50 mm) and uses 20 mm tape; the actual centre lateral position and tape width await confirmation. The centre IR is 5 mm ahead of the outer pair. Firmware recovery uses the centre detection position and now preserves the selected pivot direction until the centre reacquires tape, avoiding opposite outer sensors reversing each other on a tight bend. Both narrow and wide synthetic layouts complete ±45°, ±90°, ±135° and ±150° cases. This is not physical validation.
 
 ## Sensor check and calibration
 

@@ -30,7 +30,7 @@ class Navigator {
   wallCourse=enterWalls;
   if(!r.valid()||!c.valid()){reason="RACE_CALIBRATION_REQUIRED";return false;}
   if(mask==0){reason="RACE_START_ON_LINE";return false;}
-  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;reason="RACE_LINE";return true;
+  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;pivotSide=0;reason="RACE_LINE";return true;
  }
  wall::Speeds step(const Config&r,const wall::Config&c,const wall::Input&original,uint8_t tape){
   if(state==IDLE||state==FAULT||state==WALL)return {};
@@ -46,15 +46,21 @@ class Navigator {
   if(state==TRACK){
    if(tape==0){
     heading=lastTape.heading;pointX=lastTape.x+r.sensorOffset*cosf(heading);pointY=lastTape.y+r.sensorOffset*sinf(heading);
-    probed=false;quietSince=i.now;state=SETTLE;reason="RACE_LINE_LOST_ASSESSING";return {};
+    pivotSide=0;probed=false;quietSince=i.now;state=SETTLE;reason="RACE_LINE_LOST_ASSESSING";return {};
    }
-   lastTape=i.pose;if(tape==4||tape==6)lastSide=1;else if(tape==1||tape==3)lastSide=-1;
-   float direction=(tape==4||tape==6)?1:(tape==1||tape==3)?-1:0;
-   // Outer-only readings need a pivot, not an arc with a fixed minimum radius.
-   if(tape==4||tape==1){
+   if(tape&2){lastTape=i.pose;pivotSide=0;}
+   // Finish an outer-sensor pivot until the centre reaches tape. At a tight
+   // bend the opposite outer sensor can still see the incoming segment;
+   // immediately obeying it would reverse the pivot on every control step.
+   if(!pivotSide&&(tape==4||tape==1))pivotSide=tape==4?1:-1;
+   if(pivotSide){
+    lastSide=pivotSide;
     if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
-    return guarded(c,i,{-direction*c.turnSpeed,direction*c.turnSpeed});
+    reason="RACE_LINE_PIVOT";
+    return guarded(c,i,{-pivotSide*c.turnSpeed,pivotSide*c.turnSpeed});
    }
+   if(tape==4||tape==6)lastSide=1;else if(tape==1||tape==3)lastSide=-1;
+   float direction=(tape==4||tape==6)?1:(tape==1||tape==3)?-1:0;
    // A broad stripe/intersection is crossed slowly; it is not a sensor fault.
    float speed=(tape==5||tape==7)?fminf(r.speed,c.turnSpeed):r.speed;
    reason="RACE_LINE";return guarded(c,i,{speed*(1-.6f*direction),speed*(1+.6f*direction)});
@@ -69,7 +75,7 @@ class Navigator {
   if(turning){
    if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
    if(state!=ALIGN&&tape==2&&maze::angleDistance(i.pose.heading,heading+maze::PI_F)>.1f){
-    if(++hits>=3){state=SETTLE;quietSince=i.now;reason="RACE_SETTLING_ON_LINE";}return {};
+    if(++hits>=3){if(state==SWEEP_SECOND)lastSide=-lastSide;state=SETTLE;quietSince=i.now;reason="RACE_SETTLING_ON_LINE";}return {};
    }
    hits=0;auto d=turn.step(c,i);
    if(turn.failed){fail("RACE_TURN_DRIFT");return {};}
@@ -105,7 +111,7 @@ class Navigator {
   return {};
  }
  private:
- maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,hits=0,entrySamples=0;bool probed=false;
+ maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,pivotSide=0,hits=0,entrySamples=0;bool probed=false;
  bool wallCourse=true;
  uint32_t quietSince=0,entrySequence=0;wall::Turn turn;
  bool turnClear(const wall::Config&c,const wall::Input&i)const{
