@@ -1,3 +1,4 @@
+#define ROBOT_ENABLE_STANDALONE 1
 #define ARDUINO_UNOR4_WIFI
 #include "firmware_fixture.h"
 static void request(const char*command){

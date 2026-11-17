@@ -1,5 +1,7 @@
 # Current robot wiring and startup
 
+**2026-11-17 update:** today’s build uses laptop USB, front/right sonars, three floor sensors and two encoders. The left sonar/button below are future connections. Standalone is disabled by default. Follow [USB-Lab-Setup.md](USB-Lab-Setup.md) for current startup and measurements; the older startup narrative below is superseded.
+
 This is the consolidated connection plan for the **UNO R4 WiFi, L298N, three HC-SR04 sonars, three LM393 floor sensors, two single-output LM393 slot encoders and a start/stop button**. It supersedes the older USB-bench drawings in `documentation/`. Signal assignments match the current firmware; installation has not been physically inspected.
 
 Open [Robot-Wiring.svg](Robot-Wiring.svg) for the complete overview.

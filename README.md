@@ -1,8 +1,7 @@
-Current wiring and robot-owned startup: [Robot-Wiring.md](Robot-Wiring.md) · [complete diagram](Robot-Wiring.svg). Physical profile dimensions are still needed; no physical validation is claimed.
-
-Standalone line-to-maze operation and onboard Wi-Fi setup: see [Standalone-Setup.md](Standalone-Setup.md). This local addition is not yet uploaded or physically validated.
-
 # COGS 300 Robot
+
+**Current build: laptop USB, Lab 07 with two sonars; Lab 08 object search available by explicit start.** Start with [USB-Lab-Setup.md](USB-Lab-Setup.md) and [USB-Code-Review.md](USB-Code-Review.md). Physical measurements remain unset; no physical validation is claimed. Standalone/Wi-Fi are disabled by default.
+
 
 ## Download and set up
 
@@ -16,4 +15,4 @@ Keep Terminal open while using the controller. For setup help and troubleshootin
 
 Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** This revision is not uploaded or physically validated.
 
-Legacy tape/lab modes remain. Their [firmware 6 guide](documentation/observation-first.md) describes the older tape navigator; its steering and limitations are unchanged. The app exposes **Maze solver** and **Manual driving** only. Maze solver selects line or wall guidance onboard and retains the USB watchdog for laptop-controlled runs. Goal-room recognition is intentionally omitted; object-search behavior is not part of the new course controller.
+The controller exposes line following, both Lab 07 tape-stop demonstrations, object search, three-sonar line/wall maze, explicit wheel calibration, and manual driving. The firmware owns configuration. See the current USB guide above; older standalone and observation-first documents describe historical/opt-in behavior.

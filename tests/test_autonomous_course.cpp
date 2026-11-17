@@ -1,3 +1,4 @@
+#define ROBOT_ENABLE_STANDALONE 1
 // Fresh boot -> automatic commissioning -> line -> wall -> dead-end -> return.
 // Actual production firmware, synthetic mechanics and ray sonar; no USB setup commands.
 #include "firmware_fixture.h"
@@ -9,7 +10,7 @@ void reading(const maze::Pose&p,int n){float sx=n==0?80:30,sy=n==0?0:n==1?-50:50
  float x=p.x+sx*cosf(p.heading)-sy*sinf(p.heading),y=p.y+sx*sinf(p.heading)+sy*cosf(p.heading);
  float mm=cast(x,y,p.heading+(n==0?0:n==1?-maze::PI_F/2:maze::PI_F/2));acceptReading(n,(int)(mm/10),(uint32_t)(mm*5.8f));}
 int main(){
- setup();hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
+ setup();hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.floorSensorOffset=90;p.leftSonarInstalled=true;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;
  assert(configureHardware(p));maze::Pose actual;for(int n=0;n<3;++n)reading(actual,n);tape(2);
  assert(startStandalone());float vl=0,vr=0,l=0,r=0;bool learned=false,wall=false,turned=false,finished=false;int sensor=0;uint32_t lastPing=nowMs;
  for(int k=0;k<18000;++k){

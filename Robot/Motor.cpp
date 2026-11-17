@@ -29,6 +29,7 @@ static void output(int left, int right) {
   if (motorRight && !right) rightOffAt = now;
   if (left) lastLeftSign = sign(left);
   if (right) lastRightSign = sign(right);
+  updateEncoderDirections(left,right);
   motorLeft = left; motorRight = right;
   // On this car A drives the physical right wheel, B drives the left.
   // Keep logical wheel commands independent of channel polarity calibration.

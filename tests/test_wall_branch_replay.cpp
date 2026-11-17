@@ -32,7 +32,7 @@ int main(){
  setup();command("SONAR 1 40");command("ENC 1 0 0");command("ODOM 1 1 120");
  command("BODY 90 70 60 80 30 50");command("WALLCFG 80 45 15 200 0.15 140 400");command("SPEEDCFG 200 190 0.6 0.3 150");
  serviceOdometry();maze::Pose actual;for(int n=0;n<3;++n)sonar(actual,n);
- command("MODE WALL_MAZE");assert(mode==WALL_MAZE);
+ command("HELLO");command("MODE WALL_MAZE");assert(mode==WALL_MAZE);
  float vl=0,vr=0;bool complete=false;int sensor=0;
  for(int k=0;k<12000;++k){
   auto accelerate=[](float v,float target){return v+wall::limit(target-v,-4,4);};

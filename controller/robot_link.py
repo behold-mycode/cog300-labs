@@ -7,7 +7,7 @@ import time
 DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
                 followCm=20, wallCm=10, lineTapeLevel=-1)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
-MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE', 'RACE'}
+MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE', 'RACE', 'OBJECT', 'CALIBRATE'}
 BROWSER_TIMEOUT = .6
 
 
@@ -133,7 +133,7 @@ class RobotLink:
 
     def action(self, owner, seq, action, values):
         commands = {
-            'race_config': ('RACECFG', [('speed',1,300),('offset',1,999),('angle',.5,2.4)]),
+            'race_config': ('RACECFG', [('speed',1,300),('offset',1,999),('angle',.5,3.1)]),
             'save_calibration': ('SAVE', []), 'load_calibration': ('LOAD', []),
             'sonar': ('SONAR', [('enabled',0,1),('interval',25,100)]),
             'body': ('BODY', [('front',1,1000),('rear',1,1000),('halfWidth',1,1000),('frontSensor',0,1000),('sideX',-1000,1000),('sideY',0,1000)]),

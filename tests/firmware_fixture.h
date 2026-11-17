@@ -21,4 +21,4 @@ void tick(uint32_t ms,int front=60,int right=10) {
   serviceOdometry();serviceObservation();serviceControlTimeout();serviceNavigation();serviceMotor();serviceMapExport();
 }
 
-hardware::Profile syntheticHardware(){hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;return p;}
+hardware::Profile syntheticHardware(){hardware::Profile p;p.leftMmPerEdge=p.rightMmPerEdge=1;p.track=120;p.floorSensorOffset=90;p.leftSonarInstalled=true;p.front=90;p.rear=70;p.halfWidth=60;p.frontSonar=80;p.sideSonarX=30;p.sideSonarY=50;return p;}

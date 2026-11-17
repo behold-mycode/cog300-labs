@@ -13,7 +13,7 @@ struct Calibration {
  race::Config race;
  bool valid()const{
   return hardwareMotorDirectionsMatch(motors.invertA,motors.invertB)&&motors.power>0&&motors.power<=255&&motors.minimum>=0&&motors.minimum<=motors.power&&
-   tape>=0&&tape<=1&&kind>=1&&kind<=2&&leftSonar&&interval>=25&&interval<=100&&
+   tape>=0&&tape<=1&&kind>=1&&kind<=2&&interval>=25&&interval<=100&&
    isfinite(leftScale)&&leftScale>=.001f&&leftScale<=100&&isfinite(rightScale)&&rightScale>=.001f&&rightScale<=100&&
    isfinite(track)&&track>=10&&track<=1000&&wall.valid()&&velocity.valid()&&race.valid();
  }
@@ -23,7 +23,7 @@ bool saved=false;
 bool calibrationSaved(){return saved;}
 void clearSavedCalibrationStatus(){saved=false;}
 bool saveCalibration(){
- if(!hardwareFingerprint()||mode!=MANUAL||motorLeft||motorRight||motorDemandActive()||!prepareWallCalibration())return false;
+ if(!hardwareFingerprint()||mode!=MANUAL||motorLeft||motorRight||motorDemandActive()||!prepareWallCalibration(false))return false;
  Calibration c;c.hardwareId=hardwareFingerprint();c.motors=settings;c.tape=lineTapeLevel;c.kind=encoderKind();c.invertLeft=encoderInvertLeft();c.invertRight=encoderInvertRight();
  c.leftSonar=leftSonarEnabled();c.interval=sonarInterval();c.leftScale=odometry.leftScale;c.rightScale=odometry.rightScale;c.track=odometry.track;
  c.wall=wallNavigator.config;c.velocity=wheelVelocity.config;c.race=raceConfig;

@@ -1,3 +1,4 @@
+#define ROBOT_ENABLE_STANDALONE 1
 #include "firmware_fixture.h"
 void advance(int mask,int ms=50){tape(mask);acceptReading(2,15,870);tick(ms,60,15);}
 int main(){
@@ -11,9 +12,9 @@ int main(){
  assert(!raceWallStarted&&resumeWallGraph&&mode==RACE);assert(explorer.graph.nodeCount==nodes);
  advance(0);assert(!raceWallStarted);
  for(int n=0;n<10;++n)advance(0);
- assert(raceWallStarted&&mode==RACE);assert(explorer.graph.nodeCount==nodes);
+ assert(!raceWallStarted&&mode==RACE);assert(explorer.graph.nodeCount==nodes);
  stopRobot();advance(2);assert(startStandalone());assert(!raceWallStarted);
  for(int n=0;n<10;++n)advance(0);
- assert(raceWallStarted&&mode==RACE);
- stopRobot();advance(7);assert(!startStandalone()&&mode==MANUAL);
+ assert(!raceWallStarted&&mode==RACE);
+ stopRobot();advance(7);assert(startStandalone()&&mode==RACE);
 }

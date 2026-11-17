@@ -1,3 +1,4 @@
+#define ROBOT_ENABLE_STANDALONE 1
 #include "firmware_fixture.h"
 int main(){
  setup();assert(mode==MANUAL);assert(!startStandalone());

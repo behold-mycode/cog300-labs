@@ -7,8 +7,8 @@ The app only connects to the robot, selects a mode, starts/stops it, and provide
 3. Connect to the serial port, choose a mode and press **Start**. Selecting a mode alone stops motion.
 4. Hold arrow keys or WASD for manual control; release to stop. Space, Escape and **Stop** stop all modes. Manual keys select manual mode.
 
-Laptop-controlled operation retains its heartbeat stop: leaving the window, losing the browser/USB connection or disconnecting stops motion. The robot's physical button and onboard autonomous start remain separate from this tethered control session. Standalone running does not require the desktop app.
+Laptop-controlled operation retains its heartbeat stop: leaving the window, losing the browser/USB connection or disconnecting stops motion. Standalone button/Wi-Fi control is disabled in the default build.
 
-The two modes are **Maze solver** and **Manual driving**. Maze solver starts with line guidance when tape is present, otherwise wall navigation. Sustained tape loss switches to walls; stable tape reacquisition in a corridor switches back to line guidance without clearing the route map. A measured junction manoeuvre finishes before guidance changes. Each solver start creates a fresh route map. The robot reports why it stops; selecting Start does not bypass missing hardware setup or clearance checks.
+Modes: Line following, Drive until tape, Stop at tape end, Object search, Line + wall maze (three sonars), Wheel calibration, Manual driving. Selection stops; Start runs. Connecting never overwrites calibration.
 
-Run `python3 controller/controller.py --demo` for a UI-only preview with no hardware access. Changes are host-tested; the latest firmware has not been uploaded or physically validated. See [Standalone-Setup.md](../Standalone-Setup.md) for development/hardware status.
+See [USB-Lab-Setup.md](../USB-Lab-Setup.md) for first calibration, required measurements, sonar limits and the current lab scope. Run `python3 controller/controller.py --demo` for a UI-only preview with no hardware access. The firmware is not yet physically validated.

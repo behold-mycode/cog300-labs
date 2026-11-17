@@ -2,8 +2,8 @@
 #include "WallNavigator.h"
 namespace race {
 struct Config {
- float speed=0,sensorOffset=0,searchAngle=1.8f;
- bool valid()const{return isfinite(speed)&&isfinite(sensorOffset)&&isfinite(searchAngle)&&speed>0&&speed<=300&&sensorOffset>0&&sensorOffset<1000&&searchAngle>=.5f&&searchAngle<=2.4f;}
+ float speed=0,sensorOffset=0,searchAngle=3.f;
+ bool valid()const{return isfinite(speed)&&isfinite(sensorOffset)&&isfinite(searchAngle)&&speed>0&&speed<=300&&sensorOffset>0&&sensorOffset<1000&&searchAngle>=.5f&&searchAngle<=3.1f;}
 };
 class Button {
  bool armed=false,pressed=false,inhibit=false,pending=false;uint32_t down=0,up=0;
@@ -26,10 +26,11 @@ class Navigator {
  const char*reason="RACE_IDLE";
  bool wallStage()const{return state==WALL;}
  void stop(){state=IDLE;}
- bool begin(const Config&r,const wall::Config&c,const wall::Input&i,uint8_t mask){
+ bool begin(const Config&r,const wall::Config&c,const wall::Input&i,uint8_t mask,bool enterWalls=true){
+  wallCourse=enterWalls;
   if(!r.valid()||!c.valid()){reason="RACE_CALIBRATION_REQUIRED";return false;}
-  if(mask==0||mask==7||mask==5){reason="RACE_START_ON_LINE";return false;}
-  state=TRACK;lastTape=i.pose;heading=i.pose.heading;rearStart=i.pose.path;lastSide=1;reason="RACE_LINE";return true;
+  if(mask==0){reason="RACE_START_ON_LINE";return false;}
+  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;reason="RACE_LINE";return true;
  }
  wall::Speeds step(const Config&r,const wall::Config&c,const wall::Input&original,uint8_t tape){
   if(state==IDLE||state==FAULT||state==WALL)return {};
@@ -43,24 +44,31 @@ class Navigator {
   bool turning=state==SWEEP_FIRST||state==SWEEP_SECOND||state==ALIGN;
   if(!turning&&f+c.frontSensor<=c.front+c.margin+stop){reason="RACE_FRONT_BLOCKED";return {};}
   if(state==TRACK){
-   if(tape==0||tape==5||tape==7){
+   if(tape==0){
     heading=lastTape.heading;pointX=lastTape.x+r.sensorOffset*cosf(heading);pointY=lastTape.y+r.sensorOffset*sinf(heading);
     probed=false;quietSince=i.now;state=SETTLE;reason="RACE_LINE_LOST_ASSESSING";return {};
    }
    lastTape=i.pose;if(tape==4||tape==6)lastSide=1;else if(tape==1||tape==3)lastSide=-1;
    float direction=(tape==4||tape==6)?1:(tape==1||tape==3)?-1:0;
-   reason="RACE_LINE";return guarded(c,i,{r.speed*(1-.35f*direction),r.speed*(1+.35f*direction)});
+   // Outer-only readings need a pivot, not an arc with a fixed minimum radius.
+   if(tape==4||tape==1){
+    if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
+    return guarded(c,i,{-direction*c.turnSpeed,direction*c.turnSpeed});
+   }
+   // A broad stripe/intersection is crossed slowly; it is not a sensor fault.
+   float speed=(tape==5||tape==7)?fminf(r.speed,c.turnSpeed):r.speed;
+   reason="RACE_LINE";return guarded(c,i,{speed*(1-.6f*direction),speed*(1+.6f*direction)});
   }
   bool stopped=v<1;
   if(state==SETTLE){
    if(!stopped){quietSince=i.now;return {};}
    if((uint32_t)(i.now-quietSince)<250)return {};
-   if(tape==2){state=TRACK;lastTape=i.pose;if(maze::angleDistance(i.pose.heading,heading)>.1f)rearStart=i.pose.path;reason="RACE_LINE_RESTORED";return {};}
+   if(tape==2){state=TRACK;lastTape=i.pose;reason="RACE_LINE_RESTORED";return {};}
    turn.begin(lastSide*r.searchAngle,i.pose);state=SWEEP_FIRST;hits=0;reason="RACE_SEARCHING_LINE";return {};
   }
   if(turning){
-   if(!wall::turnClear(c,i,i.pose.path-rearStart)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
-   if(state!=ALIGN&&tape==2&&maze::angleDistance(i.pose.heading,heading+maze::PI_F)>.4f){
+   if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
+   if(state!=ALIGN&&tape==2&&maze::angleDistance(i.pose.heading,heading+maze::PI_F)>.1f){
     if(++hits>=3){state=SETTLE;quietSince=i.now;reason="RACE_SETTLING_ON_LINE";}return {};
    }
    hits=0;auto d=turn.step(c,i);
@@ -81,12 +89,13 @@ class Navigator {
    reason="RACE_PROBING_LAST_TAPE_POINT";return guarded(c,i,{speed,speed});
   }
   if(state==ENTRY){
+   if(!wallCourse){fail("LINE_END_OR_LOST");return {};}
    if(tape){state=SETTLE;quietSince=i.now;return {};}
    if(!stopped){quietSince=i.now;return {};}
    if((uint32_t)(i.now-quietSince)<250)return {};
    const auto&left=original.ranges[2];const auto&right=original.ranges[1];
    float width=left.mm+right.mm+2*c.sideY;
-   bool corridor=wall::fresh(left,i.now)&&wall::fresh(right,i.now)&&width>c.corridorWidth*.7f&&width<c.corridorWidth*1.3f&&left.mm<c.corridorWidth&&right.mm<c.corridorWidth;
+   bool corridor=wall::fresh(left,i.now)&&wall::fresh(right,i.now)&&width>2*(c.halfWidth+c.margin)&&left.mm<wall::SIDE_RANGE_MM&&right.mm<wall::SIDE_RANGE_MM;
    if(corridor&&entrySequence!=left.sequence){entrySequence=left.sequence;++entrySamples;}
    if(!corridor)entrySamples=0;
    if(entrySamples>=3){state=WALL;reason="RACE_ENTERING_WALL_MAZE";return {};}
@@ -96,8 +105,18 @@ class Navigator {
   return {};
  }
  private:
- maze::Pose lastTape;float heading=0,pointX=0,pointY=0,rearStart=0;int lastSide=1,hits=0,entrySamples=0;bool probed=false;
+ maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,hits=0,entrySamples=0;bool probed=false;
+ bool wallCourse=true;
  uint32_t quietSince=0,entrySequence=0;wall::Turn turn;
+ bool turnClear(const wall::Config&c,const wall::Input&i)const{
+  // The line section is an open floor area. There is no rear sensor; a path
+  // length threshold cannot certify rear clearance and used to deadlock bends.
+  for(int n=0;n<(wallCourse?3:1);++n){
+   float d=wall::corrected(c,i,n);
+   if(d<0||d+(n==0?c.frontSensor:c.sideY)<=c.radius()+c.margin)return false;
+  }
+  return true;
+ }
  void fail(const char*why){state=FAULT;reason=why;}
  wall::Speeds guarded(const wall::Config&c,const wall::Input&i,wall::Speeds d){
   bool curve=fabsf(d.left-d.right)>1||fabsf(i.leftSpeed-i.rightSpeed)>1;
@@ -106,7 +125,7 @@ class Navigator {
   float front=wall::corrected(c,i,0);
   if(front<0){reason="RACE_FRONT_UNKNOWN";return {};}
   float room=front+c.frontSensor-c.front-c.margin;
-  for(int n=1;n<3;++n){
+  for(int n=1;wallCourse&&n<3;++n){
    float side=wall::corrected(c,i,n);
    float sideRoom=side+c.sideY-(curve?c.radius():c.halfWidth)-c.margin;
    if(side<0||sideRoom<=0||(curve&&sideRoom<=momentum)){reason="RACE_SIDE_CLEARANCE_REQUIRED";return {};}

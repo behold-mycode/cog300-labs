@@ -1,6 +1,7 @@
 #include <cassert>
 #include "../Robot/Robot.h"
 #include "../Robot/Motor.cpp"
+void updateEncoderDirections(int,int) {}
 void stopRobot() { stopMotor(); }
 void tick(uint32_t ms) { nowMs += ms; serviceMotor(); }
 int main() {
