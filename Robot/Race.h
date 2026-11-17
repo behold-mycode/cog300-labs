@@ -22,7 +22,7 @@ class Button {
 };
 class Navigator {
  public:
- enum State{IDLE,TRACK,SETTLE,SWEEP_FIRST,SWEEP_SECOND,ALIGN,PROBE,ENTRY,WALL,FAULT}state=IDLE;
+ enum State{IDLE,TRACK,SETTLE,SWEEP_FIRST,SWEEP_SECOND,ALIGN,PROBE,ENTRY,WALL,FAULT,CENTRE_LINE}state=IDLE;
  const char*reason="RACE_IDLE";
  bool wallStage()const{return state==WALL;}
  void stop(){state=IDLE;}
@@ -30,7 +30,7 @@ class Navigator {
   wallCourse=enterWalls;
   if(!r.valid()||!c.valid()){reason="RACE_CALIBRATION_REQUIRED";return false;}
   if(mask==0){reason="RACE_START_ON_LINE";return false;}
-  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;pivotSide=0;reason="RACE_LINE";return true;
+  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;pivotSide=0;onBand=false;reason="RACE_LINE";return true;
  }
  wall::Speeds step(const Config&r,const wall::Config&c,const wall::Input&original,uint8_t tape){
   if(state==IDLE||state==FAULT||state==WALL)return {};
@@ -41,7 +41,7 @@ class Navigator {
   float f=wall::corrected(c,i,0);if(f<0){reason="RACE_FRONT_UNKNOWN";return {};}
   float v=fmaxf(fabsf(i.leftSpeed),fabsf(i.rightSpeed));
   float stop=v*c.reaction+v*v/(2*c.deceleration);
-  bool turning=state==SWEEP_FIRST||state==SWEEP_SECOND||state==ALIGN;
+  bool turning=state==SWEEP_FIRST||state==SWEEP_SECOND||state==ALIGN||state==CENTRE_LINE;
   if(!turning&&f+c.frontSensor<=c.front+c.margin+stop){reason="RACE_FRONT_BLOCKED";return {};}
   if(state==TRACK){
    if(tape==0){
@@ -69,17 +69,33 @@ class Navigator {
   if(state==SETTLE){
    if(!stopped){quietSince=i.now;return {};}
    if((uint32_t)(i.now-quietSince)<250)return {};
-   if(tape==2){state=TRACK;lastTape=i.pose;reason="RACE_LINE_RESTORED";return {};}
-   turn.begin(lastSide*r.searchAngle,i.pose);state=SWEEP_FIRST;hits=0;reason="RACE_SEARCHING_LINE";return {};
+   if(tape&2){state=TRACK;lastTape=i.pose;reason="RACE_LINE_RESTORED";return {};}
+   turn.begin(lastSide*r.searchAngle,i.pose);state=SWEEP_FIRST;onBand=false;bandArmed=false;reason="RACE_SEARCHING_LINE";return {};
   }
   if(turning){
    if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
-   if(state!=ALIGN&&tape==2&&maze::angleDistance(i.pose.heading,heading+maze::PI_F)>.1f){
-    if(++hits>=3){if(state==SWEEP_SECOND)lastSide=-lastSide;state=SETTLE;quietSince=i.now;reason="RACE_SETTLING_ON_LINE";}return {};
+   if(state==CENTRE_LINE){
+    // Both tape edges were observed. Do not accept the first edge again.
+    if((tape&2)&&fabsf(bandCentre-i.pose.heading)<=bandTolerance){
+     state=SETTLE;quietSince=i.now;reason="RACE_SETTLING_ON_LINE";return {};
+    }
+    auto precise=c;precise.angleTolerance=bandTolerance;
+    auto d=turn.step(precise,i);
+    if(turn.failed){fail("RACE_TURN_DRIFT");return {};}
+    if(turn.done){state=SETTLE;quietSince=i.now;}
+    reason="RACE_CENTRING_ON_LINE";return d;
    }
-   hits=0;auto d=turn.step(c,i);
+   bool searching=state==SWEEP_FIRST||state==SWEEP_SECOND;
+   if(searching){
+    if(tape&2){if(bandArmed&&!onBand){onBand=true;bandStart=i.pose.heading;}}
+    else {bandArmed=true;if(onBand&&centreOnBand(c,i))return {};}
+   }
+   auto d=turn.step(c,i);
    if(turn.failed){fail("RACE_TURN_DRIFT");return {};}
    if(!turn.done){reason="RACE_SEARCHING_LINE";return d;}
+   // A stripe cut off by the sweep limit has no observed second edge.
+   // Skip that partial band, including until it exits after reversing.
+   onBand=false;bandArmed=false;
    if(state==SWEEP_FIRST){turn.begin(-lastSide*2*r.searchAngle,i.pose);state=SWEEP_SECOND;}
    else if(state==SWEEP_SECOND){turn.begin(maze::wrap(heading-i.pose.heading),i.pose);state=ALIGN;}
    else{state=probed?ENTRY:PROBE;quietSince=i.now;entrySamples=0;entrySequence=0;}
@@ -111,9 +127,22 @@ class Navigator {
   return {};
  }
  private:
- maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,pivotSide=0,hits=0,entrySamples=0;bool probed=false;
- bool wallCourse=true;
+ maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,pivotSide=0,entrySamples=0;bool probed=false;
+ bool wallCourse=true,onBand=false,bandArmed=false;
+ float bandStart=0,bandCentre=0,bandTolerance=0;
  uint32_t quietSince=0,entrySequence=0;wall::Turn turn;
+ bool centreOnBand(const wall::Config&c,const wall::Input&i){
+  onBand=false;bandCentre=(bandStart+i.pose.heading)*.5f;
+  // Firmware distanceTolerance is 1.5 encoder edges. Half a heading step
+  // may separate the band midpoint from the closest attainable wheel count.
+  float halfHeadingStep=c.distanceTolerance/(3*c.track);
+  bandTolerance=fmaxf(halfHeadingStep+1e-6f,fminf(c.angleTolerance,fabsf(i.pose.heading-bandStart)*.25f));
+  // Reject the incoming stripe using the whole detected band, not its edge.
+  if(maze::angleDistance(bandCentre,heading+maze::PI_F)<=.1f+c.angleTolerance)return false;
+  if(state==SWEEP_SECOND)lastSide=-lastSide;
+  turn.begin(bandCentre-i.pose.heading,i.pose);state=CENTRE_LINE;
+  reason="RACE_CENTRING_ON_LINE";return true;
+ }
  bool turnClear(const wall::Config&c,const wall::Input&i)const{
   // The line section is an open floor area. There is no rear sensor; a path
   // length threshold cannot certify rear clearance and used to deadlock bends.

@@ -28,7 +28,7 @@ Motor polarity/reversal sequencing, USB heartbeat timeout, bounded serial parsin
 
 ## Verification
 
-Final check: **31 C++ test executables plus scenario variants, 25 Python tests, and browser-event checks passed**. Both Robot and IRCalibration compile for UNO R4 WiFi. The measured-profile follow-up also passes simulated commissioning with approximately 5.105 mm encoder edges. `git diff --check` is clean.
+Final check: **32 C++ test executables plus scenario variants, 25 Python tests, and browser-event checks passed**. Both Robot and IRCalibration compile for UNO R4 WiFi. The measured-profile follow-up also passes simulated commissioning with approximately 5.105 mm encoder edges. `git diff --check` is clean.
 
 Run `python3 tests/run_checks.py` for host checks and `arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi Robot` for the board build. New regressions cover USB ownership, corner recovery, broad tape, immediate stop, encoder first-edge direction, two-sonar commissioning/persistence, side-range saturation, commissioning boundary bypass, and pivot geometry. Geometric line tests include ±45°, ±90°, ±135° and ±150°. Object tests cover target bearings around the car, a farther distractor, no-return scans and boundary stop.
 
@@ -37,3 +37,9 @@ These tests use synthetic sensors/mechanics. Remaining hardware-dependent work i
 ## Measured-profile follow-up
 
 Entered the reported wheel/body/sonar geometry on 2026-11-17. A wide-sensor replay (100 mm outer spacing, assumed centred middle IR and 20 mm tape) reproduced slow repeated wrong-way searches and alternating pivots on a tight bend. Recovery now remembers the successful search direction; outer-only pivots keep their direction until centre detection; saved tape position is updated only when the centre actually detects tape. Expanded angle regressions pass both layouts. Missing-profile tests now explicitly construct an unconfigured robot rather than assuming the real car profile is empty.
+
+## Confirmed tape width
+
+The user confirmed the centre IR is midway between the outer sensors and straight tape is 50 mm wide, with different geometry at turns. Updating the wide replay from 20 mm to 50 mm exposed premature stripe-edge reacquisition and acceptance of a partial incoming stripe at a sweep limit. Recovery now measures both observed edges, aims toward their angular midpoint, accepts centre detection alongside an outer sensor, and discards incomplete bands at sweep limits. The simulation models turn overlaps as the union of joined strips; it does not prove arbitrary physical junction geometry.
+
+Independent review also identified a quantized midpoint edge case. A dedicated regression reproduces a stripe midpoint between encoder counts; centring tolerance now respects half a measurable heading step while still requiring tape detection. Full host checks and the UNO R4 WiFi build pass.
