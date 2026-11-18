@@ -78,3 +78,15 @@ and measured recovery remain; no periodic pulse pauses are used.
 The earlier working baseline remains tagged `lab07-working-high-power-2026-11-17`.
 
 Outer IR pins are swapped in software to match the installed wiring: physical left D4, centre D2, physical right D3. Do not swap the wires again.
+
+
+## Tape-position memory
+
+Open-floor line recovery records the left/right wheel encoder positions whenever
+any IR sensor sees tape, alongside the last indicated turn direction. After line
+loss and coast, it reverses each wheel's displacement toward that recorded pose,
+then searches toward the remembered side. Wheel targets stop independently once
+reached; an overshot pivot is unwound rather than blindly backing straight.
+No pulse drive is used. Encoder slip and coast can still make the physical return
+imperfect; the IR sweep must reacquire the actual line. Combined line/maze
+recovery is unchanged, and Stop-at-end still stops immediately at tape loss.
