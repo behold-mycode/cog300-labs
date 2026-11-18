@@ -39,7 +39,7 @@ Confirmed IR positions are 0, 50 and 100 mm across the front. The course tape is
 
 | Mode | Behavior |
 |---|---|
-| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 80%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
+| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 90%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
 | Drive until tape · Lab 07 | Drives forward and stops on any floor sensor detecting tape. |
 | Stop at tape end · Lab 07 | Starts on tape, tracks it, stops at the first all-off reading. Use Line following for bends requiring recovery. |
 | Object search · Lab 08 | Explicit laptop start. Samples forward through +180°, then back through −180°, chooses the nearest median range, aligns, verifies, and approaches to 20 cm ahead of the chassis. Any tape detection stops the run. |
@@ -65,19 +65,14 @@ Lab 08 asks for transitions, an angle-resolved sweep toward the nearest object, 
 
 The line-only modes assume a clear open floor and intentionally ignore all sonars, including obstacles reported by them. Object search and combined line/maze still use sonar; their front ray cannot certify unobserved rear/side space. Single-channel encoders infer direction from commanded motor polarity and cannot independently detect slip or being pushed. Tight wall turns require enough physical room for the chassis, regardless of code.
 
-## Pulsed corner trial
 
-Rollback milestone: Git tag `lab07-working-high-power-2026-11-17` at `509555e`.
-The trial branch `lab07-pulsed-corners` keeps continuous high power on centre-only
-straight tracking. Corrections, pivots, broad tape, and recovery use strong pulses:
-35 ms of actual powered motion maximum, followed by 120 ms off. A measured
-0.04-radian heading change ends a pulse early. Motor reversal waiting does not
-consume the powered pulse. These durations are trial settings, not measurements
-of the car's optimum response. Off intervals coast the motors; they are not
-active electrical braking.
+## Continuous power after pulse trial
 
-During a recovery sweep the first centre-tape detection pauses the drive; small
-pulses then finish observing the tape band and align to its midpoint. An outer
-sensor pivot stops as soon as the centre sees tape, settles, then resumes.
-Straight travel remains continuous at full configured power. Test physical
-overshoot and recovery before treating this trial as better than the milestone.
+The short-pulse trial caused vibration without sustained movement on the actual
+car. It has been removed, including its added centre-tape settling pause.
+Line drive is continuous: 255/255 on straights, 230/255 or 255/230 for
+steering, and full configured power in opposing directions for pivots.
+The minimum steering ratio is 230/255 of the configured maximum.
+Sonar remains excluded from open-floor line modes. Existing stop-on-line-loss
+and measured recovery remain; no periodic pulse pauses are used.
+The earlier working baseline remains tagged `lab07-working-high-power-2026-11-17`.

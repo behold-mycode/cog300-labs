@@ -6,8 +6,6 @@ Mode mode=MANUAL;
 NavigationConfig navigationConfig;
 maze::Explorer explorer;
 static object::Search objectSearch;
-static line::PulseDrive linePulses;
-static uint8_t previousLineMask=0;
 const char* navigationState="STOPPED";
 static maze::ProgressGuard progress;
 static bool wallTurning=false;
@@ -23,7 +21,6 @@ const char* modeName() {
   }
 }
 void cancelNavigation() {
-  linePulses.reset();previousLineMask=0;
   cancelAutomaticSetup();raceNavigator.stop();objectSearch.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
   navigationState="STOPPED";
 }
@@ -129,15 +126,9 @@ void serviceNavigation() {
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
-    uint8_t tape=lineMask();
-    bool searching=raceNavigator.state==race::Navigator::SWEEP_FIRST||raceNavigator.state==race::Navigator::SWEEP_SECOND;
-    if(searching&&(tape&2)&&!(previousLineMask&2))linePulses.pause(millis());
-    previousLineMask=tape;
-    auto d=raceNavigator.step(raceConfig,wallNavigator.config,motionInput(),tape);
+    auto d=raceNavigator.step(raceConfig,wallNavigator.config,motionInput(),lineMask());
     navigationState=raceNavigator.reason;
-    bool precise=raceNavigator.state!=race::Navigator::TRACK||lineMask()!=2;
-    auto power=linePulses.step(millis(),d,settings.power,precise,motorLeft,motorRight,odometry.pose.heading);
-    requestMotor(power.left,power.right);
+    auto power=lineDrive(d,settings.power);requestMotor(power.left,power.right);
     if(raceNavigator.state==race::Navigator::FAULT){const char*why=raceNavigator.reason;stopRobot();navigationState=why;}
     return;
   }
