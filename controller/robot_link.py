@@ -307,6 +307,13 @@ class RobotLink:
                 if len(raw) == 4 and all(v in (0, 1) for v in raw[:3]) and raw[3] in (-1, 0, 1):
                     self.telemetry.update(ir=raw[:3], tapeLevel=raw[3])
             except ValueError: pass
+        elif line.startswith('LINECTRL,'):
+            try:
+                values = [float(v) for v in line.split(',')[1:]]
+                if len(values) == 8 and all(math.isfinite(v) for v in values):
+                    self.telemetry['lineControl'] = dict(zip(
+                        ('phase','cruise','minimum','saturated','heading','remaining','speedL','speedR'),values))
+            except ValueError: pass
         elif line.startswith('DATA,'):
             parts = line.split(',')
             if len(parts) != 8 or parts[2] not in MODES: return

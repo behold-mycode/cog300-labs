@@ -1,3 +1,5 @@
+// Desktop integration exercises the tethered profile, not automatic battery mode.
+#define ROBOT_LINE_ONLY 0
 // Deterministic host serial transport around the actual firmware.
 #include <iostream>
 #include <sstream>

@@ -1,5 +1,8 @@
 #pragma once
 #include <Arduino.h>
+#ifndef ROBOT_LINE_ONLY
+#define ROBOT_LINE_ONLY 0 // Set to 1 for automatic battery-powered line following.
+#endif
 #ifndef ROBOT_ENABLE_STANDALONE
 #define ROBOT_ENABLE_STANDALONE 0
 #endif
@@ -32,6 +35,10 @@ extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
 extern const char* navigationState;
+float lineSensorOffset();
+void armBatteryLine();void serviceBatteryLine();
+void configureLineDrive(int cruise,int minimum);
+void reportLineControl();
 extern int motorLeft,motorRight,lineTapeLevel;
 extern bool controlSession,controlExpired;
 extern maze::Odometry odometry;

@@ -1,4 +1,7 @@
 #pragma once
+#ifndef ROBOT_LINE_ONLY
+#define ROBOT_LINE_ONLY 0
+#endif
 #include <cassert>
 #include "../Robot/Robot.h"
 #include "../Robot/Motor.cpp"

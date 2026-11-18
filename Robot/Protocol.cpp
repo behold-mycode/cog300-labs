@@ -36,7 +36,7 @@ void reportStatus() {
 void serviceTelemetry() {
   if(standaloneActive&&!Serial)return;
   if (logging && (uint32_t)(millis() - lastLog) >= LOG_MS) {
-    lastLog = millis(); reportStatus(); reportLine(); reportNavigation(); reportEncoders();reportWall();reportRace();
+    lastLog = millis(); reportStatus(); reportLine(); reportNavigation(); reportEncoders();reportLineControl();reportWall();reportRace();
   }
 }
 static void invalid() { lastCommandOk=false; stopRobot(); Serial.println(F("ERROR invalid command; stopped")); }
@@ -62,16 +62,22 @@ void processCommand(char* line) {
   for (uint8_t i = 0; i < count; ++i)
     for (char* p = args[i]; *p; ++p) *p = toupper((unsigned char)*p);
   const char* cmd = args[0];
+  if (!strcmp(cmd,"LINECFG") && count==3){
+    int cruise,minimum;
+    if(!number(args[1],1,255,cruise)||!number(args[2],1,255,minimum)||minimum>cruise){invalid();return;}
+    configureLineDrive(cruise,minimum);Serial.println(F("OK LINECFG"));reportLineControl();return;
+  }
   if (!strcmp(cmd, "STOP") && count == 1) {
     stopRobot(); Serial.println(F("OK STOP")); return;
   }
   if (!strcmp(cmd, "HELLO") && count == 1) {
-    stopRobot(); controlSession = true; controlExpired = false;
+    if(!ROBOT_LINE_ONLY)stopRobot();
+    controlSession = !ROBOT_LINE_ONLY; controlExpired = false;
     lastControl = millis();
     // Reconnecting a different desktop must not overwrite the calibration of a
     // live map with its startup defaults.
     reportConfiguration();
-    Serial.println(F("ROBOT_READY 7")); return;
+    reportLineControl();Serial.println(F("ROBOT_READY 7")); return;
   }
   if (!strcmp(cmd, "HEARTBEAT") && count == 1) {
     if (controlSession) { lastControl = millis(); Serial.println(F("ALIVE")); }
@@ -80,6 +86,7 @@ void processCommand(char* line) {
   if (!strcmp(cmd, "STATUS") && count == 1) { reportStatus(); return; }
   if (!strcmp(cmd, "HELP") && count == 1) {
     Serial.println(F("Protocol 7 / 115200 baud / Newline. STOP always stops."));
+    Serial.println(F("LINECFG cruise_pwm minimum_pwm; stops before changing continuous line power (RAM only)."));
     Serial.println(F("HELLO opens 500ms watchdog session; HEARTBEAT keeps it alive."));
     Serial.println(F("DRIVE left right (-255..255; session required)"));
     Serial.println(F("MODE LINE|STOP_ON_TAPE|STOP_AT_END|OBJECT|CALIBRATE|RACE|WALL_MAZE|MANUAL; TEST left right ms (1..5000)"));
@@ -202,7 +209,7 @@ void processCommand(char* line) {
     Serial.println(F("OK CONFIG")); return;
   }
   if (!strcmp(cmd, "MODE") && count == 2) {
-    if(strcmp(args[1],"MANUAL")&&!controlSession){invalid();return;}
+    if(strcmp(args[1],"MANUAL")&&!controlSession&&!(ROBOT_LINE_ONLY&&!strcmp(args[1],"LINE"))){invalid();return;}
     if (!strcmp(args[1], "MANUAL")) startNavigation(MANUAL);
     else if (!strcmp(args[1], "CALIBRATE")) startNavigation(CALIBRATE);
     else if (!strcmp(args[1], "OBJECT")) startNavigation(OBJECT);

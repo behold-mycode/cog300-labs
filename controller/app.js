@@ -26,6 +26,10 @@ function render(state){
   const t=state.telemetry||{};
   if(state.mode==='MANUAL'&&t.mode==='MANUAL'&&!['STOPPED','DRIVING','TIMED_TEST'].includes(t.state))localStop();
   $('robotState').textContent=state.connected?(t.state||'Stopped').replaceAll('_',' ').toLowerCase():'Not connected';
+  const line=t.lineControl;
+  $('wheelStatus').textContent=state.connected&&line
+    ? `Wheel PWM L ${t.left??0} · R ${t.motorRight??0} / 255. Approx. speed L ${Math.round(line.speedL)} · R ${Math.round(line.speedR)} mm/s.${line.saturated?' Power trim at limit.':''}`
+    : 'Wheel feedback appears after connection.';
   const irLive=state.connected&&Array.isArray(t.ir);
   const tapeLevel=state.settings?.lineTapeLevel;
   ['irLeft','irCentre','irRight'].forEach((id,index)=>{
