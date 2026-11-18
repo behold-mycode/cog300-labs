@@ -12,3 +12,38 @@ inline wall::Powers lineDrive(wall::Speeds d,int maximum){
  };
  return {wheel(d.left),wheel(d.right)};
 }
+
+namespace line {
+// Pause between strong corrections; count powered time only after the motor
+// bridge's direction-change interlock has actually enabled the wheels.
+class PulseDrive {
+ enum Phase { IDLE,WAIT,POWER,REST,RESUME } phase=IDLE;
+ uint32_t since=0;
+ bool powered=false;
+ float startHeading=0;
+ public:
+ void reset(){phase=IDLE;powered=false;}
+ void pause(uint32_t now){phase=REST;since=now;powered=false;}
+ wall::Powers step(uint32_t now,wall::Speeds d,int maximum,bool precise,
+                   int actualLeft,int actualRight,float heading){
+  if(d.left==0&&d.right==0){reset();return {};}
+  if(!precise){
+   if(phase!=IDLE&&phase!=RESUME){phase=RESUME;since=now;}
+   if(phase==RESUME&&(uint32_t)(now-since)<120)return {};
+   reset();return lineDrive(d,maximum);
+  }
+  if(phase==IDLE||phase==RESUME){phase=WAIT;since=now;powered=false;}
+  if(phase==WAIT||phase==REST){
+   if((uint32_t)(now-since)<120)return {};
+   phase=POWER;powered=false;
+  }
+  auto p=lineDrive(d,maximum);
+  bool enabled=(p.left==0||actualLeft*p.left>0)&&(p.right==0||actualRight*p.right>0);
+  if(!powered&&enabled){powered=true;since=now;startHeading=heading;}
+  if(powered&&((uint32_t)(now-since)>=35||fabsf(heading-startHeading)>=.04f)){
+   phase=REST;since=now;powered=false;return {};
+  }
+  return p;
+ }
+};
+}

@@ -48,6 +48,10 @@ class Navigator {
     heading=lastTape.heading;pointX=lastTape.x+r.sensorOffset*cosf(heading);pointY=lastTape.y+r.sensorOffset*sinf(heading);
     pivotSide=0;probed=false;quietSince=i.now;state=SETTLE;reason="RACE_LINE_LOST_ASSESSING";return {};
    }
+   if(!wallCourse&&pivotSide&&(tape&2)){
+    pivotSide=0;lastTape=i.pose;state=SETTLE;quietSince=i.now;
+    reason="LINE_SETTLING_ON_TAPE";return {};
+   }
    if(tape&2){lastTape=i.pose;pivotSide=0;}
    // Finish an outer-sensor pivot until the centre reaches tape. At a tight
    // bend the opposite outer sensor can still see the incoming segment;
