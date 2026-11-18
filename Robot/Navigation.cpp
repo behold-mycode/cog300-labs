@@ -5,7 +5,10 @@ static bool batteryLinePending=false;
 static uint32_t batteryLineArmedAt=0;
 static line::Follower lineFollower;
 static line::WheelControl lineWheels;
-static line::Input lineInput(){return {millis(),odometry.pose,lineMask()};}
+static line::Input lineInput(){
+  line::Input i{millis(),odometry.pose,lineMask()};
+  i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);return i;
+}
 
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
@@ -48,6 +51,7 @@ void startNavigation(Mode selected) {
     if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
     if(!feedbackReady()){navigationState="ENCODERS_REQUIRED";return;}
     lineFollower.config.sensorOffset=lineSensorOffset();
+    lineFollower.config.track=odometry.track;
     if(selected!=STOP_ON_TAPE&&!lineFollower.begin(lineInput())){
       navigationState=lineFollower.reason;return;
     }
@@ -132,7 +136,8 @@ void serviceNavigation() {
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
-    auto power=lineWheels.step(lineFollower.step(lineInput()),lineInput(),settings.power);
+    auto input=lineInput();
+    auto power=lineWheels.step(lineFollower.step(input),input,settings.power);
     navigationState=lineFollower.reason;requestMotor(power.left,power.right);
     if(lineFollower.state==line::Follower::STOPPED){const char*why=lineFollower.reason;stopRobot();navigationState=why;}
     return;
@@ -183,11 +188,12 @@ void serviceObservation() {
   Serial.print(',');Serial.print(motorLeft);Serial.print(',');Serial.print(motorRight);Serial.print(',');Serial.print(odometry.configured?1:0);reportWallTrace();
 }
 
-void configureLineDrive(int cruise,int minimum){
-  stopRobot();lineWheels.cruise=cruise;lineWheels.minimum=minimum;
+bool configureLineDrive(int cruise,int minimum){
+  if(cruise<=lineWheels.feedForwardOffset)return false;
+  stopRobot();lineWheels.cruise=cruise;lineWheels.minimum=minimum;return true;
 }
 void reportLineControl(){
-  auto i=motionInput();
+  auto i=lineInput();
   Serial.print(F("LINECTRL,"));Serial.print((int)lineFollower.state);
   Serial.print(',');Serial.print(lineWheels.cruise);Serial.print(',');Serial.print(lineWheels.minimum);
   Serial.print(',');Serial.print(lineWheels.saturated?1:0);
@@ -202,4 +208,22 @@ void serviceBatteryLine(){
   lineFollower.config.continuousSearch=true;
   startNavigation(LINE);
   standaloneActive=mode==LINE;
+}
+
+void configureLineSpeeds(float cruise,float turn,float correction,float capture){
+  stopRobot();auto& c=lineFollower.config;
+  c.cruiseSpeed=cruise;c.turnSpeed=turn;c.correctionSpeed=correction;c.captureSpeed=capture;
+}
+bool configureLineMotor(float reference,float offset,float kp,float ki,int start){
+  if(offset>=lineWheels.cruise)return false;
+  stopRobot();lineWheels.referenceSpeed=reference;lineWheels.feedForwardOffset=offset;
+  lineWheels.kp=kp;lineWheels.ki=ki;lineWheels.startPower=start;return true;
+}
+void reportLineTuning(){
+  auto& c=lineFollower.config;
+  Serial.print(F("LINETUNE,"));Serial.print(c.cruiseSpeed);Serial.print(',');Serial.print(c.turnSpeed);
+  Serial.print(',');Serial.print(c.correctionSpeed);Serial.print(',');Serial.print(c.captureSpeed);
+  Serial.print(',');Serial.print(lineWheels.referenceSpeed);Serial.print(',');Serial.print(lineWheels.feedForwardOffset);
+  Serial.print(',');Serial.print(lineWheels.kp);Serial.print(',');Serial.print(lineWheels.ki);
+  Serial.print(',');Serial.println(lineWheels.startPower);
 }

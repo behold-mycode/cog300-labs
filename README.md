@@ -1,6 +1,6 @@
 # COGS 300 Robot
 
-**Current build: laptop USB control with redesigned line following.** See [USB-Lab-Setup.md](USB-Lab-Setup.md). Line mode uses continuous encoder-balanced drive and forward-progress recovery, with the USB disconnect stop retained. Optional battery auto-start is available by changing `ROBOT_LINE_ONLY` from `0` to `1` in `Robot/Robot.h`; see [Standalone-Line-Setup.md](Standalone-Line-Setup.md).
+**Current build: laptop USB control with redesigned line following.** See [USB-Lab-Setup.md](USB-Lab-Setup.md). Line mode uses physical wheel-speed feedback, geometry-aware steering, and live tape capture, with the USB disconnect stop retained. See [Line-Control-Tuning.md](Line-Control-Tuning.md) for the rebuilt behavior, tuning commands, and verification limits. Optional battery auto-start is available by changing `ROBOT_LINE_ONLY` from `0` to `1` in `Robot/Robot.h`; see [Standalone-Line-Setup.md](Standalone-Line-Setup.md).
 
 
 ## Download and set up

@@ -2,7 +2,7 @@
 
 **This guide describes the default `ROBOT_LINE_ONLY=0` laptop profile. The optional automatic battery profile (`=1`) is documented in [Standalone-Line-Setup.md](Standalone-Line-Setup.md).**
 
-Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Firmware has been uploaded during the lab session; the robot reported saved wheel calibration. High-power line behavior still needs a physical course test.
+Updated 2026-11-18. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Earlier firmware was uploaded during the lab session. The current feedback rebuild has not been uploaded or physically tested; see [Line-Control-Tuning.md](Line-Control-Tuning.md).
 
 ## What to install today
 
@@ -27,7 +27,7 @@ Measurements reported 2026-11-17: wheel spacing 130 mm, wheel diameter approxima
 
 Final body measurements: length approximately 210 mm, axle 140 mm behind the body front, front sonar and centre IR 10 mm ahead of the body, outer IR sensors approximately 5 mm ahead. The right sonar midpoint is 95 mm behind the body front. Therefore the entered axle-based profile is: front envelope 150 mm (including the protrusion), rear 70 mm, centre IR 150 mm, front sonar 150 mm, right sonar forward 45 mm and lateral 65 mm. Required profile dimensions are now populated.
 
-Confirmed IR positions are 0, 50 and 100 mm across the front. Tape is 50 mm wide on straights; the centre sensor is 5 mm ahead of the outer pair. The redesigned follower uses continuous forward corrections, a latched corner cue and the remembered centre-tape position. It releases pivots on leading-sensor tape contact to allow for coast. Production-path replay covers ±45°, ±90°, ±135° and ±150° at three motor gains. This is model validation, not a physical course result. See [Standalone-Line-Setup.md](Standalone-Line-Setup.md) for the current control details.
+Confirmed IR positions are 0, 50 and 100 mm across the front. Tape is 50 mm wide on straights; the centre sensor is 5 mm ahead of the outer pair. The rebuilt follower uses physical wheel-speed feedback, live tape capture, and geometric turn cues. Its tests cover 162 bend/end scenarios and 108 gap/opposite-turn courses, including angled starts and motor/coast variation. These are model results, not a physical course result. See [Line-Control-Tuning.md](Line-Control-Tuning.md) for settings and evidence.
 
 ## Sensor check and calibration
 
@@ -35,13 +35,13 @@ Confirmed IR positions are 0, 50 and 100 mm across the front. Tape is 50 mm wide
 2. Once the measured profile is filled, upload `Robot/Robot.ino`. Close Serial Monitor before using the desktop controller.
 3. Launch `Launch Robot Controller.command`, connect, and choose **Wheel calibration · clear floor**. Start only in clear straight space, with at least 650 mm ahead of the chassis and side/pivot clearance. This routine drives forward up to 300 mm, measures wheel response and coasting, saves calibration, and stops. Initial placement is centre sensor on a narrow tape line, or all sensors on bare floor. A wide patch of tape is not a bare-floor reference.
 4. **Line following** requires configured encoders and known IR polarity, but no sonar or moving calibration. **Object search** still uses saved wheel calibration; **Wheel calibration** remains an explicit moving operation.
-5. Line modes now use direct high power to overcome friction, rather than the saved low-speed target. Test straight travel and turns on the actual floor; capture state and counts if it stalls or overshoots. Stop, USB watchdog, reversal delay, and encoder stall detection remain active.
+5. Line mode now regulates physical wheel speeds with a separate motor model and optional running floor (default zero). Tune starting effort, sustainable power and achievable speeds on the actual floor; capture state and counts if it stalls or overshoots. Stop, USB watchdog, reversal delay, and encoder stall detection remain active.
 
 ## Laptop modes
 
 | Mode | Behavior |
 |---|---|
-| Line following · Lab 07 | Continuous encoder-balanced line tracking (nominal PWM 240, moving-wheel floor 230); forward correction and measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
+| Line following · Lab 07 | Encoder-regulated line tracking (200 mm/s straight target, optional PWM floor); live capture and measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
 | Drive until tape · Lab 07 | Drives forward and stops on any floor sensor detecting tape. |
 | Stop at tape end · Lab 07 | Starts on tape, tracks it, stops at the first all-off reading. Use Line following for bends requiring recovery. |
 | Object search · Lab 08 | Explicit laptop start. Samples forward through +180°, then back through −180°, chooses the nearest median range, aligns, verifies, and approaches to 20 cm ahead of the chassis. Any tape detection stops the run. |
@@ -61,14 +61,18 @@ The driver is nonblocking, has a 45 ms echo deadline, and staggers pings. It doe
 
 Sources retrieved 2026-11-17: [Lab 07](https://cogs-300.github.io/labs/lab07), [Lab 08](https://cogs-300.github.io/labs/lab08).
 
-Lab 07 asks for multiple tuned IR sensors, tape start/stop, corrective turning, and completion of the line course. These behaviors are now exposed in the app. Sharp-corner geometry is tested synthetically through 150° left and right; that does not guarantee every physical tape layout or angle. Broad tape is crossed slowly; LINE is a follower, not an exhaustive branch-searching tape-maze planner. The existing separate MAZE/graph code remains for that older purpose.
+Lab 07 asks for multiple tuned IR sensors, tape start/stop, corrective turning, and completion of the line course. These behaviors are now exposed in the app. Sharp-corner geometry is tested synthetically through 150° left and right; that does not guarantee every physical tape layout or angle. Broad tape is treated as ambiguous continuation; LINE is a follower, not an exhaustive branch-searching tape-maze planner. The existing separate MAZE/graph code remains for that older purpose.
 
 Lab 08 asks for transitions, an angle-resolved sweep toward the nearest object, and acquisition from arbitrary orientation. Object-search start is manual as requested; automatic wall-to-object transition remains undefined until the actual course cue is supplied. The extra boundary behavior stops on tape. This is not proof that every chassis corner stays inside an arena: initial pivot clearance, sensor placement and stopping distance must be verified. A front sonar cannot distinguish a target from an arena wall; the selected target is the nearest detected reflector. Thin targets between angular samples or weak echoes need physical validation.
 
 The line-only modes assume a clear open floor and intentionally ignore all sonars, including obstacles reported by them. Object search and combined line/maze still use sonar; their front ray cannot certify unobserved rear/side space. Single-channel encoders infer direction from commanded motor polarity and cannot independently detect slip or being pushed. Tight wall turns require enough physical room for the chassis, regardless of code.
 
 
-## Continuous power after pulse trial
+## Historical trials — superseded by the feedback rebuild
+
+The rest of this page records previous uploads and is not the current line controller.
+
+### Continuous power after pulse trial
 
 The short-pulse trial caused vibration without sustained movement on the actual
 car. It has been removed, including its added centre-tape settling pause.
@@ -82,7 +86,7 @@ The earlier working baseline remains tagged `lab07-working-high-power-2026-11-17
 Outer IR pins are swapped in software to match the installed wiring: physical left D4, centre D2, physical right D3. Do not swap the wires again.
 
 
-## Tape-position memory
+### Tape-position memory
 
 Open-floor line recovery records the left/right wheel encoder positions whenever
 any IR sensor sees tape, alongside the last indicated turn direction. After line

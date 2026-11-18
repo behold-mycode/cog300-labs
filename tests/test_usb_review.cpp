@@ -11,7 +11,7 @@ int main(int argc,char**argv){
   command("SPEEDCFG 200 200 0.6 0.3 150");
   command("HELLO");tape(2);command("MODE LINE");
   for(int n=0;n<20;++n){command("HEARTBEAT");tick(50,60,15);}
-  assert(mode==LINE&&motorLeft==240);
+  assert(mode==LINE&&motorLeft>0&&motorLeft<=settings.power);
   tape(0);command("HEARTBEAT");tick(50,60,15);
   assert(mode==LINE&&lineFollower.state==line::Follower::FOLLOW&&motorLeft>0&&motorRight>0);return 0;
  }

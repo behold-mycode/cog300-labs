@@ -47,22 +47,13 @@ A serial `HELLO` alone is observational in the battery profile.
 
 ## Behavior
 
-- Continuous drive, nominal straight PWM 240; moving wheels normally stay between
-  PWM 230 and 255. These are provisional duty-cycle settings, not measured speeds.
-- Encoder travel balances the wheels. Ordinary corrections move forward, using
-  a coasting inner wheel when a tighter curve is needed; pivots are for loss/search.
-- Corner memory includes the first side cue and last centre-tape location. The
-  150 mm sensor offset guides the approach. The leading outer sensor releases a
-  pivot early to allow for motor coast and the existing reversal interval.
-- Line loss keeps searching in this battery profile. It changes position between
-  sweeps and does not switch into the wall maze or object search.
-- A real encoder stall still stops the run. Explicit Stop stays stopped. These are
-  faults/operator commands, not routine tape-loss pauses.
+- Physical wheel-speed control: 200 mm/s straight target, 90 mm/s pivot wheel target, and 130 mm/s capture target. The optional line PWM floor defaults to zero.
+- Encoder feedback balances speed; the outer-wheel target accounts for the coasting inner wheel during a strong correction.
+- Geometry guides approach and rejects old incoming tape. Reacquisition cancels obsolete approach, and steering remains responsive throughout capture.
+- Line loss keeps searching in this battery profile. It changes position between sweeps and does not switch into the wall maze or object search.
+- Encoder stall and explicit Stop still stop the run.
 
-Geometry is an estimate from wheel travel, not an absolute angle measurement;
-wheel slip and the approximate wheel diameter still require a physical course run.
-The 55 mm approach allowance and 400 ms turn-exit interval are model-tested
-starting values, not measured stopping calibration for this floor.
+See [Line-Control-Tuning.md](Line-Control-Tuning.md) for settings and floor tuning. The 250 ms motor reversal interlock remains; the former 400 ms blind turn-exit interval is removed. Geometry is wheel-derived, not an absolute heading measurement.
 
 ## Saved alternatives and verification
 

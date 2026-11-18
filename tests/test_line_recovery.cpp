@@ -56,7 +56,7 @@ int main() {
   for (int n = 0; n < 2000; ++n) {
     auto move = f.step(i);
     i.now += 20;
-    float dl = move.left * 4, dr = move.right * 4, ds = (dl + dr) * .5f;
+    float dl = move.left * .02f, dr = move.right * .02f, ds = (dl + dr) * .5f;
     i.pose.heading += (dr - dl) / 130;
     i.pose.x += ds * cosf(i.pose.heading);
     i.pose.y += ds * sinf(i.pose.heading);
