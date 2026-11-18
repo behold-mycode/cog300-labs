@@ -1,6 +1,6 @@
-// UNO R4 WiFi: left/centre/right floor sensor OUT -> D3/D2/D4.
+// UNO R4 WiFi: left/centre/right floor sensor OUT -> D4/D2/D3.
 // Motors remain disabled. Serial Monitor: 115200 baud, any line ending.
-const uint8_t IR_PINS[] = {3, 2, 4};
+const uint8_t IR_PINS[] = {4, 2, 3};
 const uint8_t MOTOR_PINS[] = {5, 6, 7, 8, 9, 10};
 int tapeLevels[] = {-1, -1, -1};
 uint32_t lastLog = 0;
@@ -26,7 +26,7 @@ void loop() {
     }
   }
   if ((uint32_t)(millis()-lastLog)>=200) {
-    lastLog=millis();Serial.print("Left D3 / Centre D2 / Right D4: ");
+    lastLog=millis();Serial.print("Left D4 / Centre D2 / Right D3: ");
     for(int n=0;n<3;++n){Serial.print(digitalRead(IR_PINS[n]));Serial.print(' ');}
     Serial.println();
   }

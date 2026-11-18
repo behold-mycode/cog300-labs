@@ -4,7 +4,7 @@ Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor 
 
 ## What to install today
 
-Follow [Robot-Wiring.md](Robot-Wiring.md) for the existing motor/power connections. Floor sensor outputs: left **D3**, centre **D2**, right **D4**. Encoder outputs: left **D12**, right **A4**. Keep front/right sonar assignments unchanged. D0/D11 are reserved for the future left sonar; no button or Wi-Fi is needed for USB operation.
+Follow [Robot-Wiring.md](Robot-Wiring.md) for the existing motor/power connections. Floor sensor outputs: left **D4**, centre **D2**, right **D3**. Encoder outputs: left **D12**, right **A4**. Keep front/right sonar assignments unchanged. D0/D11 are reserved for the future left sonar; no button or Wi-Fi is needed for USB operation.
 
 USB supplies the Arduino and sensor/driver logic. The motor pack supplies L298N VS. The old Arduino-5V-to-VS bridge must be absent when the pack is connected. This review did not change the physical wiring.
 
@@ -76,3 +76,5 @@ The minimum steering ratio is 230/255 of the configured maximum.
 Sonar remains excluded from open-floor line modes. Existing stop-on-line-loss
 and measured recovery remain; no periodic pulse pauses are used.
 The earlier working baseline remains tagged `lab07-working-high-power-2026-11-17`.
+
+Outer IR pins are swapped in software to match the installed wiring: physical left D4, centre D2, physical right D3. Do not swap the wires again.
