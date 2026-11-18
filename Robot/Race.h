@@ -22,7 +22,7 @@ class Button {
 };
 class Navigator {
  public:
- enum State{IDLE,TRACK,SETTLE,SWEEP_FIRST,SWEEP_SECOND,ALIGN,PROBE,ENTRY,WALL,FAULT,CENTRE_LINE}state=IDLE;
+ enum State{IDLE,TRACK,SETTLE,SWEEP_FIRST,SWEEP_SECOND,ALIGN,PROBE,ENTRY,WALL,FAULT,CENTRE_LINE,BACKTRACK}state=IDLE;
  const char*reason="RACE_IDLE";
  bool wallStage()const{return state==WALL;}
  void stop(){state=IDLE;}
@@ -30,7 +30,7 @@ class Navigator {
   wallCourse=enterWalls;
   if(!r.valid()||!c.valid()){reason="RACE_CALIBRATION_REQUIRED";return false;}
   if(mask==0){reason="RACE_START_ON_LINE";return false;}
-  state=TRACK;lastTape=i.pose;heading=i.pose.heading;lastSide=1;pivotSide=0;onBand=false;reason="RACE_LINE";return true;
+  state=TRACK;lastTape=lastSeenTape=i.pose;rewindPending=forceSearch=false;heading=i.pose.heading;lastSide=(mask==1||mask==3)?-1:1;pivotSide=0;onBand=false;reason="RACE_LINE";return true;
  }
  wall::Speeds step(const Config&r,const wall::Config&c,const wall::Input&original,uint8_t tape){
   if(state==IDLE||state==FAULT||state==WALL)return {};
@@ -46,8 +46,10 @@ class Navigator {
   if(state==TRACK){
    if(tape==0){
     heading=lastTape.heading;pointX=lastTape.x+r.sensorOffset*cosf(heading);pointY=lastTape.y+r.sensorOffset*sinf(heading);
+    rewindPending=!wallCourse;forceSearch=false;
     pivotSide=0;probed=false;quietSince=i.now;state=SETTLE;reason="RACE_LINE_LOST_ASSESSING";return {};
    }
+   lastSeenTape=i.pose; // Remember both wheel positions at the last actual tape contact.
    if(tape&2){lastTape=i.pose;pivotSide=0;}
    // Finish an outer-sensor pivot until the centre reaches tape. At a tight
    // bend the opposite outer sensor can still see the incoming segment;
@@ -69,8 +71,26 @@ class Navigator {
   if(state==SETTLE){
    if(!stopped){quietSince=i.now;return {};}
    if((uint32_t)(i.now-quietSince)<250)return {};
-   if(tape&2){state=TRACK;lastTape=i.pose;reason="RACE_LINE_RESTORED";return {};}
+   if(rewindPending){
+    rewindPending=false;
+    rewindLeft=rewindDirection(lastSeenTape.left-i.pose.left,c.distanceTolerance);
+    rewindRight=rewindDirection(lastSeenTape.right-i.pose.right,c.distanceTolerance);
+    if(rewindLeft||rewindRight){state=BACKTRACK;reason="LINE_BACKTRACKING_LAST_TAPE";return {};}
+   }
+   if(!forceSearch&&(tape&2)){state=TRACK;lastTape=i.pose;reason="RACE_LINE_RESTORED";return {};}
+   forceSearch=false;
    turn.begin(lastSide*r.searchAngle,i.pose);state=SWEEP_FIRST;onBand=false;bandArmed=false;reason="RACE_SEARCHING_LINE";return {};
+  }
+  if(state==BACKTRACK){
+   // Undo each wheel's measured travel since tape was last seen, including
+   // coast after loss. This also undoes an overshot pivot, not just a straight.
+   if(rewindLeft*(lastSeenTape.left-i.pose.left)<=c.distanceTolerance)rewindLeft=0;
+   if(rewindRight*(lastSeenTape.right-i.pose.right)<=c.distanceTolerance)rewindRight=0;
+   if(!rewindLeft&&!rewindRight){
+    state=SETTLE;quietSince=i.now;forceSearch=true;reason="LINE_BACKTRACK_COMPLETE";return {};
+   }
+   reason="LINE_BACKTRACKING_LAST_TAPE";
+   return {rewindLeft*r.speed,rewindRight*r.speed};
   }
   if(turning){
    if(!turnClear(c,i)){reason="RACE_TURN_CLEARANCE_REQUIRED";return {};}
@@ -127,7 +147,10 @@ class Navigator {
   return {};
  }
  private:
- maze::Pose lastTape;float heading=0,pointX=0,pointY=0;int lastSide=1,pivotSide=0,entrySamples=0;bool probed=false;
+ maze::Pose lastTape,lastSeenTape;
+ bool rewindPending=false,forceSearch=false;int rewindLeft=0,rewindRight=0;
+ static int rewindDirection(float delta,float tolerance){return delta>tolerance?1:delta<-tolerance?-1:0;}
+float heading=0,pointX=0,pointY=0;int lastSide=1,pivotSide=0,entrySamples=0;bool probed=false;
  bool wallCourse=true,onBand=false,bandArmed=false;
  float bandStart=0,bandCentre=0,bandTolerance=0;
  uint32_t quietSince=0,entrySequence=0;wall::Turn turn;

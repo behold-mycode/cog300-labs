@@ -4,7 +4,7 @@ Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor 
 
 ## What to install today
 
-Follow [Robot-Wiring.md](Robot-Wiring.md) for the existing motor/power connections. Floor sensor outputs: left **D3**, centre **D2**, right **D4**. Encoder outputs: left **D12**, right **A4**. Keep front/right sonar assignments unchanged. D0/D11 are reserved for the future left sonar; no button or Wi-Fi is needed for USB operation.
+Follow [Robot-Wiring.md](Robot-Wiring.md) for the existing motor/power connections. Floor sensor outputs: left **D4**, centre **D2**, right **D3**. Encoder outputs: left **D12**, right **A4**. Keep front/right sonar assignments unchanged. D0/D11 are reserved for the future left sonar; no button or Wi-Fi is needed for USB operation.
 
 USB supplies the Arduino and sensor/driver logic. The motor pack supplies L298N VS. The old Arduino-5V-to-VS bridge must be absent when the pack is connected. This review did not change the physical wiring.
 
@@ -39,7 +39,7 @@ Confirmed IR positions are 0, 50 and 100 mm across the front. The course tape is
 
 | Mode | Behavior |
 |---|---|
-| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 80%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
+| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 90%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
 | Drive until tape · Lab 07 | Drives forward and stops on any floor sensor detecting tape. |
 | Stop at tape end · Lab 07 | Starts on tape, tracks it, stops at the first all-off reading. Use Line following for bends requiring recovery. |
 | Object search · Lab 08 | Explicit laptop start. Samples forward through +180°, then back through −180°, chooses the nearest median range, aligns, verifies, and approaches to 20 cm ahead of the chassis. Any tape detection stops the run. |
@@ -64,3 +64,31 @@ Lab 07 asks for multiple tuned IR sensors, tape start/stop, corrective turning, 
 Lab 08 asks for transitions, an angle-resolved sweep toward the nearest object, and acquisition from arbitrary orientation. Object-search start is manual as requested; automatic wall-to-object transition remains undefined until the actual course cue is supplied. The extra boundary behavior stops on tape. This is not proof that every chassis corner stays inside an arena: initial pivot clearance, sensor placement and stopping distance must be verified. A front sonar cannot distinguish a target from an arena wall; the selected target is the nearest detected reflector. Thin targets between angular samples or weak echoes need physical validation.
 
 The line-only modes assume a clear open floor and intentionally ignore all sonars, including obstacles reported by them. Object search and combined line/maze still use sonar; their front ray cannot certify unobserved rear/side space. Single-channel encoders infer direction from commanded motor polarity and cannot independently detect slip or being pushed. Tight wall turns require enough physical room for the chassis, regardless of code.
+
+
+## Continuous power after pulse trial
+
+The short-pulse trial caused vibration without sustained movement on the actual
+car. It has been removed, including its added centre-tape settling pause.
+Line drive is continuous: 255/255 on straights, 230/255 or 255/230 for
+steering, and full configured power in opposing directions for pivots.
+The minimum steering ratio is 230/255 of the configured maximum.
+Sonar remains excluded from open-floor line modes. Existing stop-on-line-loss
+and measured recovery remain; no periodic pulse pauses are used.
+The earlier working baseline remains tagged `lab07-working-high-power-2026-11-17`.
+
+Outer IR pins are swapped in software to match the installed wiring: physical left D4, centre D2, physical right D3. Do not swap the wires again.
+
+
+## Tape-position memory
+
+Open-floor line recovery records the left/right wheel encoder positions whenever
+any IR sensor sees tape, alongside the last indicated turn direction. After line
+loss and coast, it reverses each wheel's displacement toward that recorded pose,
+then searches toward the remembered side. Wheel targets stop independently once
+reached; an overshot pivot is unwound rather than blindly backing straight.
+No pulse drive is used. Encoder slip and coast can still make the physical return
+imperfect; the IR sweep must reacquire the actual line. Combined line/maze
+recovery is unchanged, and Stop-at-end still stops immediately at tape loss.
+
+Straight-line trim: equal forward wheel commands now use PWM 240/240 (or the configured maximum if lower). Steering remains 230/255 or 255/230, with full-power pivots and reverse recovery. This is a small power reduction, not a measured speed percentage.
