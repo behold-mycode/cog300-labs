@@ -1,6 +1,7 @@
 # Battery-powered line following
 
-Current build: `Robot/Robot.ino`, UNO R4 WiFi. `ROBOT_LINE_ONLY=1` in
+Optional build: `Robot/Robot.ino`, UNO R4 WiFi. The default is laptop USB control.
+Change `ROBOT_LINE_ONLY` from `0` to `1` in
 `Robot/Robot.h` starts line following 1.5 seconds after power-up or reset.
 It does not wait for a laptop, a button, sonar, or moving wheel calibration.
 LOW means tape. Physical left/centre/right IR inputs are D4/D2/D3.
@@ -29,7 +30,7 @@ Sources: [Arduino R4 power](https://docs.arduino.cc/tutorials/uno-r4-wifi/cheat-
 
 ## Upload and run
 
-1. Connect the laptop USB cable and upload `Robot/Robot.ino` for UNO R4 WiFi.
+1. Set `ROBOT_LINE_ONLY=1` in `Robot/Robot.h`. Connect the laptop USB cable and upload `Robot/Robot.ino` for UNO R4 WiFi.
    This build starts automatically after reset, including the reset following upload.
 2. Place the car with centre IR over tape, facing along the course. It can also
    search when starting off tape, but centred placement provides a known direction.

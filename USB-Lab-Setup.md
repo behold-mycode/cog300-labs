@@ -1,6 +1,6 @@
 # USB robot: Lab 07 first, Lab 08 prepared
 
-**This guide describes the optional `ROBOT_LINE_ONLY=0` laptop profile. The default automatic battery profile is documented in [Standalone-Line-Setup.md](Standalone-Line-Setup.md).**
+**This guide describes the default `ROBOT_LINE_ONLY=0` laptop profile. The optional automatic battery profile (`=1`) is documented in [Standalone-Line-Setup.md](Standalone-Line-Setup.md).**
 
 Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Firmware has been uploaded during the lab session; the robot reported saved wheel calibration. High-power line behavior still needs a physical course test.
 

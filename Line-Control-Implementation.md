@@ -76,3 +76,8 @@ passed. UNO R4 compilation passed: 128164 bytes flash, 14768 bytes RAM. No hardw
 upload or floor trial occurred; the robot USB port is absent. The desktop serial
 integration explicitly builds `ROBOT_LINE_ONLY=0`; dedicated battery tests build
 `=1` and check HELLO/start/no-heartbeat/Stop independently. No deferred review bugs.
+
+Latest user steering: keep laptop USB as default until external board power is
+available. `ROBOT_LINE_ONLY=0` is the shipped default; `=1` retains the tested
+auto-start battery option. USB disconnect/heartbeat stopping remains active in
+the default profile. This supersedes the earlier default-battery decision.

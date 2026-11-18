@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #ifndef ROBOT_LINE_ONLY
-#define ROBOT_LINE_ONLY 1 // Battery-powered line following starts automatically.
+#define ROBOT_LINE_ONLY 0 // Set to 1 for automatic battery-powered line following.
 #endif
 #ifndef ROBOT_ENABLE_STANDALONE
 #define ROBOT_ENABLE_STANDALONE 0
