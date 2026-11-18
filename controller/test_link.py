@@ -16,6 +16,11 @@ class LinkTests(unittest.TestCase):
         self.now = 0.; self.serial = SerialFake()
         self.link = RobotLink(clock=lambda: self.now, serial_factory=lambda port: self.serial)
         self.owner = self.link.connect('fake')
+    def test_line_control_telemetry(self):
+        self.serial.feed('LINECTRL,1,240,230,0,1.2,40,200,210')
+        self.link.tick()
+        self.assertEqual(self.link.telemetry['lineControl']['cruise'], 240)
+        self.assertEqual(self.link.telemetry['lineControl']['speedR'], 210)
     def ready(self):
         self.link.frame(self.owner, 1, [], 'MANUAL')
         self.now = 2.; self.link.frame(self.owner, 2, [], 'MANUAL'); self.link.tick()

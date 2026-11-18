@@ -1,5 +1,7 @@
 # USB robot: Lab 07 first, Lab 08 prepared
 
+**This guide describes the optional `ROBOT_LINE_ONLY=0` laptop profile. The default automatic battery profile is documented in [Standalone-Line-Setup.md](Standalone-Line-Setup.md).**
+
 Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Firmware has been uploaded during the lab session; the robot reported saved wheel calibration. High-power line behavior still needs a physical course test.
 
 ## What to install today
@@ -25,21 +27,21 @@ Measurements reported 2026-11-17: wheel spacing 130 mm, wheel diameter approxima
 
 Final body measurements: length approximately 210 mm, axle 140 mm behind the body front, front sonar and centre IR 10 mm ahead of the body, outer IR sensors approximately 5 mm ahead. The right sonar midpoint is 95 mm behind the body front. Therefore the entered axle-based profile is: front envelope 150 mm (including the protrusion), rear 70 mm, centre IR 150 mm, front sonar 150 mm, right sonar forward 45 mm and lateral 65 mm. Required profile dimensions are now populated.
 
-Confirmed IR positions are 0, 50 and 100 mm across the front. The course tape is 50 mm wide on straight sections, with different geometry at turns. The expanded simulation uses 50 mm-wide joined strips with overlap at bends; the actual turn shapes still require a floor run. The centre IR is 5 mm ahead of the outer pair. Firmware recovery uses the centre detection position and now preserves the selected pivot direction until the centre reacquires tape, avoiding opposite outer sensors reversing each other on a tight bend. Recovery sweeps observe both tape edges and aim back toward the middle before resuming; incomplete bands at sweep limits are discarded. Both narrow and wide synthetic layouts complete ±45°, ±90°, ±135° and ±150° cases. This is not physical validation.
+Confirmed IR positions are 0, 50 and 100 mm across the front. Tape is 50 mm wide on straights; the centre sensor is 5 mm ahead of the outer pair. The redesigned follower uses continuous forward corrections, a latched corner cue and the remembered centre-tape position. It releases pivots on leading-sensor tape contact to allow for coast. Production-path replay covers ±45°, ±90°, ±135° and ±150° at three motor gains. This is model validation, not a physical course result. See [Standalone-Line-Setup.md](Standalone-Line-Setup.md) for the current control details.
 
 ## Sensor check and calibration
 
 1. With wheels off the ground, upload `IRCalibration/IRCalibration.ino` if the new floor modules need tuning. It keeps motors disabled and reports all three pins. Put all three over white tape and send **T**, then over floor and send **G**. Every sensor must change state; the current firmware expects the same tape polarity across all three modules. Tune at the installed height.
 2. Once the measured profile is filled, upload `Robot/Robot.ino`. Close Serial Monitor before using the desktop controller.
 3. Launch `Launch Robot Controller.command`, connect, and choose **Wheel calibration · clear floor**. Start only in clear straight space, with at least 650 mm ahead of the chassis and side/pivot clearance. This routine drives forward up to 300 mm, measures wheel response and coasting, saves calibration, and stops. Initial placement is centre sensor on a narrow tape line, or all sensors on bare floor. A wide patch of tape is not a bare-floor reference.
-4. For the first **Line following** start, missing calibration also invokes that same moving setup before following the line. Prefer explicit calibration first. **Object search** and the two tape-stop demonstrations require completed calibration; they never silently run that forward setup.
+4. **Line following** requires configured encoders and known IR polarity, but no sonar or moving calibration. **Object search** still uses saved wheel calibration; **Wheel calibration** remains an explicit moving operation.
 5. Line modes now use direct high power to overcome friction, rather than the saved low-speed target. Test straight travel and turns on the actual floor; capture state and counts if it stalls or overshoots. Stop, USB watchdog, reversal delay, and encoder stall detection remain active.
 
 ## Laptop modes
 
 | Mode | Behavior |
 |---|---|
-| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 90%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
+| Line following · Lab 07 | Continuous encoder-balanced line tracking (nominal PWM 240, moving-wheel floor 230); forward correction and measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
 | Drive until tape · Lab 07 | Drives forward and stops on any floor sensor detecting tape. |
 | Stop at tape end · Lab 07 | Starts on tape, tracks it, stops at the first all-off reading. Use Line following for bends requiring recovery. |
 | Object search · Lab 08 | Explicit laptop start. Samples forward through +180°, then back through −180°, chooses the nearest median range, aligns, verifies, and approaches to 20 cm ahead of the chassis. Any tape detection stops the run. |

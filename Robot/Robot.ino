@@ -7,7 +7,11 @@ void setup() {
   setupLine();
   Serial.begin(115200);
   configureHardware(hardware::CAR);loadCalibration();setupStandalone();setupWireless();
-  Serial.println(F("ROBOT_BOOT 7 stopped; HELP for commands"));
+  if(ROBOT_LINE_ONLY){
+    lineTapeLevel=0; // Installed sensors: LOW tape, HIGH floor.
+    armBatteryLine();
+    Serial.println(F("ROBOT_BOOT 7 LINE_ONLY automatic start in 1500ms"));
+  }else Serial.println(F("ROBOT_BOOT 7 stopped; HELP for commands"));
 }
 
 void loop() {
@@ -16,7 +20,7 @@ void loop() {
   serviceOdometry();serviceObservation();
   serviceControlTimeout();
   readCommands();
-  serviceNavigation();
+  serviceBatteryLine();serviceNavigation();
   serviceMotor();
   serviceTelemetry();
   serviceMapExport();

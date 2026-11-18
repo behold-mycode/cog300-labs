@@ -1,6 +1,11 @@
 #include "Robot.h"
 #include <math.h>
-#include "LineDrive.h"
+#include "LineWheelControl.h"
+static bool batteryLinePending=false;
+static uint32_t batteryLineArmedAt=0;
+static line::Follower lineFollower;
+static line::WheelControl lineWheels;
+static line::Input lineInput(){return {millis(),odometry.pose,lineMask()};}
 
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
@@ -21,7 +26,7 @@ const char* modeName() {
   }
 }
 void cancelNavigation() {
-  cancelAutomaticSetup();raceNavigator.stop();objectSearch.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
+  batteryLinePending=false;lineFollower.stop();lineWheels.reset();cancelAutomaticSetup();raceNavigator.stop();objectSearch.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
   navigationState="STOPPED";
 }
 void stopRobot() { cancelNavigation();stopMotor(); }
@@ -40,14 +45,11 @@ void startNavigation(Mode selected) {
     resetWallFeedback();objectSearch.begin(motionInput());
   }
   if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
-    if(lineTapeLevel<0||!raceConfig.valid()||!prepareWallCalibration(false)){
-      if(selected==LINE){if(beginAutomaticSetup(selected))mode=selected;}
-      else navigationState="CALIBRATE_WHEELS_FIRST";
-      return;
-    }
-    resetWallFeedback();
-    if(selected!=STOP_ON_TAPE&&!raceNavigator.begin(raceConfig,wallNavigator.config,motionInput(),lineMask(),false)){
-      navigationState=raceNavigator.reason;return;
+    if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
+    if(!feedbackReady()){navigationState="ENCODERS_REQUIRED";return;}
+    lineFollower.config.sensorOffset=lineSensorOffset();
+    if(selected!=STOP_ON_TAPE&&!lineFollower.begin(lineInput())){
+      navigationState=lineFollower.reason;return;
     }
   }
   if(selected==RACE){if(!startRace())return;}
@@ -61,6 +63,10 @@ void startNavigation(Mode selected) {
     if(!explorer.begin(odometry.pose)) { navigationState=explorer.reason;return; }
   } else if(selected!=MANUAL) explorer.invalidate();
   mode=selected;navigationState="WAITING_FOR_SENSOR";
+  if(ROBOT_LINE_ONLY&&selected==LINE){
+    standaloneActive=true;controlSession=false;controlExpired=false;
+    lineFollower.config.continuousSearch=true;
+  }
 }
 // Obstacle observation constrains all autonomous commands. No competing controller
 // can subtract this stop. A hold does not mark a graph edge explored or a goal found.
@@ -126,10 +132,9 @@ void serviceNavigation() {
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
-    auto d=raceNavigator.step(raceConfig,wallNavigator.config,motionInput(),lineMask());
-    navigationState=raceNavigator.reason;
-    auto power=lineDrive(d,settings.power);requestMotor(power.left,power.right);
-    if(raceNavigator.state==race::Navigator::FAULT){const char*why=raceNavigator.reason;stopRobot();navigationState=why;}
+    auto power=lineWheels.step(lineFollower.step(lineInput()),lineInput(),settings.power);
+    navigationState=lineFollower.reason;requestMotor(power.left,power.right);
+    if(lineFollower.state==line::Follower::STOPPED){const char*why=lineFollower.reason;stopRobot();navigationState=why;}
     return;
   }
   if(mode==RACE){serviceRace();return;}
@@ -176,4 +181,25 @@ void serviceObservation() {
   Serial.print(',');Serial.print(o.front.valid?o.front.mm:-1);Serial.print(',');Serial.print(o.right.valid?o.right.mm:-1);
   Serial.print(',');Serial.print((uint32_t)(now-f.sampledMs));Serial.print(',');Serial.print((uint32_t)(now-r.sampledMs));
   Serial.print(',');Serial.print(motorLeft);Serial.print(',');Serial.print(motorRight);Serial.print(',');Serial.print(odometry.configured?1:0);reportWallTrace();
+}
+
+void configureLineDrive(int cruise,int minimum){
+  stopRobot();lineWheels.cruise=cruise;lineWheels.minimum=minimum;
+}
+void reportLineControl(){
+  auto i=motionInput();
+  Serial.print(F("LINECTRL,"));Serial.print((int)lineFollower.state);
+  Serial.print(',');Serial.print(lineWheels.cruise);Serial.print(',');Serial.print(lineWheels.minimum);
+  Serial.print(',');Serial.print(lineWheels.saturated?1:0);
+  Serial.print(',');Serial.print(lineFollower.targetHeading);Serial.print(',');Serial.print(lineFollower.remaining);
+  Serial.print(',');Serial.print(i.leftSpeed);Serial.print(',');Serial.println(i.rightSpeed);
+}
+
+void armBatteryLine(){batteryLinePending=true;batteryLineArmedAt=millis();}
+void serviceBatteryLine(){
+  if(!batteryLinePending||(uint32_t)(millis()-batteryLineArmedAt)<1500)return;
+  batteryLinePending=false;
+  lineFollower.config.continuousSearch=true;
+  startNavigation(LINE);
+  standaloneActive=mode==LINE;
 }

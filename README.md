@@ -1,6 +1,6 @@
 # COGS 300 Robot
 
-**Current build: laptop USB, Lab 07 with two sonars; Lab 08 object search available by explicit start.** Start with [USB-Lab-Setup.md](USB-Lab-Setup.md) and [USB-Code-Review.md](USB-Code-Review.md). Reported physical measurements are entered; no physical validation is claimed. Standalone/Wi-Fi are disabled by default.
+**Current build: automatic battery-powered line following.** See [Standalone-Line-Setup.md](Standalone-Line-Setup.md) for power, upload and run instructions. It starts 1.5 seconds after reset and keeps searching without a laptop. The four rechargeable AA cells are not enough for reliable VIN power; use a regulated board supply. The full USB/Lab 08 profile remains available with `ROBOT_LINE_ONLY=0`.
 
 
 ## Download and set up
@@ -9,7 +9,7 @@
 2. Install Arduino IDE and the **Arduino UNO R4 Boards** package if needed. Open `Robot/Robot.ino`, choose **Arduino UNO R4 WiFi** and its USB port, then upload the sketch. The browser controller requires firmware 7.
 3. Close Arduino Serial Monitor and Serial Plotter.
 4. Double-click `Launch Robot Controller.command` in the extracted project folder. First launch needs internet to install its private runtime and dependencies.
-5. In the browser, select the robot's USB port and click **Connect**. Hold arrow keys or WASD to drive; release to stop. Space or Esc stops the robot.
+5. For the optional USB-controlled build (`ROBOT_LINE_ONLY=0`), in the browser select the robot's USB port and click **Connect**. Hold arrow keys or WASD to drive; release to stop. Space or Esc stops the robot.
 
 Keep Terminal open while using the controller. For setup help and troubleshooting, see [`controller/README.md`](controller/README.md). Current wiring diagrams are in [`documentation/`](documentation/).
 
