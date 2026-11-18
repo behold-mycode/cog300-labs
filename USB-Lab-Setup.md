@@ -90,3 +90,5 @@ reached; an overshot pivot is unwound rather than blindly backing straight.
 No pulse drive is used. Encoder slip and coast can still make the physical return
 imperfect; the IR sweep must reacquire the actual line. Combined line/maze
 recovery is unchanged, and Stop-at-end still stops immediately at tape loss.
+
+Straight-line trim: equal forward wheel commands now use PWM 240/240 (or the configured maximum if lower). Steering remains 230/255 or 255/230, with full-power pivots and reverse recovery. This is a small power reduction, not a measured speed percentage.
