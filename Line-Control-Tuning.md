@@ -1,6 +1,6 @@
 # Line control: rebuilt behavior and floor tuning
 
-This branch contains the feedback rebuild. It has host replay coverage and an UNO R4 build; it has not been uploaded or validated on the physical car in this session.
+This branch contains the feedback rebuild. It has host replay coverage and an UNO R4 build; the feedback firmware was uploaded over USB on 2026-11-18. Track performance still needs physical testing. Wi-Fi control is documented in [WiFi-Control.md](WiFi-Control.md).
 
 ## What changed
 

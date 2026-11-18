@@ -13,6 +13,10 @@
 
 Keep Terminal open while using the controller. For setup help and troubleshooting, see [`controller/README.md`](controller/README.md). Current wiring diagrams are in [`documentation/`](documentation/).
 
-Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** This revision is not uploaded or physically validated.
+Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** The line feedback rebuild has been uploaded; wall-maze behavior remains physically unvalidated.
 
 The controller exposes line following, both Lab 07 tape-stop demonstrations, object search, three-sonar line/wall maze, explicit wheel calibration, and manual driving. The firmware owns configuration. See the current USB guide above; older standalone and observation-first documents describe historical/opt-in behavior.
+
+## Wi-Fi control
+
+The UNO R4 can now host a browser for line start/stop, live readings and tuning while retaining USB uploads and the existing desktop controller. See [WiFi-Control.md](WiFi-Control.md) for connection and ownership behavior.

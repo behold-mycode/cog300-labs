@@ -1,10 +1,14 @@
 #pragma once
 #include <Arduino.h>
+#include "SerialOutput.h"
 #ifndef ROBOT_LINE_ONLY
 #define ROBOT_LINE_ONLY 0 // Set to 1 for automatic battery-powered line following.
 #endif
 #ifndef ROBOT_ENABLE_STANDALONE
 #define ROBOT_ENABLE_STANDALONE 0
+#endif
+#ifndef ROBOT_ENABLE_WIFI
+#define ROBOT_ENABLE_WIFI 1
 #endif
 #include <stdint.h>
 #include "Odometry.h"
@@ -82,3 +86,10 @@ bool configureHardware(const hardware::Profile&);uint32_t hardwareFingerprint();
 bool automaticSetupActive();void cancelAutomaticSetup();bool beginAutomaticSetup(Mode destination=RACE);void serviceAutomaticSetup();void clearSavedCalibrationStatus();
 
 bool hardwareMotorDirectionsMatch(bool invertA,bool invertB);
+
+uint32_t wirelessControlToken();
+bool processWirelessCommand(char* command,uint32_t token);
+void releaseWirelessControl();
+void lineWirelessStatus(char* out,size_t size);
+
+void reportWireless();

@@ -1,77 +1,135 @@
 #include "Robot.h"
 #include "WirelessHttp.h"
-#if defined(ARDUINO_UNOR4_WIFI) && ROBOT_ENABLE_STANDALONE
+#if defined(ARDUINO_UNOR4_WIFI) && ROBOT_ENABLE_WIFI
 #include <WiFiS3.h>
+#include "Modem.h"
+#include "AsyncRadio.h"
 #include "WirelessPage.h"
 #if __has_include("WirelessSecrets.h")
 #include "WirelessSecrets.h"
 #else
-// A fresh clone remains buildable, but cannot accidentally create an open AP.
 #define ROBOT_WIFI_SSID "COGS-Robot"
 #define ROBOT_WIFI_PASSWORD ""
 #endif
-static WiFiServer webServer(80);
-static WiFiClient webClient;
-static wireless::Request webRequest;
-static bool apReady=false,serverRunning=false,clientActive=false,dirtySocket=false;
-static uint32_t clientSince=0;
-void suspendWireless(){
- if(clientActive){webClient.stop();clientActive=false;}
- if(serverRunning){webServer.end();serverRunning=false;}
- webRequest.reset();dirtySocket=false;
+
+// WiFiS3 is used only during stopped startup. During operation each call sends
+// at most 16 UART bytes (~1.4ms at 115200), reads at most 128 buffered bytes,
+// and never waits for a network/modem response. No core/library patches needed.
+namespace {
+enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE } operation=ACCEPT;
+wireless::Reply reply;
+wireless::Request request;
+bool apReady=false,pending=false;
+int serverSocket=-1,clientSocket=-1;
+uint32_t started=0,clientSince=0,nextPoll=0,wifiMaxUs=0;
+char transmit[320]{};size_t txSize=0,txOffset=0;
+char responseHeader[240]{},statusBody[850]{};
+const char* responseBody=nullptr;
+size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
+
+void radioFailure(){
+ apReady=false;pending=false;
+ if(wirelessControlToken()){stopRobot();releaseWirelessControl();navigationState="WIFI_RADIO_ERROR";}
+ Serial.println(F("WIFI_RADIO_ERROR reset board to retry; USB available"));
+}
+void beginOperation(Operation op,int amount=0){
+ operation=op;const char* name="";
+ switch(op){case ACCEPT:name="SERVERAVAILABLE";break;case AVAILABLE:name="AVAILABLE";break;
+ case RECEIVE:name="CLIENTRECEIVE";break;case SEND:name="CLIENTSEND";break;case CLOSE:name="CLIENTCLOSE";break;}
+ char expected[40];snprintf(expected,sizeof(expected),"+%s:",name);reply.begin(op==SEND?"":expected);
+ int socket=op==ACCEPT?serverSocket:clientSocket;
+ int n=(op==RECEIVE||op==SEND)?snprintf(transmit,sizeof(transmit),"AT+%s=%d,%d\r\n",name,socket,amount):
+  snprintf(transmit,sizeof(transmit),"AT+%s=%d\r\n",name,socket);
+ txSize=(size_t)n;txOffset=0;
+ if(op==SEND){
+  for(int j=0;j<amount;++j){size_t index=responseOffset+j;transmit[txSize++]=index<headerSize?responseHeader[index]:responseBody[index-headerSize];}
+  sendingSize=amount;
+ }
+ started=millis();pending=true;
+}
+void status(bool ok,uint32_t returnedToken){
+ char line[420];lineWirelessStatus(line,sizeof(line));
+ snprintf(statusBody,sizeof(statusBody),"{\"ok\":%s,\"token\":%lu,\"owner\":\"%s\",\"state\":\"%s\",\"mode\":\"%s\",\"ir\":%u,\"pwm\":[%d,%d],\"radioMaxUs\":%lu,%s}",
+  ok?"true":"false",(unsigned long)returnedToken,controlSession?"USB":wirelessControlToken()?"Wi-Fi":"none",
+  navigationState,modeName(),lineMask(),motorLeft,motorRight,(unsigned long)wifiMaxUs,line);
+}
+void prepareResponse(){
+ bool ok=true;const char*type="application/json";
+ if(request.get("/")){responseBody=wirelessPage;type="text/html; charset=utf-8";}
+ else if(request.get("/status")){status(true,0);responseBody=statusBody;}
+ else{
+  char command[96];ok=request.command(command);uint32_t token=0;
+  if(ok){bool claim=!strcmp(command,"CLAIM");auto supplied=request.token();
+   ok=processWirelessCommand(command,supplied);
+   if(ok&&(claim||supplied==wirelessControlToken()))token=wirelessControlToken();
+  }
+  status(ok,token);responseBody=statusBody;
+ }
+ bodySize=strlen(responseBody);responseOffset=0;
+ headerSize=snprintf(responseHeader,sizeof(responseHeader),
+  "HTTP/1.1 %s\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n",
+  ok?"200 OK":"409 Conflict",type,(unsigned)bodySize);
+ beginOperation(SEND,(int)((headerSize+bodySize)<256?headerSize+bodySize:256));
+}
+void advance(){
+ if(!reply.ok){
+  if(reply.error&&clientSocket>=0&&operation!=CLOSE)beginOperation(CLOSE);
+  else radioFailure();
+  return;
+ }
+ switch(operation){
+ case ACCEPT:
+  clientSocket=atoi(reply.data);
+  if(clientSocket<0){nextPoll=millis()+20;return;}
+  clientSince=millis();request.reset();beginOperation(AVAILABLE);break;
+ case AVAILABLE:{
+  int count=atoi(reply.data);
+  if(count>0)beginOperation(RECEIVE,count>256?256:count);
+  else if((uint32_t)(millis()-clientSince)>=1000)beginOperation(CLOSE);
+  else nextPoll=millis()+10;
+  break;}
+ case RECEIVE:
+  for(size_t j=0;j<reply.used;++j)request.feed(reply.data[j]);
+  if(request.complete||request.bad)prepareResponse();
+  else if((uint32_t)(millis()-clientSince)>=1000)beginOperation(CLOSE);
+  else beginOperation(AVAILABLE);
+  break;
+ case SEND:
+  responseOffset+=sendingSize;
+  if(responseOffset<headerSize+bodySize){size_t remaining=headerSize+bodySize-responseOffset;beginOperation(SEND,remaining>256?256:remaining);}
+  else beginOperation(CLOSE);
+  break;
+ case CLOSE:clientSocket=-1;request.reset();nextPoll=millis();break;
+ }
+}
+void step(){
+ if(!apReady)return;
+ if(!pending){if((int32_t)(millis()-nextPoll)>=0)beginOperation(clientSocket<0?ACCEPT:AVAILABLE);return;}
+ if(txOffset<txSize){
+  size_t n=txSize-txOffset;if(n>16)n=16;
+  Serial2.write((uint8_t*)transmit+txOffset,n);txOffset+=n;
+ }
+ for(int n=0;n<128&&Serial2.available()&&!reply.done;++n)reply.feed((char)Serial2.read());
+ if(reply.done){pending=false;advance();}
+ else if((uint32_t)(millis()-started)>=2000)radioFailure();
+}
 }
 void setupWireless(){
  if(strlen(ROBOT_WIFI_PASSWORD)<8||strlen(ROBOT_WIFI_PASSWORD)>63){Serial.println(F("WIFI_DISABLED configure WirelessSecrets.h"));return;}
  WiFi.config(IPAddress(192,168,4,1));
- apReady=WiFi.beginAP(ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD)==WL_AP_LISTENING;
- if(apReady){webServer.begin();serverRunning=true;Serial.println(F("WIFI_READY http://192.168.4.1"));}
- else Serial.println(F("WIFI_FAILED physical start remains available"));
+ if(WiFi.beginAP(ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD)!=WL_AP_LISTENING){Serial.println(F("WIFI_FAILED USB available"));return;}
+ std::string result;
+ if(!modem.write("+BEGINSERVER:",result,"AT+BEGINSERVER=80\r\n")){Serial.println(F("WIFI_SERVER_FAILED"));return;}
+ serverSocket=atoi(result.c_str());apReady=serverSocket>=0;
+ if(apReady)Serial.println(F("WIFI_READY http://192.168.4.1"));
 }
-static void header(bool ok,const char*type){
- webClient.print(ok?"HTTP/1.1 200 OK\r\n":"HTTP/1.1 400 Bad Request\r\n");
- webClient.print("Connection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: ");webClient.print(type);webClient.print("\r\n\r\n");
+void serviceWireless(){uint32_t start=micros();step();uint32_t elapsed=micros()-start;if(elapsed>wifiMaxUs)wifiMaxUs=elapsed;}
+void reportWireless(){
+ Serial.print(apReady?F("WIFI_READY http://192.168.4.1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
 }
-static void configuration(){
- webClient.print("CONFIG ");webClient.print(settings.power);webClient.print(' ');webClient.print(settings.minimum);webClient.print(' ');webClient.print(settings.invertA);webClient.print(' ');webClient.print(settings.invertB);webClient.print(' ');webClient.print(settings.followCm);webClient.print(' ');webClient.print(settings.wallCm);webClient.print(' ');webClient.println(lineTapeLevel);
- webClient.print("SONAR ");webClient.print(leftSonarEnabled());webClient.print(' ');webClient.println(sonarInterval());
- webClient.print("ENC ");webClient.print(encoderKind());webClient.print(' ');webClient.print(encoderInvertLeft());webClient.print(' ');webClient.println(encoderInvertRight());
- webClient.print("ODOM ");webClient.print(odometry.leftScale,5);webClient.print(' ');webClient.print(odometry.rightScale,5);webClient.print(' ');webClient.println(odometry.track);
- const auto&c=wallNavigator.config;
- webClient.print("BODY ");float body[]={c.front,c.rear,c.halfWidth,c.frontSensor,c.sideX,c.sideY};for(float x:body){webClient.print(x);webClient.print(' ');}webClient.println();
- webClient.print("WALLCFG ");float wall[]={c.cruise,c.turnSpeed,c.margin,c.deceleration,c.reaction,c.matchRadius,c.corridorWidth};for(float x:wall){webClient.print(x);webClient.print(' ');}webClient.println();
- const auto&v=wheelVelocity.config;webClient.print("SPEEDCFG ");float speed[]={v.fullLeft,v.fullRight,v.kp,v.ki,v.acceleration};for(float x:speed){webClient.print(x);webClient.print(' ');}webClient.println();
- webClient.print("RACECFG ");webClient.print(raceConfig.speed);webClient.print(' ');webClient.print(raceConfig.sensorOffset);webClient.print(' ');webClient.println(raceConfig.searchAngle);
-}
-void serviceWireless(){
- // Every radio/client operation can block on the ESP modem. Never call one
- // while driving, even if it looks like an inexpensive connected()/available().
- if(mode!=MANUAL||motorLeft||motorRight||motorDemandActive()){dirtySocket=true;return;}
- if(!apReady)return;
- if(dirtySocket)suspendWireless();
- if(!serverRunning){webServer.begin();serverRunning=true;}
- if(!clientActive){webClient=webServer.available();if(!webClient)return;clientActive=true;clientSince=millis();webRequest.reset();}
- for(int budget=0;budget<128&&webClient.available()&&!webRequest.complete&&!webRequest.bad;++budget)webRequest.feed((char)webClient.read());
- if(!webRequest.complete&&!webRequest.bad&&(uint32_t)(millis()-clientSince)<1500)return;
- bool start=false;
- if(webRequest.get("/")){header(true,"text/html; charset=utf-8");webClient.print(wirelessPage);}
- else if(webRequest.get("/status")){
-  header(true,"text/plain");webClient.print("State: ");webClient.println(navigationState);
-  webClient.print("Saved calibration available: ");webClient.println(calibrationSaved()?"yes":"no");
-  webClient.print("Tape mask: ");webClient.println(lineMask());
-  webClient.print("Ranges front/right/left cm: ");for(int n=0;n<3;++n){webClient.print(sensorDistanceCm(n));webClient.print(' ');}webClient.println();
- }else if(webRequest.get("/config")){header(true,"text/plain");configuration();}
- else{
-  char cmd[96];bool ok=webRequest.command(cmd);
-  if(ok){
-   start=!strcmp(cmd,"RUN START");
-   if(!start){controlSession=false;controlExpired=false;processCommand(cmd);ok=lastCommandOk;}
-  }
-  header(ok,"text/plain");webClient.println(ok?(start?"Start requested. Wi-Fi pauses during motion; use the physical button to stop.":"Command accepted."):"Command rejected. Check syntax, calibration, and whether the map must be cleared.");
- }
- webClient.stop();clientActive=false;webRequest.reset();
- if(start)startStandalone(); // Socket closes before motors can be enabled.
-}
+void suspendWireless(){} // Runtime transport remains incremental in every mode.
 #else
+void reportWireless(){Serial.println(F("WIFI_DISABLED"));}
 void setupWireless(){}
 void serviceWireless(){}
 void suspendWireless(){}

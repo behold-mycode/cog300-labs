@@ -25,4 +25,5 @@ void loop() {
   serviceTelemetry();
   serviceMapExport();
   serviceWireless();
+  serviceSerialOutput();
 }

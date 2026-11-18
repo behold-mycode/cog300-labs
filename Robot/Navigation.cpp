@@ -227,3 +227,10 @@ void reportLineTuning(){
   Serial.print(',');Serial.print(lineWheels.kp);Serial.print(',');Serial.print(lineWheels.ki);
   Serial.print(',');Serial.println(lineWheels.startPower);
 }
+
+void lineWirelessStatus(char* out,size_t size){
+ const auto& c=lineFollower.config;auto i=lineInput();
+ snprintf(out,size,"\"phase\":%d,\"speed\":[%.1f,%.1f],\"tune\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%d]",
+  (int)lineFollower.state,i.leftSpeed,i.rightSpeed,c.cruiseSpeed,c.turnSpeed,c.correctionSpeed,c.captureSpeed,
+  lineWheels.referenceSpeed,lineWheels.feedForwardOffset,lineWheels.kp,lineWheels.ki,lineWheels.startPower,lineWheels.cruise,lineWheels.minimum);
+}

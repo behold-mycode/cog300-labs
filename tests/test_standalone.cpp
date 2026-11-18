@@ -9,7 +9,8 @@ int main(){
  command("SAVE");assert(calibrationSaved());
  settings.power=100;lineTapeLevel=-1;assert(loadCalibration());assert(settings.power==255&&lineTapeLevel==1&&mode==MANUAL);
  tape(2);acceptReading(2,15,870);tick(10,60,15);
- command("HELLO");assert(startStandalone());assert(standaloneActive&&mode==RACE&&!controlSession);
+ char claim[]="CLAIM";assert(processWirelessCommand(claim,0));assert(!startStandalone());assert(wirelessControlToken()&&mode==MANUAL);
+ command("STOP");command("HELLO");assert(startStandalone());assert(standaloneActive&&mode==RACE&&!controlSession);
  tick(600,60,15);assert(mode==RACE); // Explicit standalone ignores the old USB lease.
  stopRobot();assert(!standaloneActive&&mode==MANUAL);
  command("HELLO");command("MODE RACE");tick(501);assert(mode==MANUAL); // Tethered RACE retains watchdog.

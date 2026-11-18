@@ -6,6 +6,30 @@
 
 bool lastCommandOk=true;
 bool controlSession = false, controlExpired = false;
+static uint32_t wifiToken=0,wifiSequence=0,wifiLastControl=0;
+static bool wirelessDispatch=false;
+uint32_t wirelessControlToken(){return wifiToken;}
+void releaseWirelessControl(){wifiToken=0;}
+bool processWirelessCommand(char* line,uint32_t token){
+  serviceControlTimeout();
+  if(!strcmp(line,"STOP")){stopRobot();releaseWirelessControl();controlSession=false;controlExpired=true;return true;}
+  if(!strcmp(line,"CLAIM")){
+    if(controlSession||wifiToken||mode!=MANUAL||motorDemandActive())return false;
+    stopRobot(); // Explicit claim cancels a pending battery auto-start.
+    if(!wifiSequence)wifiSequence=micros()|1U;
+    wifiToken=++wifiSequence;if(!wifiToken)wifiToken=++wifiSequence;
+    wifiLastControl=millis();controlExpired=false;return true;
+  }
+  if(!wifiToken||token!=wifiToken)return false;
+  if(!strcmp(line,"HEARTBEAT")){wifiLastControl=millis();return true;}
+  if(!strcmp(line,"RELEASE")){stopRobot();releaseWirelessControl();return true;}
+  bool allowed=!strcmp(line,"MODE LINE")||!strncmp(line,"LINECFG ",8)||
+    !strncmp(line,"LINESPEED ",10)||!strncmp(line,"LINEMOTOR ",10);
+  if(!allowed)return false;
+  bool starting=!strcmp(line,"MODE LINE");
+  wifiLastControl=millis();wirelessDispatch=true;processCommand(line);wirelessDispatch=false;
+  return lastCommandOk&&(!starting||mode==LINE);
+}
 static uint32_t lastControl = 0, lastLog = 0, lastInput = 0;
 static bool logging = true, discardLine = false;
 static char input[96];
@@ -18,6 +42,9 @@ static void reportConfiguration(){
       Serial.print(settings.wallCm);Serial.print(',');Serial.println(lineTapeLevel);
 }
 void serviceControlTimeout() {
+  if(wifiToken&&(uint32_t)(millis()-wifiLastControl)>=1500){
+    stopRobot();releaseWirelessControl();navigationState="WIFI_TIMEOUT";
+  }
   if (controlSession && (uint32_t)(millis() - lastControl) >= CONTROL_TIMEOUT_MS) {
     stopRobot(); controlSession = false; controlExpired = true;
     Serial.println(F("CONTROL_TIMEOUT"));
@@ -34,12 +61,12 @@ void reportStatus() {
   Serial.print(','); Serial.println(motorRight);
 }
 void serviceTelemetry() {
-  if(standaloneActive&&!Serial)return;
+  if(!Serial||!serialOutputReady()||mapExportActive())return;
   if (logging && (uint32_t)(millis() - lastLog) >= LOG_MS) {
     lastLog = millis(); reportStatus(); reportLine(); reportNavigation(); reportEncoders();reportLineControl();reportWall();reportRace();
   }
 }
-static void invalid() { lastCommandOk=false; stopRobot(); Serial.println(F("ERROR invalid command; stopped")); }
+static void invalid() { lastCommandOk=false; if(!wifiToken||wirelessDispatch)stopRobot(); Serial.println(F("ERROR invalid command; stopped")); }
 static bool number(const char* text, int low, int high, int& value) {
   if (!*text || strlen(text) > 6) return false;
   char* end;
@@ -62,6 +89,10 @@ void processCommand(char* line) {
   for (uint8_t i = 0; i < count; ++i)
     for (char* p = args[i]; *p; ++p) *p = toupper((unsigned char)*p);
   const char* cmd = args[0];
+  if(wifiToken&&!wirelessDispatch&&strcmp(cmd,"STOP")&&strcmp(cmd,"STATUS")&&strcmp(cmd,"HELP")&&strcmp(cmd,"WIFI")){
+    lastCommandOk=false;Serial.println(F("BUSY WIFI_CONTROL"));return;
+  }
+  if(!strcmp(cmd,"WIFI")&&count==1){reportWireless();return;}
   if (!strcmp(cmd,"LINECFG") && count==3){
     int cruise,minimum;
     if(!number(args[1],1,255,cruise)||!number(args[2],0,255,minimum)||minimum>cruise){invalid();return;}
@@ -84,7 +115,7 @@ void processCommand(char* line) {
     if(!configureLineMotor(reference,offset,kp,ki,start)){invalid();return;}Serial.println(F("OK LINEMOTOR"));reportLineTuning();return;
   }
   if (!strcmp(cmd, "STOP") && count == 1) {
-    stopRobot(); Serial.println(F("OK STOP")); return;
+    stopRobot(); releaseWirelessControl(); Serial.println(F("OK STOP")); return;
   }
   if (!strcmp(cmd, "HELLO") && count == 1) {
     if(!ROBOT_LINE_ONLY)stopRobot();
@@ -226,7 +257,7 @@ void processCommand(char* line) {
     Serial.println(F("OK CONFIG")); return;
   }
   if (!strcmp(cmd, "MODE") && count == 2) {
-    if(strcmp(args[1],"MANUAL")&&!controlSession&&!(ROBOT_LINE_ONLY&&!strcmp(args[1],"LINE"))){invalid();return;}
+    if(strcmp(args[1],"MANUAL")&&!controlSession&&!wirelessDispatch&&!(ROBOT_LINE_ONLY&&!strcmp(args[1],"LINE"))){invalid();return;}
     if (!strcmp(args[1], "MANUAL")) startNavigation(MANUAL);
     else if (!strcmp(args[1], "CALIBRATE")) startNavigation(CALIBRATE);
     else if (!strcmp(args[1], "OBJECT")) startNavigation(OBJECT);
@@ -263,7 +294,7 @@ void readCommands() {
   // Bounded work prevents continuous input from starving sensors/watchdog.
   for (uint8_t budget = 0; budget < 32 && Serial.available(); ++budget) {
     char c = (char)Serial.read(); lastInput = millis();
-    if (c == '!') { stopRobot(); inputLength = 0; discardLine = true; }
+    if (c == '!') { stopRobot();releaseWirelessControl(); inputLength = 0; discardLine = true; }
     else if (c == '\r' || c == '\n') {
       if (!discardLine && inputLength) { input[inputLength] = 0; processCommand(input); }
       inputLength = 0; discardLine = false;
@@ -274,6 +305,6 @@ void readCommands() {
     }
   }
   if (inputLength && (uint32_t)(millis() - lastInput) >= 1000) {
-    stopRobot(); inputLength = 0; discardLine = true;
+    if(!wifiToken)stopRobot(); inputLength = 0; discardLine = true;
   }
 }

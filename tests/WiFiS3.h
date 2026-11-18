@@ -2,26 +2,35 @@
 #include <deque>
 #include <string>
 #include <sstream>
+#include <cassert>
 #define WL_AP_LISTENING 7
 static int modemCalls=0;
-static bool pendingWeb=false;
-static std::deque<char> webBytes;
-static std::ostringstream webOutput;
+static std::deque<std::string> webRequests;
+static std::string webOutput;
+static bool radioSilent=false;
 struct IPAddress{IPAddress(int,int,int,int){}};
 struct FakeWiFi {void config(IPAddress){++modemCalls;}int beginAP(const char*,const char*){++modemCalls;return WL_AP_LISTENING;}} WiFi;
-struct WiFiClient{
- bool active=false;
- operator bool(){++modemCalls;return active;}
- int available(){++modemCalls;return webBytes.size();}
- int read(){++modemCalls;char c=webBytes.front();webBytes.pop_front();return c;}
- void stop(){++modemCalls;active=false;webBytes.clear();}
- template<class T>void print(T x){++modemCalls;webOutput<<x;}
- void print(float x,int){print(x);}
- template<class T>void println(T x){print(x);print('\n');}
- void println(){print('\n');}
-};
-struct WiFiServer{
- WiFiServer(int){}void begin(){++modemCalls;}
- void end(){++modemCalls;pendingWeb=false;webBytes.clear();}
- WiFiClient available(){++modemCalls;WiFiClient c;c.active=pendingWeb;pendingWeb=false;return c;}
-};
+struct FakeRadio {
+ std::deque<char> rx;std::string tx,body;int payload=0,remaining=0;size_t maxWrite=0;
+ void respond(const std::string&s){if(!radioSilent)for(char c:s)rx.push_back(c);}
+ void command(){
+  auto equal=tx.find('=');std::string name=tx.substr(2,equal-2),argument=tx.substr(equal+1);tx.clear();
+  int amount=0;auto comma=argument.find(',');if(comma!=std::string::npos)amount=atoi(argument.c_str()+comma+1);
+  if(name=="+SERVERAVAILABLE"){
+   if(body.empty()&&!webRequests.empty()){body=webRequests.front();webRequests.pop_front();}
+   respond(name+": "+(body.empty()?"-1":"1")+"\r\nOK\r\n");
+  }else if(name=="+AVAILABLE")respond(name+": "+std::to_string(body.size())+"\r\nOK\r\n");
+  else if(name=="+CLIENTRECEIVE"){
+   auto part=body.substr(0,amount);body.erase(0,part.size());respond(name+": "+std::to_string(part.size())+"|"+part+"OK\r\n");
+  }else if(name=="+CLIENTSEND"){payload=remaining=amount;}
+  else if(name=="+CLIENTCLOSE"){body.clear();respond(name+":\r\nOK\r\n");}
+  else assert(false);
+ }
+ size_t write(uint8_t*bytes,size_t n){
+  if(n>maxWrite)maxWrite=n;assert(n<=16);
+  for(size_t j=0;j<n;++j){char c=bytes[j];if(remaining){webOutput+=c;if(!--remaining)respond("OK\r\n");}
+   else {tx+=c;if(c=='\n')command();}}
+  return n;
+ }
+ int available(){return rx.size();}int read(){char c=rx.front();rx.pop_front();return c;}
+} Serial2;

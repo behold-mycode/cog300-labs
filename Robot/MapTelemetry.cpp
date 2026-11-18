@@ -18,7 +18,7 @@ void reportNavigation() {
   Serial.print(',');Serial.println(explorer.world.updates);
 }
 void serviceMapExport() {
-  if(!exporting || (uint32_t)(millis()-lastRecordMs)<10) return;
+  if(!serialOutputReady() || !exporting || (uint32_t)(millis()-lastRecordMs)<10) return;
   lastRecordMs=millis();
   const maze::Graph &g=explorer.graph;
   if(record==0) {

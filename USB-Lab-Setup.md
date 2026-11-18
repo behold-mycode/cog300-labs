@@ -2,7 +2,7 @@
 
 **This guide describes the default `ROBOT_LINE_ONLY=0` laptop profile. The optional automatic battery profile (`=1`) is documented in [Standalone-Line-Setup.md](Standalone-Line-Setup.md).**
 
-Updated 2026-11-18. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Earlier firmware was uploaded during the lab session. The current feedback rebuild has not been uploaded or physically tested; see [Line-Control-Tuning.md](Line-Control-Tuning.md).
+Updated 2026-11-18. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. The current feedback rebuild was uploaded over USB on 2026-11-18. Track performance remains unvalidated; see [Line-Control-Tuning.md](Line-Control-Tuning.md).
 
 ## What to install today
 
@@ -49,7 +49,7 @@ Confirmed IR positions are 0, 50 and 100 mm across the front. Tape is 50 mm wide
 | Wheel calibration · clear floor | Forward measurement and coast, saves and stops. |
 | Manual driving | Hold arrows/WASD; release to stop. |
 
-Selecting a mode stops motion; **Start** runs it. Space/Escape stops. Leaving the controller window or losing browser/USB heartbeat stops the car. Standalone button/Wi-Fi entry points are disabled in the default build (`ROBOT_ENABLE_STANDALONE=0`).
+Selecting a mode stops motion; **Start** runs it. Space/Escape stops. Leaving the controller window or losing browser/USB heartbeat stops the car. The legacy standalone button is disabled (`ROBOT_ENABLE_STANDALONE=0`). Wi-Fi control is independently enabled (`ROBOT_ENABLE_WIFI=1`); see [WiFi-Control.md](WiFi-Control.md). USB uploads remain available. Release Wi-Fi control before connecting the desktop controller.
 
 ## Sonar range and open space
 

@@ -20,6 +20,7 @@ bool startRace(){
  navigationState=raceNavigator.reason;return ok;
 }
 bool startStandalone(){
+ if(wirelessControlToken())return false;
  if(!ROBOT_ENABLE_STANDALONE){navigationState="USB_CONTROL_REQUIRED";return false;}
  if(mapExportActive()){navigationState="BUSY_MAP_EXPORT";return false;}
  stopRobot();suspendWireless();startNavigation(RACE);
@@ -29,7 +30,7 @@ bool startStandalone(){
 void serviceButton(){
  if(!ROBOT_ENABLE_STANDALONE)return;
  auto e=runButton.update(digitalRead(1)==LOW,millis(),mode!=MANUAL||motorLeft||motorRight);
- if(e==race::Button::STOP)stopRobot();
+ if(e==race::Button::STOP){stopRobot();releaseWirelessControl();controlSession=false;controlExpired=true;}
  else if(e==race::Button::START)startStandalone();
 }
 void serviceRace(){
