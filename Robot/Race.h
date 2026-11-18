@@ -38,11 +38,11 @@ class Navigator {
   // Completed no-return pulses are usable in the open line section, unlike a
   // missing/stuck echo. They still do not certify a collision-free swept area.
   for(auto &x:i.ranges)if(x.noReturn&&(uint32_t)(i.now-x.stamp)<300){x.valid=true;x.mm=4000;}
-  float f=wall::corrected(c,i,0);if(f<0){reason="RACE_FRONT_UNKNOWN";return {};}
+  float f=wall::corrected(c,i,0);if(wallCourse&&f<0){reason="RACE_FRONT_UNKNOWN";return {};}
   float v=fmaxf(fabsf(i.leftSpeed),fabsf(i.rightSpeed));
   float stop=v*c.reaction+v*v/(2*c.deceleration);
   bool turning=state==SWEEP_FIRST||state==SWEEP_SECOND||state==ALIGN||state==CENTRE_LINE;
-  if(!turning&&f+c.frontSensor<=c.front+c.margin+stop){reason="RACE_FRONT_BLOCKED";return {};}
+  if(wallCourse&&!turning&&f+c.frontSensor<=c.front+c.margin+stop){reason="RACE_FRONT_BLOCKED";return {};}
   if(state==TRACK){
    if(tape==0){
     heading=lastTape.heading;pointX=lastTape.x+r.sensorOffset*cosf(heading);pointY=lastTape.y+r.sensorOffset*sinf(heading);
@@ -144,6 +144,7 @@ class Navigator {
   reason="RACE_CENTRING_ON_LINE";return true;
  }
  bool turnClear(const wall::Config&c,const wall::Input&i)const{
+  if(!wallCourse)return true; // Explicit open-floor line mode does not use sonar.
   // The line section is an open floor area. There is no rear sensor; a path
   // length threshold cannot certify rear clearance and used to deadlock bends.
   for(int n=0;n<(wallCourse?3:1);++n){
@@ -154,6 +155,7 @@ class Navigator {
  }
  void fail(const char*why){state=FAULT;reason=why;}
  wall::Speeds guarded(const wall::Config&c,const wall::Input&i,wall::Speeds d){
+  if(!wallCourse)return d;
   bool curve=fabsf(d.left-d.right)>1||fabsf(i.leftSpeed-i.rightSpeed)>1;
   float v=fmaxf(fabsf(i.leftSpeed),fabsf(i.rightSpeed));
   float momentum=v*c.reaction+v*v/(2*c.deceleration);

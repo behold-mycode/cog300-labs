@@ -18,10 +18,10 @@ int main(){
  i.leftSpeed=0;i.rightSpeed=60;d=n.step(r,c,i,2);assert(d.left==0&&d.right==0); // Residual turn/coast also guarded.
  i.leftSpeed=i.rightSpeed=0;i.ranges[1].mm=500;
  i.now+=20;d=n.step(r,c,i,0);assert(d.left==0&&d.right==0&&!n.wallStage());
- // Outer-only line pivots need swept-body clearance too.
+ // Combined line/maze pivots still need swept-body clearance.
  race::Navigator wide;auto wideBody=c;wideBody.halfWidth=120;
  i.ranges[0].mm=60;for(auto &s:i.ranges){s.stamp=i.now;s.pose=i.pose;}
- assert(wide.begin(r,wideBody,i,2,false));auto blocked=wide.step(r,wideBody,i,4);
+ assert(wide.begin(r,wideBody,i,2,true));auto blocked=wide.step(r,wideBody,i,4);
  assert(blocked.left==0&&blocked.right==0);
  i.ranges[0].mm=500;
  // Tape disappearance alone must not immediately switch to maze.

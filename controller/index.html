@@ -17,6 +17,12 @@
 </select>
 <div class="run-controls"><button id="start" class="primary" disabled>Start</button><button id="stop">Stop <span>SPACE / ESC</span></button></div>
 <p id="robotState" role="status">Stopped</p>
+<div class="sensors" aria-label="Live IR sensor readings">
+<div><span>LEFT · D3</span><strong id="irLeft">—</strong></div>
+<div><span>CENTRE · D2</span><strong id="irCentre">—</strong></div>
+<div><span>RIGHT · D4</span><strong id="irRight">—</strong></div>
+</div>
+<p id="irHelp" class="hint">Keep the robot stopped while adjusting sensors. Waiting for live readings.</p>
 <div class="keys" aria-hidden="true"><kbd id="keyUp">↑</kbd><div><kbd id="keyLeft">←</kbd><kbd id="keyDown">↓</kbd><kbd id="keyRight">→</kbd></div></div>
 <p class="instruction">Hold arrows or WASD for manual driving. Release to stop.</p>
 <p class="hint">Changing mode stops the robot. Press Start to run it.<br>USB control stops if this window loses focus or disconnects.</p>

@@ -1,5 +1,6 @@
 #include "Robot.h"
 #include <math.h>
+#include "LineDrive.h"
 
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
@@ -120,13 +121,14 @@ void serviceNavigation() {
   }
   if(mode==STOP_ON_TAPE){
     if(lineMask()){stopRobot();navigationState="TAPE_REACHED";}
-    else if(frontClear(false)){driveVelocity({raceConfig.speed,raceConfig.speed});navigationState="SEEKING_TAPE";}
+    else {requestMotor(settings.power,settings.power);navigationState="SEEKING_TAPE";}
     return;
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
     auto d=raceNavigator.step(raceConfig,wallNavigator.config,motionInput(),lineMask());
-    navigationState=raceNavigator.reason;driveVelocity(d);
+    navigationState=raceNavigator.reason;
+    auto power=lineDrive(d,settings.power);requestMotor(power.left,power.right);
     if(raceNavigator.state==race::Navigator::FAULT){const char*why=raceNavigator.reason;stopRobot();navigationState=why;}
     return;
   }

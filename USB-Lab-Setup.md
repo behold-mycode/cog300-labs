@@ -1,6 +1,6 @@
 # USB robot: Lab 07 first, Lab 08 prepared
 
-Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. No firmware was uploaded and no physical run was performed during this review.
+Updated 2026-11-17. Current target: UNO R4 WiFi, laptop USB, L298N, three floor IR modules, two single-output encoders, front/right sonars. The left sonar is **not installed**. Firmware has been uploaded during the lab session; the robot reported saved wheel calibration. High-power line behavior still needs a physical course test.
 
 ## What to install today
 
@@ -33,13 +33,13 @@ Confirmed IR positions are 0, 50 and 100 mm across the front. The course tape is
 2. Once the measured profile is filled, upload `Robot/Robot.ino`. Close Serial Monitor before using the desktop controller.
 3. Launch `Launch Robot Controller.command`, connect, and choose **Wheel calibration · clear floor**. Start only in clear straight space, with at least 650 mm ahead of the chassis and side/pivot clearance. This routine drives forward up to 300 mm, measures wheel response and coasting, saves calibration, and stops. Initial placement is centre sensor on a narrow tape line, or all sensors on bare floor. A wide patch of tape is not a bare-floor reference.
 4. For the first **Line following** start, missing calibration also invokes that same moving setup before following the line. Prefer explicit calibration first. **Object search** and the two tape-stop demonstrations require completed calibration; they never silently run that forward setup.
-5. Test low-speed forward motion and measured turns on the actual floor. Full-speed wheel response does not prove low-speed breakaway behavior. If it stalls, overshoots or reports a fault, capture the reported state and counts before changing parameters.
+5. Line modes now use direct high power to overcome friction, rather than the saved low-speed target. Test straight travel and turns on the actual floor; capture state and counts if it stalls or overshoots. Stop, USB watchdog, reversal delay, and encoder stall detection remain active.
 
 ## Laptop modes
 
 | Mode | Behavior |
 |---|---|
-| Line following · Lab 07 | Encoder-regulated line tracking; outer sensor pivots; bounded measured recovery at loss; no dependency on the missing left sonar; stops after an unsuccessful search rather than switching to walls. |
+| Line following · Lab 07 | Direct high-power line tracking (255/255 straight, inner steering wheel at least 80%, full-power pivots); encoder-measured recovery at loss; no sonar dependency; stops after an unsuccessful search rather than switching to walls. |
 | Drive until tape · Lab 07 | Drives forward and stops on any floor sensor detecting tape. |
 | Stop at tape end · Lab 07 | Starts on tape, tracks it, stops at the first all-off reading. Use Line following for bends requiring recovery. |
 | Object search · Lab 08 | Explicit laptop start. Samples forward through +180°, then back through −180°, chooses the nearest median range, aligns, verifies, and approaches to 20 cm ahead of the chassis. Any tape detection stops the run. |
@@ -63,4 +63,4 @@ Lab 07 asks for multiple tuned IR sensors, tape start/stop, corrective turning, 
 
 Lab 08 asks for transitions, an angle-resolved sweep toward the nearest object, and acquisition from arbitrary orientation. Object-search start is manual as requested; automatic wall-to-object transition remains undefined until the actual course cue is supplied. The extra boundary behavior stops on tape. This is not proof that every chassis corner stays inside an arena: initial pivot clearance, sensor placement and stopping distance must be verified. A front sonar cannot distinguish a target from an arena wall; the selected target is the nearest detected reflector. Thin targets between angular samples or weak echoes need physical validation.
 
-The line and object modes assume an open floor area with pivot clearance. Their front ray cannot certify unobserved rear/side space. Single-channel encoders infer direction from commanded motor polarity and cannot independently detect slip or being pushed. Tight wall turns require enough physical room for the chassis, regardless of code.
+The line-only modes assume a clear open floor and intentionally ignore all sonars, including obstacles reported by them. Object search and combined line/maze still use sonar; their front ray cannot certify unobserved rear/side space. Single-channel encoders infer direction from commanded motor polarity and cannot independently detect slip or being pushed. Tight wall turns require enough physical room for the chassis, regardless of code.

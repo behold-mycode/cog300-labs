@@ -26,6 +26,16 @@ function render(state){
   const t=state.telemetry||{};
   if(state.mode==='MANUAL'&&t.mode==='MANUAL'&&!['STOPPED','DRIVING','TIMED_TEST'].includes(t.state))localStop();
   $('robotState').textContent=state.connected?(t.state||'Stopped').replaceAll('_',' ').toLowerCase():'Not connected';
+  const irLive=state.connected&&Array.isArray(t.ir);
+  const tapeLevel=state.settings?.lineTapeLevel;
+  ['irLeft','irCentre','irRight'].forEach((id,index)=>{
+    const value=irLive?t.ir[index]:undefined;
+    $(id).textContent=value===0||value===1
+      ? `${value} · ${tapeLevel===0||tapeLevel===1?(value===tapeLevel?'TAPE':'FLOOR'):'raw'}` : '—';
+  });
+  $('irHelp').textContent=irLive
+    ? `Live readings · ${tapeLevel===0||tapeLevel===1?`${tapeLevel} = tape, ${1-tapeLevel} = floor.`:'Tape polarity not set.'} Keep the robot stopped while adjusting sensors.`
+    : 'No live readings. Connect the robot to calibrate.';
   $('demo').textContent=state.demo?'DEMO · NO HARDWARE':'';
 }
 async function sendFrame(){
