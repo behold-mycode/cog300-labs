@@ -101,10 +101,10 @@ void processCommand(char* line) {
   if(!strcmp(cmd,"LINESPEED") && count==5){
     float cruise,turn,correction,capture;
     if(!realNumber(args[1],30,600,cruise)||!realNumber(args[2],30,400,turn)||
-       !realNumber(args[3],30,600,correction)||!realNumber(args[4],30,600,capture)){
+       !realNumber(args[3],30,600,correction)||!realNumber(args[4],0,600,capture)){
       invalid();return;
     }
-    configureLineSpeeds(cruise,turn,correction,capture);Serial.println(F("OK LINESPEED"));reportLineTuning();return;
+    configureLineSpeeds(cruise,turn,correction,capture,wirelessDispatch&&mode==LINE);Serial.println(F("OK LINESPEED"));reportLineTuning();return;
   }
   if(!strcmp(cmd,"LINEMOTOR") && count==6){
     float reference,offset,kp,ki;int start;
@@ -133,7 +133,7 @@ void processCommand(char* line) {
   if (!strcmp(cmd, "STATUS") && count == 1) { reportStatus(); return; }
   if (!strcmp(cmd, "HELP") && count == 1) {
     Serial.println(F("Protocol 7 / 115200 baud / Newline. STOP always stops."));
-    Serial.println(F("LINESPEED cruise turn_wheel correction capture (mm/s); LINEMOTOR reference_mm_s offset_pwm kp ki start_pwm; stops; RAM only."));
+    Serial.println(F("LINESPEED cruise turn_wheel correction capture (mm/s); Wi-Fi speeds apply live. LINEMOTOR reference_mm_s offset_pwm kp ki start_pwm stops; RAM only."));
     Serial.println(F("LINECFG reference_pwm minimum_pwm (0 disables floor); stops; RAM only."));
     Serial.println(F("HELLO opens 500ms watchdog session; HEARTBEAT keeps it alive."));
     Serial.println(F("DRIVE left right (-255..255; session required)"));
@@ -202,7 +202,7 @@ void processCommand(char* line) {
   if (!strcmp(cmd,"ODOM") && count==4) {
     float l,r,w;
     if(explorer.graph.nodeCount || !realNumber(args[1],.001f,100,l)||!realNumber(args[2],.001f,100,r)||!realNumber(args[3],10,1000,w)) { invalid();return; }
-    stopRobot();resetWallCalibration();odometry.configure(l,r,w);explorer.geometry=maze::Geometry();explorer.dynamics=maze::Dynamics();explorer.world.reset();Serial.println(F("OK ODOM"));return;
+    stopRobot();resetWallCalibration();odometry.configure(l,r,w);++odometryEpoch;explorer.geometry=maze::Geometry();explorer.dynamics=maze::Dynamics();explorer.world.reset();Serial.println(F("OK ODOM"));return;
   }
   if(!strcmp(cmd,"TRACE")&&count==2&&number(args[1],0,1,a)) {
     setObservationTrace(a);Serial.println(F("OK TRACE"));return;

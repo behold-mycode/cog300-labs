@@ -4,7 +4,7 @@
 #include <WiFiS3.h>
 #include "Modem.h"
 #include "AsyncRadio.h"
-#include "WirelessPage.h"
+#include "WirelessPageGzip.h"
 #if __has_include("WirelessSecrets.h")
 #include "WirelessSecrets.h"
 #else
@@ -49,13 +49,17 @@ void beginOperation(Operation op,int amount=0){
 }
 void status(bool ok,uint32_t returnedToken){
  char line[420];lineWirelessStatus(line,sizeof(line));
- snprintf(statusBody,sizeof(statusBody),"{\"ok\":%s,\"token\":%lu,\"owner\":\"%s\",\"state\":\"%s\",\"mode\":\"%s\",\"ir\":%u,\"pwm\":[%d,%d],\"radioMaxUs\":%lu,%s}",
+ const auto& pose=odometry.pose;
+ snprintf(statusBody,sizeof(statusBody),"{\"ok\":%s,\"token\":%lu,\"owner\":\"%s\",\"state\":\"%s\",\"mode\":\"%s\",\"ir\":%u,\"pwm\":[%d,%d],\"radioMaxUs\":%lu,\"ms\":%lu,\"poseEpoch\":%lu,\"poseReady\":%s,\"pose\":[%.1f,%.1f,%.4f],%s}",
   ok?"true":"false",(unsigned long)returnedToken,controlSession?"USB":wirelessControlToken()?"Wi-Fi":"none",
-  navigationState,modeName(),lineMask(),motorLeft,motorRight,(unsigned long)wifiMaxUs,line);
+  navigationState,modeName(),lineMask(),motorLeft,motorRight,(unsigned long)wifiMaxUs,
+  (unsigned long)millis(),(unsigned long)odometryEpoch,
+  encodersEnabled()&&odometry.configured&&odometry.sampled?"true":"false",
+  pose.x,pose.y,pose.heading,line);
 }
 void prepareResponse(){
- bool ok=true;const char*type="application/json";
- if(request.get("/")){responseBody=wirelessPage;type="text/html; charset=utf-8";}
+ bool ok=true;const bool page=request.get("/");const char*type="application/json";
+ if(page){responseBody=reinterpret_cast<const char*>(wirelessPageGzip);type="text/html; charset=utf-8";}
  else if(request.get("/status")){status(true,0);responseBody=statusBody;}
  else{
   char command[96];ok=request.command(command);uint32_t token=0;
@@ -65,10 +69,10 @@ void prepareResponse(){
   }
   status(ok,token);responseBody=statusBody;
  }
- bodySize=strlen(responseBody);responseOffset=0;
+ bodySize=page?sizeof(wirelessPageGzip):strlen(responseBody);responseOffset=0;
  headerSize=snprintf(responseHeader,sizeof(responseHeader),
-  "HTTP/1.1 %s\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: %s\r\nContent-Length: %u\r\n\r\n",
-  ok?"200 OK":"409 Conflict",type,(unsigned)bodySize);
+  "HTTP/1.1 %s\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Type: %s\r\nContent-Length: %u\r\n%s\r\n",
+  ok?"200 OK":"409 Conflict",type,(unsigned)bodySize,page?"Content-Encoding: gzip\r\n":"");
  beginOperation(SEND,(int)((headerSize+bodySize)<256?headerSize+bodySize:256));
 }
 void advance(){
@@ -125,7 +129,7 @@ void setupWireless(){
 }
 void serviceWireless(){uint32_t start=micros();step();uint32_t elapsed=micros()-start;if(elapsed>wifiMaxUs)wifiMaxUs=elapsed;}
 void reportWireless(){
- Serial.print(apReady?F("WIFI_READY http://192.168.4.1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
+ Serial.print(apReady?F("WIFI_READY http://192.168.4.1 build=direct-rollback-ir-v1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
 }
 void suspendWireless(){} // Runtime transport remains incremental in every mode.
 #else

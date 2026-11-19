@@ -2,6 +2,7 @@
 #include "Odometry.h"
 
 maze::Odometry odometry;
+uint32_t odometryEpoch=0;
 static volatile uint32_t leftTicks=0,rightTicks=0;
 static volatile int leftDirection=1,rightDirection=1;
 static bool encEnabled=false,encQuadrature=false;
@@ -22,7 +23,7 @@ bool configureEncoders(int kind,bool invertL,bool invertR) {
   if(kind<0||kind>2) return false;
   stopRobot();resetWallCalibration();
   if(encEnabled) { detachInterrupt(digitalPinToInterrupt(ENC_LA));detachInterrupt(digitalPinToInterrupt(ENC_RA)); }
-  encEnabled=false;odometry.sampled=false;odometry.configured=false;explorer.geometry=maze::Geometry();explorer.dynamics=maze::Dynamics();explorer.world.reset();
+  ++odometryEpoch;encEnabled=false;odometry.sampled=false;odometry.configured=false;explorer.geometry=maze::Geometry();explorer.dynamics=maze::Dynamics();explorer.world.reset();
   if(!kind) return true;
   encQuadrature=kind==2;encInvertL=invertL?-1:1;encInvertR=invertR?-1:1;
   // No pullups: actual module voltage/output type must be checked before enabling.
@@ -44,6 +45,7 @@ void serviceOdometry() {
   odometry.update(l,r,millis());
 }
 void resetOdometry() {
+  ++odometryEpoch;
   noInterrupts();int32_t l=(int32_t)leftTicks,r=(int32_t)rightTicks;interrupts();
   odometry.reset(l,r,millis());
 }

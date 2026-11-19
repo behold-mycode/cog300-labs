@@ -15,7 +15,7 @@ int main() {
  for(int n=0;n<10;++n){command("HEARTBEAT");tick(50);}
  assert(motorLeft>0&&motorRight>0&&motorLeft<=settings.power);
  tape(4);command("HEARTBEAT");tick(10);assert(mode==LINE);
- tape(0);tick(20);assert(motorLeft==0&&motorRight>0&&lineFollower.state==line::Follower::FOLLOW);
+ tape(0);tick(20);assert(motorLeft==0&&motorRight>0&&lineFollower.state==line::Follower::SEARCH);
  tick(501);assert(mode==MANUAL&&motorLeft==0&&motorRight==0);
  command("HELLO");tape(0);command("MODE STOP_ON_TAPE");tick(20);assert(mode==STOP_ON_TAPE);
  tape(1);tick(20);assert(mode==MANUAL&&motorLeft==0&&!strcmp(navigationState,"TAPE_REACHED"));
@@ -25,7 +25,7 @@ int main() {
  tick(20,2);assert(motorLeft>0&&motorRight>0);
  tick(20,-1);assert(motorLeft>0);
  // STOP cancels both active and pending reversing commands in every line phase.
- for(auto phase:{line::Follower::FOLLOW,line::Follower::CORNER,line::Follower::SEARCH}){
+ for(auto phase:{line::Follower::FOLLOW,line::Follower::SEARCH}){
   tape(5);command("MODE LINE");lineFollower.state=phase;requestMotor(-240,240);serviceMotor();
   command("STOP");nowMs+=500;serviceMotor();
   assert(mode==MANUAL&&!motorDemandActive()&&!motorLeft&&!motorRight);

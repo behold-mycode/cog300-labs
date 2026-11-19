@@ -8,7 +8,7 @@ async function api(path,body){
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),1200);
   try{
     const response=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:{'X-Robot-Token':token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:abort.signal});
-    const data=await response.json();if(!response.ok)throw new Error(data.error||'Connection failed');return data;
+    const data=await response.json();if(!response.ok){const error=new Error(data.error||'Connection failed');error.status=response.status;throw error;}return data;
   }finally{clearTimeout(timer);}
 }
 function showError(e){$('error').textContent=e.message||String(e);$('error').hidden=false;}
@@ -50,7 +50,10 @@ async function sendFrame(){
     if(owner===requestOwner&&requestSeq>=renderedSeq){renderedSeq=requestSeq;render(state);}
   }catch(error){
     if(requestOwner!==owner||requestSeq<seq)return;
-    owner=null;ready=false;localStop();render({connected:false,ready:false,status:error.message});
+    const ended=error.status>=400&&error.status<500;
+    if(ended)owner=null;
+    ready=false;localStop();
+    render({connected:!ended,ready:false,status:ended?error.message:'Waiting for controller — retrying; motion disabled'});
   }
 }
 function stop(){localStop();void sendFrame();}

@@ -15,7 +15,7 @@ int main() {
   serviceMotor();
   assert(mode == LINE && standaloneActive && motorLeft > 0 && motorRight > 0 &&
          !automaticSetupActive());
-  assert(lineFollower.config.continuousSearch && lineTapeLevel == 0);
+  assert(lineFollower.config.allowOffTapeStart && lineTapeLevel == 0);
   command("HELLO");
   assert(mode == LINE && standaloneActive && !controlSession);
   command("MODE LINE");

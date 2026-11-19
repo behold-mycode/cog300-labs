@@ -13,7 +13,7 @@ int main(int argc,char**argv){
   for(int n=0;n<20;++n){command("HEARTBEAT");tick(50,60,15);}
   assert(mode==LINE&&motorLeft>0&&motorLeft<=settings.power);
   tape(0);command("HEARTBEAT");tick(50,60,15);
-  assert(mode==LINE&&lineFollower.state==line::Follower::FOLLOW&&motorLeft>0&&motorRight>0);return 0;
+  assert(mode==LINE&&lineFollower.state==line::Follower::SEARCH&&motorLeft>0&&motorRight>0);return 0;
  }
  if(!strcmp(argv[1],"opening")){
   wallNavigator.config.corridorWidth=600;

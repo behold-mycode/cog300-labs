@@ -85,16 +85,16 @@ repeated restarts of the same search. One owner produces the wheel command per t
 
 ### Follow
 
-Use the binary IR pattern as a coarse lateral error with the last reliable side
-remembered. Use modest proportional steering with yaw-rate damping from encoders;
-do not pretend three bits are a high-resolution analog line-position estimate.
-Both wheels normally move forward. Return smoothly toward straight motion when
-centre tape is restored; do not immediately pivot or stop for an outer-sensor event.
+    Use the binary IR pattern as a coarse lateral error with the last reliable side
+    remembered. Use modest proportional steering with yaw-rate damping from encoders;
+    do not pretend three bits are a high-resolution analog line-position estimate.
+    Both wheels normally move forward. Return smoothly toward straight motion when
+    centre tape is restored; do not immediately pivot or stop for an outer-sensor event.
 
-A short all-floor gap may continue the previous forward arc for a bounded distance
-(initial hypothesis: half the 50 mm tape width). The bound is distance-based and
-must be exercised in the complete simulation. Persistent loss or a persistent
-strong outer signal enters Corner/Search, not an unbounded remembered turn.
+    A short all-floor gap may continue the previous forward arc for a bounded distance
+    (initial hypothesis: half the 50 mm tape width). The bound is distance-based and
+    must be exercised in the complete simulation. Persistent loss or a persistent
+    strong outer signal enters Corner/Search, not an unbounded remembered turn.
 
 ### Corner
 

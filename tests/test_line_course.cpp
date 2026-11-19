@@ -14,6 +14,7 @@ static float distance(float x, float y, Point a, Point b) {
 // Real navigation/PWM/reversal/encoder code runs; only floor and motor are
 // models.
 int main() {
+  int failures=0;
   for (float heading : {-.12f, -.06f, 0.f, .06f, .12f})
     for (int mirror : {-1, 1})
       for (int course = 0; course < 3; ++course)
@@ -108,8 +109,9 @@ int main() {
                   "phase=%s\n",
                   heading, mirror, course, variant, reached, steps * .005f, x,
                   y, h, navigationState);
-          assert(reached);
-          assert(largestHeading < 3.f);
+          if(!reached || largestHeading>=3.f)++failures;
           stopRobot();
         }
+  fprintf(stderr,"TOTAL failures=%d\n",failures);
+  assert(failures==0);
 }

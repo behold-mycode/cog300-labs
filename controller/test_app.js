@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const events = {}, nodes = {}, requests = [];
+let failFetch=false, poll;
 function element(id) {
   return nodes[id] ||= {value:'', checked:false, disabled:false, textContent:'', open:false,
     dataset:{}, handlers:{}, classList:{toggle(){}},
@@ -17,9 +18,10 @@ const document = {getElementById:element, querySelectorAll:()=>[], createElement
   hasFocus:()=>true, hidden:false, addEventListener:(name,fn)=>events['doc:'+name]=fn};
 const context = vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},
   location:{hash:'#token=test'},URLSearchParams,URL,Blob,console,
-  setTimeout:()=>1,clearTimeout(){},setInterval(){},AbortController,
+  setTimeout:()=>1,clearTimeout(){},setInterval(fn){poll=fn;},AbortController,
   fetch:async (url,options)=>{
     const body=options.body?JSON.parse(options.body):null;requests.push({url,body});
+    if(failFetch)throw new TypeError('Network request failed');
     return {ok:true,json:async()=> url.endsWith('/ports')?[]:url.endsWith('/connect')?{owner:'owner'}:state};
   }});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'app.js'),'utf8'),context);
@@ -52,6 +54,14 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   state.telemetry.left=240;state.telemetry.motorRight=250;
   await element('stop').handlers.click();await flush();
   assert.match(element('wheelStatus').textContent,/PWM L 240 · R 250/);
+  failFetch=true;
+  events.keydown(key('ArrowUp'));await flush();
+  assert.equal(element('start').disabled,true);
+  failFetch=false; await poll(); await flush();
+  assert.equal(frames().at(-1).body.owner,'owner');
+  assert.deepEqual(frames().at(-1).body.keys,[]);
+  assert.equal(frames().at(-1).body.mode,'MANUAL');
+  assert.equal(element('badge').textContent,'Connected');
   const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
   assert.deepEqual([...html.matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]),['LINE','STOP_ON_TAPE','STOP_AT_END','OBJECT','RACE','CALIBRATE','MANUAL']);
   assert.ok(!html.includes('<form')&&!html.includes('maintenance')&&!html.includes('Calibration'));

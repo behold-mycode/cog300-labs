@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
+subprocess.run(["python3", str(root / "build_wifi_page.py"), "--check"], check=True)
 with tempfile.TemporaryDirectory() as directory:
     for source in sorted((root/'tests').glob('test_*.cpp')):
         binary = str(Path(directory)/source.stem)

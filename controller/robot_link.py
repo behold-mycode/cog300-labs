@@ -52,6 +52,7 @@ class RobotLink:
         self.serial = None
         self.owner = None
         self.ready = False
+        self.browser_paused = False
         self.phase = 'Disconnected'
         self.settings = DEFAULTS.copy()
         self.keys, self.mode = [], 'MANUAL'
@@ -75,6 +76,7 @@ class RobotLink:
         self.serial = self.serial_factory(port)
         self.owner = secrets.token_urlsafe(24)
         self.ready = False
+        self.browser_paused = False
         self.phase = 'Waiting for firmware 7'
         self.keys, self.mode = [], 'MANUAL'
         self.buffer.clear(); self.telemetry = {}; self.navigation = {}
@@ -102,6 +104,9 @@ class RobotLink:
             raise ValueError('Invalid keyboard or mode input.')
         self._authorize(owner, seq)
         self.last_browser = self.clock()
+        if self.browser_paused:
+            if keys or mode != 'MANUAL': return
+            self.browser_paused = False
         # Never queue movement while waiting for handshake/settings acknowledgement.
         self.keys = keys if self.ready and mode == 'MANUAL' else []
         self.mode = mode if self.ready else 'MANUAL'
@@ -227,10 +232,25 @@ class RobotLink:
             except OSError: pass
         self.trace_recording=False
         self.serial = self.owner = None
+        self.browser_paused = False
         self.ready = False; self.keys, self.mode = [], 'MANUAL'
         self.map_exporting = False; self.pending_navigation = None
         self.phase = reason
         self.log(reason)
+
+    def _recover(self, reason):
+        """Keep the port/owner, but require a fresh stopped firmware session."""
+        self.ready = False
+        self.browser_paused = True
+        self.keys, self.mode = [], 'MANUAL'
+        self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
+        self.map_exporting = False; self.pending_navigation = None
+        self.trace_recording = False
+        self.phase = 'Waiting for firmware 7'
+        self.started = self.clock() - 2
+        self.last_hello = -100.
+        self._send('STOP')
+        self.log(reason + ' — retrying firmware handshake; USB retained.')
 
     def _receive(self, line):
         if line != 'ALIVE' and not line.startswith('OBS,'): self.log('< ' + line)
@@ -256,10 +276,12 @@ class RobotLink:
             self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
         elif line == 'ALIVE':
             self.last_rx = self.clock()
-        elif line.startswith(('CONTROL_TIMEOUT', 'ERROR')):
-            self.disconnect('Firmware stopped — reconnect. ' + line)
+        elif line.startswith('CONTROL_TIMEOUT'):
+            self._recover('Firmware watchdog expired')
+        elif line.startswith('ERROR'):
+            self.disconnect('Firmware error: ' + line)
         elif line.startswith('ROBOT_BOOT') and self.ready:
-            self.disconnect('Board reset — reconnect.')
+            self._recover('Board reset')
         elif line.startswith('NAV,'):
             try:
                 v = [float(x) for x in line.split(',')[1:]]
@@ -333,8 +355,12 @@ class RobotLink:
         if not self.serial: return
         try:
             now = self.clock()
-            if now - self.last_browser > BROWSER_TIMEOUT:
-                self.disconnect('Browser stopped responding — reconnect.'); return
+            if now - self.last_browser > BROWSER_TIMEOUT and not self.browser_paused:
+                self._send('STOP')
+                self.browser_paused = True
+                self.keys, self.mode = [], 'MANUAL'
+                self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
+                self.log('Browser inactive — motors stopped; USB connection retained.')
             self.buffer.extend(self.serial.read(min(self.serial.in_waiting, 2048)))
             if len(self.buffer) > 4096:
                 self.disconnect('Invalid serial stream — reconnect.'); return
@@ -348,13 +374,11 @@ class RobotLink:
             if len(self.buffer) > 384 and b'\n' not in self.buffer:
                 self.disconnect('Invalid serial line — reconnect.'); return
             if self.phase == 'Waiting for firmware 7':
-                if now - self.started > 10:
-                    self.disconnect('No firmware 7 response — upload the sketch and reconnect.'); return
                 if now - self.started >= 2 and now - self.last_hello >= .5:
                     self._send('HELLO'); self.last_hello = now
                 return
             if now - self.last_rx > 1:
-                self.disconnect('Serial connection lost — reconnect.'); return
+                self._recover('Firmware response delayed'); return
             if now - self.last_tx < .1: return
             self.last_tx = now
             self._send('HEARTBEAT')
@@ -375,7 +399,9 @@ class RobotLink:
         return header+'\n'+'\n'.join(self.trace_rows)+'\n'
 
     def snapshot(self):
-        return dict(connected=self.serial is not None, ready=self.ready, status=self.phase,
+        return dict(connected=self.serial is not None, ready=self.ready and not self.browser_paused,
+                    status=(self.phase + ' — USB open; motors disabled') if not self.ready and self.serial else
+                           'Browser inactive — motors stopped; USB connected' if self.browser_paused else self.phase,
                     mode=self.mode, settings=self.settings, telemetry=self.telemetry, navigation=self.navigation, mazeMap=self.maze_map, mapExporting=self.map_exporting,
                     traceRows=len(self.trace_rows),traceRecording=self.trace_recording,log=list(self.history))
 

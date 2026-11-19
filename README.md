@@ -1,6 +1,6 @@
 # COGS 300 Robot
 
-**Current build: laptop USB control with redesigned line following.** See [USB-Lab-Setup.md](USB-Lab-Setup.md). Line mode uses physical wheel-speed feedback, geometry-aware steering, and live tape capture, with the USB disconnect stop retained. See [Line-Control-Tuning.md](Line-Control-Tuning.md) for the rebuilt behavior, tuning commands, and verification limits. Optional battery auto-start is available by changing `ROBOT_LINE_ONLY` from `0` to `1` in `Robot/Robot.h`; see [Standalone-Line-Setup.md](Standalone-Line-Setup.md).
+**Working checkpoint: `direct-rollback-ir-v1` (2026-11-18).** After correcting the centre IR sensor, which had been reporting floor even over tape, the user reports that the installed robot now works very well. This checkpoint matches that installed direct follower and preserves the GUI, live IR indicators, tuning and path tracing. The later encoder yaw-damping candidate was never uploaded and is excluded. Earlier startup failures occurred with the misadjusted centre sensor, so they cannot establish that the driving algorithm caused those failures.
 
 
 ## Download and set up

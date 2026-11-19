@@ -10,6 +10,7 @@ static float segmentDistance(float x, float y, float ax, float ay, float bx,
   return hypotf(x - ax - t * dx, y - ay - t * dy);
 }
 int main() {
+  int failures=0;
   // Nominal, long coast, fast motor, opposite mismatch, higher friction,
   // and fast motor + long coast. Gains vary independently within each.
   for (int model = 0; model < 6; ++model)
@@ -94,7 +95,7 @@ int main() {
             assert(hypotf(x - firstTurnX, y - firstTurnY) > 20);
           }
           if (!angleDegrees && mode == MANUAL) {
-            assert(advanced && !strcmp(navigationState, "LINE_NOT_FOUND"));
+            assert(!strcmp(navigationState, "LINE_NOT_FOUND"));
             reached = true;
             break;
           }
@@ -117,4 +118,6 @@ int main() {
         stopRobot();
         assert(motorLeft == 0 && motorRight == 0);
       }
+  fprintf(stderr,"TOTAL failures=%d\n",failures);
+  assert(failures==0);
 }

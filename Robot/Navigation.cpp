@@ -50,8 +50,6 @@ void startNavigation(Mode selected) {
   if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
     if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
     if(!feedbackReady()){navigationState="ENCODERS_REQUIRED";return;}
-    lineFollower.config.sensorOffset=lineSensorOffset();
-    lineFollower.config.track=odometry.track;
     if(selected!=STOP_ON_TAPE&&!lineFollower.begin(lineInput())){
       navigationState=lineFollower.reason;return;
     }
@@ -69,7 +67,7 @@ void startNavigation(Mode selected) {
   mode=selected;navigationState="WAITING_FOR_SENSOR";
   if(ROBOT_LINE_ONLY&&selected==LINE){
     standaloneActive=true;controlSession=false;controlExpired=false;
-    lineFollower.config.continuousSearch=true;
+    lineFollower.config.allowOffTapeStart=true;
   }
 }
 // Obstacle observation constrains all autonomous commands. No competing controller
@@ -197,7 +195,7 @@ void reportLineControl(){
   Serial.print(F("LINECTRL,"));Serial.print((int)lineFollower.state);
   Serial.print(',');Serial.print(lineWheels.cruise);Serial.print(',');Serial.print(lineWheels.minimum);
   Serial.print(',');Serial.print(lineWheels.saturated?1:0);
-  Serial.print(',');Serial.print(lineFollower.targetHeading);Serial.print(',');Serial.print(lineFollower.remaining);
+  Serial.print(F(",0,0")); // Reserved legacy heading/remaining fields; no geometric planner.
   Serial.print(',');Serial.print(i.leftSpeed);Serial.print(',');Serial.println(i.rightSpeed);
 }
 
@@ -205,13 +203,14 @@ void armBatteryLine(){batteryLinePending=true;batteryLineArmedAt=millis();}
 void serviceBatteryLine(){
   if(!batteryLinePending||(uint32_t)(millis()-batteryLineArmedAt)<1500)return;
   batteryLinePending=false;
-  lineFollower.config.continuousSearch=true;
+  lineFollower.config.allowOffTapeStart=true;
   startNavigation(LINE);
   standaloneActive=mode==LINE;
 }
 
-void configureLineSpeeds(float cruise,float turn,float correction,float capture){
-  stopRobot();auto& c=lineFollower.config;
+void configureLineSpeeds(float cruise,float turn,float correction,float capture,bool keepRunning){
+  if(!keepRunning)stopRobot();
+  auto& c=lineFollower.config;
   c.cruiseSpeed=cruise;c.turnSpeed=turn;c.correctionSpeed=correction;c.captureSpeed=capture;
 }
 bool configureLineMotor(float reference,float offset,float kp,float ki,int start){

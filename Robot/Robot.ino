@@ -7,6 +7,12 @@ void setup() {
   setupLine();
   Serial.begin(115200);
   configureHardware(hardware::CAR);loadCalibration();setupStandalone();setupWireless();
+  // Eight-cell PI calibration in actual PWM units; full 0..255 output available.
+  #if ROBOT_EIGHT_CELL_PROFILE
+  configureLineSpeeds(250,250,250,125);
+  configureLineMotor(200,18.82f,.2353f,.5647f,61);
+  configureLineDrive(66,0);
+  #endif
   if(ROBOT_LINE_ONLY){
     lineTapeLevel=0; // Installed sensors: LOW tape, HIGH floor.
     armBatteryLine();
