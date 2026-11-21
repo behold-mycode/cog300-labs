@@ -12,6 +12,10 @@ class Request {
   if((size_t)(end-begin)!=strlen(name))return false;
   while(begin<end){char c=*begin++;if(c>='A'&&c<='Z')c+=32;if(c!=*name++)return false;}return true;
  }
+ bool firmwarePath()const{
+  static constexpr char line[]="POST /firmware HTTP/1.1\r\n";
+  return !strncmp(bytes,line,sizeof(line)-1);
+ }
  bool decimal(const char*begin,const char*end,uint32_t&value){
   if(begin==end)return false;value=0;
   for(auto p=begin;p<end;++p){if(*p<'0'||*p>'9'||value>(UINT32_MAX-(*p-'0'))/10)return false;value=value*10+(*p-'0');}
@@ -33,7 +37,7 @@ class Request {
     char*tail=end;while(tail>value&&(tail[-1]==' '||tail[-1]=='\t'))--tail;
     uint32_t number=0;
     if(nameIs(p,colon,"content-length")){
-     if(haveLength||!decimal(value,tail,number)||number>95){bad=true;return;}
+     if(haveLength||!decimal(value,tail,number)||number>(firmwarePath()?200u:95u)){bad=true;return;}
      haveLength=true;length=number;
     }else if(nameIs(p,colon,"transfer-encoding")){bad=true;return;}
     else if(nameIs(p,colon,"x-robot-control")){
@@ -50,6 +54,9 @@ class Request {
   if(!complete||bad||length)return false;
   char line[80];if(strlen(path)>50)return false;
   strcpy(line,"GET ");strcat(line,path);strcat(line," HTTP/1.1\r\n");return !strncmp(bytes,line,strlen(line));
+ }
+ const char* firmwareManifest()const{
+  return complete&&!bad&&control&&length==200&&firmwarePath()?bytes+header:nullptr;
  }
  uint32_t token()const{return sessionToken;}
  bool command(char*out)const{

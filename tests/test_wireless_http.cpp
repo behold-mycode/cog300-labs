@@ -15,5 +15,9 @@ int main(){
  r=parse("POST /command HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n");assert(r.bad);
  r=parse("POST /command HTTP/1.1\r\nContent-Length: 95\r\n\r\nSAVE");assert(!r.complete&&!r.command(out));
  r=parse("POST /command HTTP/1.1\r\nX-Robot-Control: 1\r\nX-Robot-Token: 12345\r\nContent-Length: 9\r\n\r\nHEARTBEAT");assert(r.command(out)&&r.token()==12345);
+ std::string manifest(200,'a');
+ r=parse("POST /firmware HTTP/1.1\r\nX-Robot-Control: 1\r\nContent-Length: 200\r\n\r\n"+manifest);
+ assert(r.firmwareManifest()&&manifest==r.firmwareManifest()&&!r.command(out));
+ assert(post(manifest).bad);
  r=post("LINESPEED 200 90 180 130");assert(r.command(out));
 }

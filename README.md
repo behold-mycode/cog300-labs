@@ -22,4 +22,4 @@ The controller exposes line following, both Lab 07 tape-stop demonstrations, obj
 
 ## Wi-Fi control
 
-The UNO R4 can now host a browser for line start/stop, live readings and tuning while retaining USB uploads and the existing desktop controller. See [WiFi-Control.md](WiFi-Control.md) for connection and ownership behavior.
+The UNO R4 can now host a browser for line start/stop, live readings and tuning while retaining USB uploads and the existing desktop controller. For wireless sketch uploads from the Mac, see [the one-time USB setup and Wi-Fi updater](WiFi-Control.md#wireless-firmware-updates-from-the-mac).
