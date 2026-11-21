@@ -24,9 +24,58 @@ class LinkTests(unittest.TestCase):
     def ready(self):
         self.link.frame(self.owner, 1, [], 'MANUAL')
         self.now = 2.; self.link.frame(self.owner, 2, [], 'MANUAL'); self.link.tick()
-        self.serial.feed('ROBOT_READY 7'); self.link.tick()
+        self.serial.feed('CAPS ARENA_1'); self.serial.feed('ROBOT_READY 7'); self.link.tick()
         self.serial.feed('OK CONFIG'); self.link.tick()
         self.assertTrue(self.link.ready)
+    def test_old_firmware_blocks_arena_commands(self):
+        self.serial.feed('ROBOT_READY 7'); self.link.tick()
+        for seq, mode in enumerate(('OBJECT','RADAR_SCAN','RADAR_ARM'),1):
+            with self.assertRaisesRegex(ValueError,'scanner firmware'):
+                self.link.frame(self.owner, seq, [], mode)
+        with self.assertRaisesRegex(ValueError,'scanner firmware'):
+            self.link.action(self.owner,4,'radar_profile',dict(minMm=50,maxMm=90))
+        self.assertNotIn('MODE OBJECT',self.serial.sent)
+        self.assertFalse(any(s.startswith('RADAR') for s in self.serial.sent))
+
+    def test_radar_commands_and_partial_sweeps(self):
+        self.ready()
+        self.link.action(self.owner, 3, 'radar_profile', dict(minMm=50, maxMm=100))
+        self.assertEqual(self.serial.sent[-1], 'RADAR PROFILE 50 100')
+        self.serial.feed('OK RADAR PROFILE'); self.link.tick()
+        self.assertEqual(self.link.radar_snapshot()['settings']['maxMm'],100)
+        self.link.frame(self.owner, 4, [], 'RADAR_SCAN'); self.now += .11; self.link.tick()
+        self.assertIn('RADAR SCAN', self.serial.sent)
+        for line in ('RADAR,7,-5,510,1','RADAR,7,0,-1,0','RADAR,7,5,530,2','LOCK,5,530,60'):
+            self.serial.feed(line)
+        self.link.tick()
+        radar = self.link.radar_snapshot()
+        self.assertEqual(len(radar['samples']),3)
+        self.assertEqual(radar['lock'],[5,530,60])
+        self.serial.feed('RADAR,8,4,500,1'); self.serial.feed('RADAR,7,9,510,2'); self.link.tick()
+        self.assertEqual(self.link.radar_snapshot()['samples'],[[4,500,1]])
+        self.now += 2.1
+        self.assertEqual(self.link.radar_snapshot()['samples'],[])
+        self.link._receive('DATA,3000,OBJECT,TURNING,20,30,90,-90')
+        self.assertIsNone(self.link.radar_snapshot()['lock'])
+        self.link.frame(self.owner, 5, [], 'MANUAL')
+        self.serial.feed('ALIVE'); self.link.tick()
+        self.assertEqual(self.serial.sent[-1],'STOP')
+
+    def test_bench_widths_require_both_neighbors(self):
+        self.ready()
+        self.link.sent_mode = 'RADAR_SCAN'
+        for angle,mm,group in [(-60,400,1),(-57,400,1),(-54,-1,0),(-51,500,2),(-48,500,2),(-45,-1,0),(-39,500,3),(-36,500,3),(-33,-1,0)]:
+            self.link._receive(f'RADAR,1,{angle},{mm},{group}')
+        widths = self.link.radar_snapshot()['bench']
+        self.assertEqual([w['status'] for w in widths],['edge clipped','bounded','incomplete'])
+        self.assertEqual(widths[1]['width'],52)
+        self.link._receive('RADAR,2,-60,-1,0')
+        self.assertEqual(self.link.radar_snapshot()['previousBench']['contours'],widths)
+        with self.assertRaises(ValueError):
+            self.link.action(self.owner,3,'radar_servo',dict(rightUs=900,centerUs=1500,leftUs=1490))
+        self.link.action(self.owner,3,'radar_servo',dict(rightUs=1950,centerUs=1500,leftUs=1000))
+        self.assertEqual(self.serial.sent[-1],'RADAR SERVO 1950 1500 1000')
+
     def test_wall_mode_and_calibration(self):
         self.ready()
         self.link.action(self.owner, 3, 'sonar', dict(enabled=1, interval=25))

@@ -5,6 +5,7 @@ static commissioning::Setup automaticSetup;
 static Mode setupDestination=RACE;
 bool automaticSetupActive(){return automaticSetup.state>=commissioning::Setup::CHECK&&automaticSetup.state<=commissioning::Setup::COAST;}
 void cancelAutomaticSetup(){automaticSetup.cancel();}
+float lineSensorOffset(){return activeHardware.floorSensorOffset;}
 uint32_t hardwareFingerprint(){return activeHardware.valid()?activeHardware.fingerprint():0;}
 bool hardwareMotorDirectionsMatch(bool a,bool b){return activeHardware.valid()&&a==activeHardware.invertA&&b==activeHardware.invertB;}
 bool configureHardware(const hardware::Profile&p){

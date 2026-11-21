@@ -16,6 +16,8 @@ Keep Terminal open while using the controller. For setup help and troubleshootin
 
 Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** Wall-maze behavior remains physically unvalidated.
 
+For the servo-mounted front sonar, contour display and arena run controls, see the [object detection guide](Object-Detection-Design.md).
+
 The controller exposes line following, both Lab 07 tape-stop demonstrations, object search, three-sonar line/wall maze, explicit wheel calibration, and manual driving. The firmware owns configuration. See the current USB guide above; older standalone and observation-first documents describe historical/opt-in behavior.
 
 ## Wi-Fi control

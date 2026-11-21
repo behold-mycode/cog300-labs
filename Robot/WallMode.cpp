@@ -33,7 +33,7 @@ bool prepareWallCalibration(bool requireLeft){
  c.angleTolerance=fmaxf(.025f,2*c.distanceTolerance/c.track);
  return c.valid();
 }
-wall::Input motionInput(){readWallInput();return wallInput;}
+const wall::Input& motionInput(){readWallInput();return wallInput;}
 void driveVelocity(wall::Speeds target){
  if(target.left==0&&target.right==0){stopMotor();wheelVelocity.reset();targets={};return;}
  readWallInput();uint32_t now=millis();if((uint32_t)(now-lastControlStep)<20)return;

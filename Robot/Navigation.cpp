@@ -1,4 +1,6 @@
 #include "Robot.h"
+#include "RadarSensor.h"
+#include "ArenaSearch.h"
 #include <math.h>
 #include "LineWheelControl.h"
 static uint32_t lastLineUs=0,maxLineGapUs=0;
@@ -46,7 +48,194 @@ void serviceRaceLine(wall::Input input,uint8_t tape){
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
 maze::Explorer explorer;
-static object::Search objectSearch;
+static arena::Search arenaSearch;
+static bool profileSet=false, exitArmed=false, sawFloor=false;
+enum class EntryPhase { WALL, STRIPE, CLEARING };
+static EntryPhase entryPhase=EntryPhase::WALL;
+enum class WallApproach { TRACK, PASS_OPENING, PIVOT };
+static WallApproach approachPhase=WallApproach::TRACK;
+static wall::Turn approachTurn;
+static float openingPath=0;
+static uint32_t cornerAt=0;
+static bool acquiredWall=false;
+static uint8_t stripeMask=0;
+static uint32_t entryAt=0;
+static float entryPath=0, clearPath=0, entryHeading=0;
+static int benchAngle=0, benchSegment=0, benchPrevious=-1, benchStep=3, benchDirection=1;
+static uint16_t benchSweep=0;
+static uint32_t benchAimAt=0;
+
+struct RadarPlotPoint { int16_t angle,mm,segment; };
+static RadarPlotPoint plotTail[8];
+static unsigned plotCount=0,plotNext=0;
+static uint16_t plotSweep=0,sourceSweep=0;
+static uint32_t plotTime=0;
+static int plotLock[3]={};
+void radarWirelessStatus(char* out,size_t size){
+  if(!size)return;
+  size_t used=0;
+  auto append=[&](const char* fmt,auto... args){
+    if(used>=size)return;
+    int n=snprintf(out+used,size-used,fmt,args...);
+    if(n>=0)used+=(size_t)n;
+  };
+  append("\"radar\":{\"sweep\":%u,\"ms\":%lu,\"step\":%d,\"points\":[",(unsigned)plotSweep,(unsigned long)plotTime,benchStep);
+  for(unsigned i=0;i<plotCount;++i){
+    const auto& p=plotTail[(plotNext+8-plotCount+i)%8];
+    append("%s[%d,%d,%d]",i?",":"",p.angle,p.mm,p.segment);
+  }
+  append("%s","],\"lock\":[");
+  if(plotLock[1]>0)append("%d,%d,%d",plotLock[0],plotLock[1],plotLock[2]);
+  append("%s","]}");
+}
+void radarPoint(uint16_t sweep,int angle,int mm,int segment){
+  if(!plotCount||sweep!=sourceSweep){plotCount=0;plotNext=0;plotLock[1]=0;sourceSweep=sweep;++plotSweep;}
+  plotTail[plotNext]={(int16_t)angle,(int16_t)mm,(int16_t)segment};
+  plotNext=(plotNext+1)%8;if(plotCount<8)++plotCount;
+  plotTime=millis();
+  Serial.print(F("RADAR,"));Serial.print(plotSweep);Serial.print(',');Serial.print(angle);
+  Serial.print(',');Serial.print(mm);Serial.print(',');Serial.println(segment);
+}
+void radarLock(int angle,int mm,int width){
+  plotLock[0]=angle;plotLock[1]=mm;plotLock[2]=width;
+  Serial.print(F("LOCK,"));Serial.print(angle);Serial.print(',');Serial.print(mm);
+  Serial.print(',');Serial.println(width);
+}
+static bool enableScanner(){
+  radarEnable();
+  if(radarReady())return true;
+  navigationState="RADAR_SERVO_UNAVAILABLE";return false;
+}
+bool radarProfile(int minimum,int maximum){
+  stopRobot();
+  if(!enableScanner())return false;
+  arenaSearch.setProfile(minimum,maximum);profileSet=true;return true;
+}
+void radarClearance(int mm){stopRobot();arenaSearch.setEntryClearance(mm);}
+void radarBenchStep(int step){stopRobot();benchStep=step;}
+bool radarStartBench(){
+  stopRobot();
+  if(!enableScanner())return false;
+  mode=RADAR_SCAN;navigationState="RADAR_BENCH_SCAN";
+  ++benchSweep;benchAngle=-60;benchDirection=1;benchSegment=0;benchPrevious=-1;
+  benchAimAt=millis();radarAim(benchAngle);return true;
+}
+static void serviceBench(){
+  const SensorReading r=radarReading();
+  const bool fresh=(int32_t)(r.sampledMs-benchAimAt)>0 && r.sequence &&
+    (r.status==RANGE_VALID||r.status==RANGE_NO_RETURN);
+  if(!fresh && millis()-benchAimAt<950)return;
+  int mm=fresh && r.status==RANGE_VALID?(int)lroundf(r.cm*10):-1;
+  if(mm>0 && (benchPrevious<0 || !arena::Search::adjacent(benchPrevious,mm,benchStep)))++benchSegment;
+  radarPoint(benchSweep,benchAngle,mm,mm>0?benchSegment:0);benchPrevious=mm;
+  if(benchDirection*benchAngle==60){
+    ++benchSweep;benchDirection=-benchDirection;benchSegment=0;benchPrevious=-1;
+  }else benchAngle+=benchDirection*benchStep;
+  benchAimAt=millis();radarAim(benchAngle);
+}
+static void watchMazeExit(){
+  approachPhase=WallApproach::TRACK;acquiredWall=false;
+  radarAim(0);exitArmed=true;sawFloor=false;entryPhase=EntryPhase::WALL;
+}
+bool radarArmExit(){
+  if(!profileSet){navigationState="RADAR_PROFILE_REQUIRED";return false;}
+  if(!radarReady()){navigationState="RADAR_SERVO_UNAVAILABLE";return false;}
+  if(mode!=MANUAL && mode!=WALL && mode!=WALL_MAZE){navigationState="STOP_OR_SELECT_WALL_FIRST";return false;}
+  if(lineTapeLevel<0 || !prepareWallCalibration(false)){navigationState="CALIBRATE_WHEELS_FIRST";return false;}
+  if(mode==MANUAL){startNavigation(WALL);if(mode!=WALL)return false;}
+  if(!exitArmed)watchMazeExit();
+  navigationState="ARENA_EXIT_ARMED";return true;
+}
+static void arenaStop(const char* why){stopRobot();navigationState=why;}
+// Two-sonar right-wall approach for an armed arena run. Use calibrated wheel
+// speeds and measured quarter turns. The existing three-sonar graph solver
+// retains control when the operator arms it mid-maze.
+static void serviceArmedWall(){
+  const auto& i=motionInput();
+  const auto& c=wallNavigator.config;
+  float front=wall::corrected(c,i,0);
+  float right=wall::corrected(c,i,1);
+  if(i.ranges[0].noReturn && i.now-i.ranges[0].stamp<300)front=4000;
+  if(i.ranges[1].openBeyond && i.now-i.ranges[1].stamp<300)right=wall::SIDE_RANGE_MM;
+  if(front<0 || right<0){driveVelocity({});navigationState="ARENA_WAITING_FOR_WALL_RANGE";return;}
+  const float speed=fminf(80,c.cruise);
+  const float stopping=speed*c.reaction+speed*speed/(2*c.deceleration);
+  const float turnRadius=c.radius()+c.margin;
+  if(approachPhase==WallApproach::PIVOT){
+    if(i.now-cornerAt>9000 || front+c.frontSensor<=turnRadius || right+c.sideY<=turnRadius){
+      arenaStop("ARENA_MAZE_PIVOT_BLOCKED");return;
+    }
+    auto d=approachTurn.step(c,i);
+    if(approachTurn.failed){arenaStop("ARENA_MAZE_PIVOT_DRIFT");return;}
+    if(approachTurn.done){approachPhase=WallApproach::TRACK;acquiredWall=false;}
+    driveVelocity(d);navigationState="ARENA_MAZE_PIVOT";return;
+  }
+  const float desired=fmaxf(settings.wallCm*10,turnRadius-c.sideY+25);
+  bool opening=right>desired+110;
+  if(!opening){acquiredWall=true;approachPhase=WallApproach::TRACK;}
+  else if(acquiredWall && approachPhase==WallApproach::TRACK){
+    openingPath=i.pose.path;approachPhase=WallApproach::PASS_OPENING;
+  }
+  bool turnRight=approachPhase==WallApproach::PASS_OPENING && i.pose.path-openingPath>=c.sideX+turnRadius;
+  bool turnLeft=front+c.frontSensor<turnRadius+stopping+45;
+  if(turnRight||turnLeft){
+    if(front+c.frontSensor<=turnRadius || right+c.sideY<=turnRadius){
+      arenaStop("ARENA_MAZE_CORNER_TOO_TIGHT");return;
+    }
+    cornerAt=i.now;approachPhase=WallApproach::PIVOT;
+    approachTurn.begin((turnRight?-.5f:.5f)*maze::PI_F,i.pose);driveVelocity({});return;
+  }
+  if(!acquiredWall && opening){driveVelocity({});navigationState="ARENA_NEEDS_RIGHT_WALL";return;}
+  float steer=opening?0:wall::limit(.48f*(right-desired),-speed*.45f,speed*.45f);
+  driveVelocity({speed+steer,speed-steer});navigationState="ARENA_TRACKING_RIGHT_WALL";
+}
+static bool serviceEntry(){
+  const auto& i=motionInput();
+  const uint8_t tape=lineMask();
+  if(entryPhase==EntryPhase::WALL){
+    if(!tape)sawFloor=true;
+    if(!sawFloor && tape){arenaStop("ARENA_ARM_ON_BARE_FLOOR");return true;}
+    if(!tape)return false;
+    if((mode==WALL && approachPhase==WallApproach::PIVOT) ||
+       ((mode==WALL_MAZE || mode==RACE) && wallNavigator.state!=wall::Navigator::CORRIDOR)){
+      arenaStop("ARENA_TAPE_DURING_TURN");return true;
+    }
+    entryPhase=EntryPhase::STRIPE;entryPath=i.pose.path;entryAt=i.now;
+    entryHeading=i.pose.heading;stripeMask=0;resetWallFeedback();
+  }
+  auto &c=wallNavigator.config;
+  if(i.now-entryAt>15000 || fabsf(i.pose.heading-entryHeading)>.22f){
+    arenaStop("ARENA_ENTRY_DRIFT_OR_TIMEOUT");return true;
+  }
+  if(entryPhase==EntryPhase::STRIPE){
+    stripeMask|=tape;
+    if(i.pose.path-entryPath>100){arenaStop("ARENA_EXIT_STRIPE_TOO_LONG");return true;}
+    if(!tape){
+      if(stripeMask!=7){arenaStop("ARENA_EXIT_MARKER_INCOMPLETE");return true;}
+      clearPath=i.pose.path;entryPhase=EntryPhase::CLEARING;
+    }
+  }else if(tape){arenaStop("OBJECT_ARENA_BOUNDARY");return true;}
+  // On release the floor sensors are already inside but the axle is still
+  // behind the stripe. Clear the pivot envelope before allowing a turn.
+  if(entryPhase==EntryPhase::CLEARING && i.pose.path-clearPath>=lineSensorOffset()+c.radius()+c.margin){
+    bool standalone=standaloneActive;
+    stopRobot();wallNavigator.invalidate();explorer.invalidate();resetWallFeedback();
+    arenaSearch.begin(motionInput());mode=OBJECT;standaloneActive=standalone;
+    navigationState=arenaSearch.reason;return true;
+  }
+  float front=wall::corrected(c,i,0);
+  float speed=fminf(65,c.cruise), v=fmaxf(speed,fmaxf(fabsf(i.leftSpeed),fabsf(i.rightSpeed)));
+  float needed=c.front-c.frontSensor+c.margin+v*c.reaction+v*v/(2*c.deceleration);
+  if(front<needed){arenaStop("ARENA_ENTRY_FRONT_BLOCKED");return true;}
+  navigationState=entryPhase==EntryPhase::STRIPE?"ARENA_CROSSING_STRIPE":"ARENA_CLEARING_STRIPE";
+  float correction=wall::limit((entryHeading-i.pose.heading)*c.track,-speed*.35f,speed*.35f);
+  driveVelocity({speed-correction,speed+correction});return true;
+}
+bool raceUsesArenaExit(){
+  if(!profileSet)return false;
+  if(!exitArmed)watchMazeExit();
+  return true;
+}
 const char* navigationState="STOPPED";
 static maze::ProgressGuard progress;
 static bool wallTurning=false;
@@ -56,13 +245,13 @@ static void hold(const char* reason) { stopMotor();navigationState=reason; }
 static bool feedbackReady() { return encodersEnabled()&&odometry.configured&&odometry.sampled; }
 const char* modeName() {
   switch(mode) {
-    case CALIBRATE:return "CALIBRATE";case OBJECT:return "OBJECT";case RACE:return "RACE";case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
+    case RADAR_SCAN:return "RADAR_SCAN";case CALIBRATE:return "CALIBRATE";case OBJECT:return "OBJECT";case RACE:return "RACE";case WALL_MAZE:return "WALL_MAZE";case FOLLOW:return "FOLLOW";case WALL:return "WALL";case LINE:return "LINE";
     case MAZE:return "MAZE";case STOP_ON_TAPE:return "STOP_ON_TAPE";case STOP_AT_END:return "STOP_AT_END";
     default:return "MANUAL";
   }
 }
 void cancelNavigation() {
-  batteryLinePending=false;lineFollower.stop();lineWheels.reset();cancelAutomaticSetup();raceNavigator.stop();objectSearch.stop();standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
+  batteryLinePending=false;lineFollower.stop();lineWheels.reset();cancelAutomaticSetup();raceNavigator.stop();arenaSearch.stop();plotCount=0;plotLock[1]=0;exitArmed=false;standaloneActive=false;explorer.pause();pauseWall();mode=MANUAL;progress.reset();wallMotion.cancel();wallTurning=false;
   navigationState="STOPPED";
 }
 void stopRobot() { cancelNavigation();stopMotor(); }
@@ -73,13 +262,7 @@ void startNavigation(Mode selected) {
     if(beginAutomaticSetup(CALIBRATE))mode=CALIBRATE;
     return;
   }
-  if(selected==OBJECT){
-    if(lineTapeLevel<0||!prepareWallCalibration(false)){
-      navigationState="CALIBRATE_WHEELS_FIRST";
-      return;
-    }
-    resetWallFeedback();objectSearch.begin(motionInput());
-  }
+  if(selected==OBJECT){navigationState="MAZE_EXIT_TAPE_REQUIRED";return;}
   if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
     lastLineUs=maxLineGapUs=0;
     if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
@@ -99,6 +282,12 @@ void startNavigation(Mode selected) {
     if(!explorer.begin(odometry.pose)) { navigationState=explorer.reason;return; }
   } else if(selected!=MANUAL) explorer.invalidate();
   mode=selected;navigationState="WAITING_FOR_SENSOR";
+  if(profileSet && (selected==WALL||selected==WALL_MAZE)){
+    if(!radarReady()||lineTapeLevel<0||!prepareWallCalibration(false)){
+      arenaStop("ARENA_CALIBRATION_REQUIRED");return;
+    }
+    watchMazeExit();
+  }
   if(ROBOT_LINE_ONLY&&selected==LINE){
     standaloneActive=true;controlSession=false;controlExpired=false;
   }
@@ -146,17 +335,19 @@ static void followWall() {
 }
 void serviceNavigation() {
   if(mode==MANUAL) return;
+  if(mode==RADAR_SCAN){serviceBench();return;}
   if(automaticSetupActive()){serviceAutomaticSetup();return;}
-  if((mode==MAZE||mode==WALL_MAZE||mode==RACE||mode==LINE||mode==OBJECT||mode==STOP_AT_END||mode==STOP_ON_TAPE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
+  if((exitArmed||mode==MAZE||mode==WALL_MAZE||mode==RACE||mode==LINE||mode==OBJECT||mode==STOP_AT_END||mode==STOP_ON_TAPE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
   if(mode!=LINE && !(mode==RACE && !raceNavigator.wallStage()) && feedbackReady() && !progress.check(odometry.pose,
       {(int8_t)(motorLeft>0?1:motorLeft<0?-1:0),(int8_t)(motorRight>0?1:motorRight<0?-1:0)},
       millis(),navigationConfig.stallMs)) {
     if(mode==WALL_MAZE)wallNavigator.fail("ENCODER_STALL");else explorer.fail("ENCODER_STALL");stopRobot();navigationState="ENCODER_STALL";return;
   }
+  if(exitArmed && serviceEntry())return;
   if(mode==OBJECT){
-    driveVelocity(objectSearch.step(wallNavigator.config,motionInput(),lineMask()));navigationState=objectSearch.reason;
-    if(objectSearch.state==object::Search::FAULT||objectSearch.state==object::Search::DONE||objectSearch.state==object::Search::BOUNDARY){
-      const char*why=objectSearch.reason;stopRobot();navigationState=why;
+    driveVelocity(arenaSearch.step(wallNavigator.config,motionInput(),lineMask(),radarReading()));navigationState=arenaSearch.reason;
+    if(arenaSearch.state==arena::Search::FAULT||arenaSearch.state==arena::Search::DONE){
+      const char*why=arenaSearch.reason;stopRobot();navigationState=why;
     }
     return;
   }
@@ -176,7 +367,7 @@ void serviceNavigation() {
   }
   if(mode==RACE){serviceRace();return;}
   if(mode==WALL_MAZE){serviceWall();return;}
-  if(mode==WALL) { followWall();return; }
+  if(mode==WALL) { if(exitArmed)serviceArmedWall();else followWall();return; }
   if(mode==FOLLOW) {
     float front=sensorDistanceCm(0);
     if(front<0) { hold("FRONT_INVALID");return; }

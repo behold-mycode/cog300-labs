@@ -6,10 +6,23 @@ static const char wirelessPage[]=R"HTML(<!doctype html>
 :root{color-scheme:light;--ink:#152a3a;--blue:#145ca0;--line:#b7c6d0;--paper:#fff;--muted:#536574}
 *{box-sizing:border-box}body{margin:0;background:#edf2f5;color:var(--ink);font:16px system-ui,sans-serif}main{max-width:920px;margin:auto;padding:20px}h1{font-size:26px;margin:0}h2{font-size:19px;margin:0 0 12px}p{line-height:1.5;margin:8px 0 16px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:8px 0 20px}.tag{font-size:13px;color:var(--muted)}section{background:var(--paper);padding:20px;margin:16px 0;border:1px solid var(--line);border-radius:10px}button,input{font:inherit}button{padding:10px 14px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:white;cursor:pointer;min-height:44px}button.secondary{background:white;color:var(--blue)}button:disabled{opacity:.45;cursor:default}.actions{display:flex;flex-wrap:wrap;gap:10px}.drive{position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line);background:#edf2f5;padding:10px 0}.drive button{flex:1}#stop{background:#b52228;border-color:#b52228;font-weight:750}#message{min-height:24px;margin:8px 0;color:var(--ink)}small,.hint{color:var(--muted);font-size:13px;line-height:1.5}#status{white-space:pre-wrap;font:13px/1.6 ui-monospace,monospace;margin-top:12px}#path{display:block;width:100%;height:300px;background:#f8fafb;border:1px solid var(--line);border-radius:6px}#pathMeta{margin:10px 0;font-size:13px;font-variant-numeric:tabular-nums}#linkStatus{font-weight:650;color:var(--blue)}.sliderRow{margin:16px 0}.sliderRow label{display:flex;justify-content:space-between;gap:12px;font-weight:550}.sliderRow output{font-variant-numeric:tabular-nums;color:var(--blue);white-space:nowrap}input[type=text],select,textarea{display:block;width:100%;font:inherit;padding:9px;border:1px solid var(--line);border-radius:5px;margin:6px 0 14px}input[type=range]{width:100%;height:38px;margin:0;padding:0;accent-color:var(--blue);cursor:pointer}fieldset{border:0;padding:0;margin:0;min-width:0}fieldset:disabled{opacity:.55}summary{cursor:pointer;font-weight:650;min-height:36px}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #af6500;outline-offset:3px}.split{display:grid;grid-template-columns:1fr 1fr;gap:24px}@media(max-width:650px){main{padding:12px}section{padding:14px}.split{grid-template-columns:1fr;gap:0}.drive button{padding:9px 7px;font-size:14px}header{align-items:start}#path{height:270px}}
 .irReadings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.irSensor{display:grid;text-align:center;gap:3px;padding:7px;border:1px solid var(--line);border-radius:6px;background:white;font-size:13px}.irSensor strong{font-size:17px}.irSensor[data-reading=tape]{background:var(--blue);border-color:var(--blue);color:white}.irSensor[data-reading=unknown]{background:#edf2f5;color:var(--muted)}
+#radarPlot{display:block;width:100%;height:auto;background:#f8fafb;border:1px solid var(--line);border-radius:6px}#radarMeta{font-variant-numeric:tabular-nums}#radarProfile,#radarClearance{margin:12px 0}input[type=number]{display:block;width:100%;max-width:14rem;font:inherit;padding:8px;margin:4px 0 8px}#radarProfile .actions{align-items:center}td,th{text-align:left;padding:3px 12px}
 </style>
 <main><header><div><h1>COGS car</h1><span class="tag">Direct line follower · rollback</span></div><span id="linkStatus" role="status">Connecting…</span></header>
 <div class="drive"><div class="actions"><button id="claim">Take Wi-Fi control</button><button id="start" disabled>Start line following</button><button id="stop">STOP</button></div><div class="irReadings" role="group" aria-label="Live IR sensor readings"><div class="irSensor" data-reading="unknown"><span>Left IR</span><strong id="irLeft">—</strong></div><div class="irSensor" data-reading="unknown"><span>Centre IR</span><strong id="irCentre">—</strong></div><div class="irSensor" data-reading="unknown"><span>Right IR</span><strong id="irRight">—</strong></div></div><p id="message" role="status" aria-live="polite"></p></div>
 <p class="hint" id="controlHint">Take Wi-Fi control to enable tuning. Once started, the car follows the line until you press Stop, even if Wi-Fi drops.</p>
+<section><h2>Object radar</h2>
+<canvas id="radarPlot" width="600" height="260" role="img" aria-label="Vehicle-relative sonar returns, forward at top" aria-describedby="radarMeta"></canvas>
+<p id="radarMeta">Waiting for scanner setup.</p>
+<p id="radarWidths" hidden></p>
+<details><summary>Measured bearings and ranges</summary><table><thead><tr><th scope="col">Bearing (° left)</th><th scope="col">Range (mm)</th></tr></thead><tbody id="radarRows"></tbody></table></details>
+<fieldset disabled><legend>Scanner setup</legend>
+<form id="radarStep"><label for="stepDegrees">Stationary scan spacing</label><select id="stepDegrees"><option value="1">1°</option><option value="2">2°</option><option value="3" selected>3°</option><option value="5">5°</option></select><button class="secondary">Apply spacing</button></form>
+<form id="radarProfile"><p class="hint">Enter the apparent target widths measured during calibration.</p>
+<div class="actions"><label for="radarMin">Minimum width (mm)<input id="radarMin" type="number" min="1" max="2000" required></label><label for="radarMax">Maximum width (mm)<input id="radarMax" type="number" min="1" max="2000" required></label><button>Set target profile</button></div></form>
+<form id="radarClearance"><label for="radarRadius">Observed clear radius around entry axle (mm)</label><input id="radarRadius" type="number" min="0" max="2000" required><button class="secondary">Set entry clearance</button></form>
+<details><summary>Servo and wheel calibration</summary><form id="radarServo"><p class="hint">Enter the measured pulse widths for this bracket.</p><div class="actions"><label for="servoRight">60° right (µs)<input id="servoRight" type="number" min="800" max="2200" required></label><label for="servoCentre">Forward (µs)<input id="servoCentre" type="number" min="800" max="2200" required></label><label for="servoLeft">60° left (µs)<input id="servoLeft" type="number" min="800" max="2200" required></label><button>Apply servo calibration</button></div></form><button id="radarCalibrate" class="secondary">Start moving wheel calibration</button></details>
+<div class="actions"><button class="secondary" id="radarScan">Scan in place</button><button class="secondary" id="radarArm">Start wall-maze course</button></div></fieldset></section>
 <section><h2>Live path</h2><canvas id="path" role="img" aria-label="Live estimated robot path and heading">Estimated path; numerical position is shown below.</canvas><div id="pathMeta">Waiting for encoder position…</div><div class="actions"><button class="secondary" id="record">Pause trail</button><button class="secondary" id="clear">Clear trail</button><button class="secondary" id="download" disabled>Download run</button><button class="secondary" id="mark" disabled>Mark missed turn</button></div><p class="hint">Updates during the run. Arrow = robot heading; the grid label shows the scale. This is an encoder estimate, not a map of the tape. Wheel slip causes drift. Recording stays in this page until downloaded.</p></section>
 <section><details><summary>Run labels for later analysis</summary><label for="courseName">Course name</label><input id="courseName" type="text" maxlength="100" placeholder="e.g. Lab loop"><label for="runOutcome">Run result</label><select id="runOutcome"><option value="unlabelled">Not labelled</option><option value="completed">Completed successfully</option><option value="missed-turn">Missed a turn</option><option value="stopped">Stopped early</option></select><label for="runNotes">Run notes</label><textarea id="runNotes" maxlength="2000" rows="2" placeholder="Battery, floor, or where it failed"></textarea><p id="markers" class="hint" role="status">No missed turns marked.</p><p class="hint">Labels and button timestamps are observations, not proof of the correct driving action. Download the run before closing the page.</p></details></section><section><h2>Driving controls</h2><p class="hint">Release a slider to apply it over Wi-Fi, including while driving. No upload needed. Settings reset when robot power is switched off.</p><div id="speeds"></div><p class="hint" id="applied">Waiting for current settings…</p></section>
 <section><details><summary>Motor calibration · advanced</summary><p class="hint">These controls stop the car when applied. Ordinary driving speed is the slider above.</p><div id="advanced"></div></details></section>
@@ -50,14 +63,82 @@ el('clear').onclick=clearTrace;el('record').onclick=()=>{recording=!recording;tr
 el('download').onclick=()=>{const blob=new Blob([JSON.stringify({format:'cogs-robot-trace-v2',run:{id:runId,course:el('courseName').value,outcome:el('runOutcome').value,notes:el('runNotes').value},events:runEvents,units:{position:'mm',heading:'radians',robotTime:'ms'},note:'Encoder estimate; frames have separate origins; segments break on connection loss or paused recording.',samples:traceRecords},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='COGS-Robot-Run-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 new ResizeObserver(drawPath).observe(canvas);
 function renderIR(mask){['irLeft','irCentre','irRight'].forEach((id,i)=>{const reading=mask==null?'unknown':mask&(4>>i)?'tape':'floor',value=reading==='unknown'?'—':reading==='tape'?'TAPE':'floor',node=el(id);if(node.textContent!==value)node.textContent=value;node.parentElement.dataset.reading=reading})}
-function render(s){if(lastMs&&s.ms<lastMs){token=0;el('message').textContent=`The car restarted.`}lastMs=s.ms;snapshot=s;trace(s);renderIR(s.ir);el('status').textContent=`Control: ${s.owner}\n${s.mode} · ${s.state} · phase ${s.phase}\nTape L / C / R: ${[4,2,1].map(b=>s.ir&b?'TAPE':'floor').join(' / ')}\nWheel speed: ${s.speed.join(' / ')} mm/s\nMotor PWM: ${s.pwm.join(' / ')}\nLongest steering interval: ${(s.maxLineGapUs/1000).toFixed(2)} ms\nLongest radio service: ${(s.radioMaxUs/1000).toFixed(2)} ms`;
+const radarPlot=el('radarPlot'),radarCtx=radarPlot.getContext('2d');
+let radarSweep=null,radarPoints=new Map(),radarBatch=0,radarBlocked=null;
+function renderRadar(s){
+ const packet=s?.radar,key=packet?[s.poseEpoch,packet.sweep].join('/'):null;
+ const restarted=s&&s.ms<lastMs;
+ if(restarted)radarBlocked=null;
+ const moved=s&&snapshot&&s.poseEpoch===snapshot.poseEpoch&&!restarted&&s.pose?.some((v,i)=>v!==snapshot.pose?.[i]);
+ if(key&&(s.pwm?.some(v=>v!==0)||moved))radarBlocked=key;
+ const active=s?.mode==='OBJECT'||s?.mode==='RADAR_SCAN';
+ const fresh=packet&&((s.ms-packet.ms)>>>0)<=2000;
+ const r=active&&fresh&&key!==radarBlocked&&packet.points?.length?packet:null;
+ if(!r||key!==radarSweep||restarted){radarPoints.clear();radarSweep=key;radarBatch=0}
+ if(r){
+  const newest=r.points||[];
+  if(newest.length&&!newest.some(p=>radarPoints.has(p[0])))radarBatch++;
+  for(const [angle,range,segment] of newest){
+   const batch=radarPoints.get(angle)?.batch??radarBatch;
+   radarPoints.set(angle,{angle,range,segment,batch});
+  }
+ }
+ const points=[...radarPoints.values()],lock=r?.lock||[],age=r?((s.ms-r.ms)>>>0):0;
+ const extent=Math.max(500,...points.map(p=>p.range),lock[1]||0);
+ const w=radarPlot.width,h=radarPlot.height,x=w/2,y=h-25,k=Math.min((x-12)/extent,(y-15)/extent);
+ const xy=(a,d)=>[x-Math.sin(a*Math.PI/180)*d*k,y-Math.cos(a*Math.PI/180)*d*k];
+ const c=radarCtx;c.clearRect(0,0,w,h);c.strokeStyle='#bac9d2';c.lineWidth=1;
+ for(const fraction of [.5,1]){c.beginPath();c.arc(x,y,extent*k*fraction,Math.PI,2*Math.PI);c.stroke()}
+ c.font='15px system-ui';c.fillStyle='#536574';c.fillText('Forward',x+5,17);c.fillText('Left',10,y+15);c.fillText('Right',w-48,y+15);
+ c.fillText(Math.round(extent)+' mm',x+6,y-extent*k+30);
+ c.strokeStyle=c.fillStyle='#145ca0';c.lineWidth=3;let previous;
+ for(const p of points){
+  if(p.range<=0||p.segment<=0){previous=null;continue}
+  const [px,py]=xy(p.angle,p.range);
+  if(previous&&previous.segment===p.segment&&previous.batch===p.batch){c.beginPath();c.moveTo(...xy(previous.angle,previous.range));c.lineTo(px,py);c.stroke()}
+  c.beginPath();c.arc(px,py,3,0,2*Math.PI);c.fill();previous=p;
+ }
+ if(lock.length===3){const [px,py]=xy(lock[0],lock[1]);c.strokeStyle='#9d341c';c.lineWidth=3;c.strokeRect(px-7,py-7,14,14)}
+ const widths=[];
+ if(r && s.mode==='RADAR_SCAN' && r.step>0){
+  const sorted=points.slice().sort((a,b)=>a.angle-b.angle);
+  for(let i=0;i<sorted.length;){
+   const first=sorted[i++];
+   if(first.range<=0 || first.segment<=0)continue;
+   let end=first,sum=first.range,count=1;
+   while(i<sorted.length && sorted[i].angle===end.angle+r.step && sorted[i].batch===first.batch &&
+         sorted[i].segment===first.segment && sorted[i].range>0){
+    end=sorted[i++];sum+=end.range;count++;
+   }
+   if(count<2)continue;
+   const before=radarPoints.get(first.angle-r.step),after=radarPoints.get(end.angle+r.step);
+   if(before?.batch!==first.batch || after?.batch!==first.batch)continue;
+   const distance=sum/count,width=2*distance*Math.sin(count*r.step*Math.PI/360);
+   widths.push(Math.round(width)+' mm wide at '+Math.round(distance)+' mm');
+  }
+ }
+ const widthsNode=el('radarWidths');widthsNode.hidden=!(r&&s.mode==='RADAR_SCAN');
+ widthsNode.textContent=widths.length?'Measured contours · '+widths.join(' / '):'Waiting for both edges of a contour.';
+ el('radarMeta').textContent=!s?'Scanner updates interrupted.':!packet?'Waiting for scanner setup.':!r?'No current stationary sweep · '+s.state:
+  'Sweep '+r.sweep+' · '+points.filter(p=>p.range>0).length+' returns · '+(age/1000).toFixed(1)+' s since sample · '+s.state+
+  (lock.length===3?' · Target □ '+lock[0]+'°, '+lock[1]+' mm away, '+lock[2]+' mm wide':' · No target lock');
+ const rows=points.map(p=>{const tr=document.createElement('tr');for(const v of [p.angle,p.range>0?p.range:'No return']){const td=document.createElement('td');td.textContent=v;tr.append(td)}return tr});el('radarRows').replaceChildren(...rows);
+}
+el('radarStep').onsubmit=e=>{e.preventDefault();act('RADAR STEP '+el('stepDegrees').value)};
+el('radarMin').oninput=()=>el('radarMax').min=el('radarMin').value||1;
+el('radarProfile').onsubmit=e=>{e.preventDefault();act('RADAR PROFILE '+el('radarMin').value+' '+el('radarMax').value)};
+el('radarClearance').onsubmit=e=>{e.preventDefault();act('RADAR CLEARANCE '+el('radarRadius').value)};
+el('radarServo').onsubmit=e=>{e.preventDefault();act('RADAR SERVO '+['servoRight','servoCentre','servoLeft'].map(id=>el(id).value).join(' '))};
+el('radarCalibrate').onclick=()=>act('MODE CALIBRATE');
+el('radarScan').onclick=()=>act('RADAR SCAN');el('radarArm').onclick=()=>act('RADAR ARM');
+function render(s){renderRadar(s);if(lastMs&&s.ms<lastMs){token=0;el('message').textContent=`The car restarted.`}lastMs=s.ms;snapshot=s;trace(s);renderIR(s.ir);el('status').textContent=`Control: ${s.owner}\n${s.mode} · ${s.state} · phase ${s.phase}\nTape L / C / R: ${[4,2,1].map(b=>s.ir&b?'TAPE':'floor').join(' / ')}\nWheel speed: ${s.speed.join(' / ')} mm/s\nMotor PWM: ${s.pwm.join(' / ')}\nLongest steering interval: ${(s.maxLineGapUs/1000).toFixed(2)} ms\nLongest radio service: ${(s.radioMaxUs/1000).toFixed(2)} ms`;
  if(!basicsLoaded){knobs[0].value=s.tune[0];knobs.forEach(input=>input.showValue());basicsLoaded=true}inputs.forEach((input,i)=>{if(!input.dataset.loaded){input.value=s.tune[i];input.dataset.loaded='1';showValue(i)}});el('applied').textContent='On robot: driving '+s.tune[0]+' mm/s · scan '+Math.min(150,s.tune[1])+' mm/s · confirmation '+Math.max(30,Math.min(125,s.tune[3]))+' mm/s (automatic).'}
-async function request(command,ownedToken=token,keepalive=false){const response=await fetch(command?'/command':'/status',{method:command?'POST':'GET',headers:command?{'X-Robot-Control':'1','X-Robot-Token':String(ownedToken),'Content-Type':'text/plain'}:{},body:command||undefined,cache:'no-store',signal:AbortSignal.timeout(1100),keepalive});const s=await response.json();if(!response.ok||!s.ok){const e=new Error(s.owner==='USB'?'USB owns control. Disconnect its controller first.':`Command rejected: ${s.state}. Take control again if the session expired.`);e.rejected=true;throw e}return s}
-function markLost(){disconnected=true;renderIR(null);el('linkStatus').textContent='Connection lost';drawPath()}
-async function act(command){if(polling){queued=command;return}if(busy)return;busy=true;controls();const epoch=generation;try{const s=await request(command);if(epoch!==generation)return;token=s.token;if(command==='CLAIM')resetTuning();render(s);el('message').textContent=command==='CLAIM'?'Wi-Fi control ready.':command.startsWith('MODE')?'Line following started.':command.startsWith('LINESPEED')?'Speeds applied.':command==='RELEASE'?'Control released.':'Settings applied; car stopped.'}catch(e){if(epoch===generation){markLost();if(e.rejected){token=0;el('message').textContent=e.message}else el('message').textContent='No reply from the car; retrying. A running car keeps driving; Stop still works.'}}finally{if(epoch===generation){busy=false;controls()}}}
+async function request(command,ownedToken=token,keepalive=false){const response=await fetch(command?'/command':'/status',{method:command?'POST':'GET',headers:command?{'X-Robot-Control':'1','X-Robot-Token':String(ownedToken),'Content-Type':'text/plain'}:{},body:command||undefined,cache:'no-store',signal:AbortSignal.timeout(1100),keepalive});const s=await response.json();if(!response.ok||!s.ok){const e=new Error(s.owner==='USB'?'USB owns control. Disconnect its controller first.':`Command rejected: ${s.state}. Take control again if the session expired.`);e.rejected=true;e.status=s;throw e}return s}
+function markLost(){disconnected=true;renderRadar(null);renderIR(null);el('linkStatus').textContent='Connection lost';drawPath()}
+async function act(command){if(polling){queued=command;return}if(busy)return;busy=true;controls();const epoch=generation;try{const s=await request(command);if(epoch!==generation)return;token=s.token;if(command==='CLAIM')resetTuning();render(s);el('message').textContent=command==='CLAIM'?'Wi-Fi control ready.':command==='MODE CALIBRATE'?s.state:command.startsWith('RADAR ')?s.state:command==='MODE LINE'?'Line following started.':command.startsWith('LINESPEED')?'Speeds applied.':command==='RELEASE'?'Control released.':'Settings applied; car stopped.'}catch(e){if(epoch===generation){if(e.rejected){token=e.status.token||0;render(e.status);el('message').textContent=e.message}else{markLost();el('message').textContent='No reply from the car; retrying. Use Stop to end the run.'}}}finally{if(epoch===generation){busy=false;controls()}}}
 async function stop(){const owned=!!token;generation++;queued=null;token=0;busy=false;controls();el('message').textContent='Sending Stop…';const epoch=generation;try{const s=await request('STOP',0,true);if(epoch===generation){render(s);el('message').textContent='Stopped.'}}catch(e){if(epoch===generation){markLost();el('message').textContent='Stop not confirmed. Press Stop again, or pick the car up.'}}}
 el('claim').onclick=()=>act('CLAIM');el('start').onclick=()=>act('MODE LINE');el('release').onclick=()=>act('RELEASE');el('stop').onclick=stop;
 async function poll(){if(!busy&&!document.hidden){polling=true;const epoch=generation;try{const s=await request(token?'HEARTBEAT':null);if(epoch===generation){if(token)token=s.token;render(s)}}catch(e){if(epoch===generation){markLost();if(e.rejected){token=0;el('message').textContent='Control ended. Take control again before starting.'}else el('message').textContent='Connection lost; retrying. A running car keeps driving until Stop.'}}finally{polling=false;if(epoch===generation){controls();if(queued){const command=queued;queued=null;act(command)}}}}setTimeout(poll,250)}
-setInterval(()=>{if(lastArrival&&Date.now()-lastArrival>1500){disconnected=true;renderIR(null);el('linkStatus').textContent='Waiting for updates';drawPath()}},500);
+setInterval(()=>{if(lastArrival&&Date.now()-lastArrival>1500){disconnected=true;renderRadar(null);renderIR(null);el('linkStatus').textContent='Waiting for updates';drawPath()}},500);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)disconnected=true});controls();poll();
 </script></html>)HTML";

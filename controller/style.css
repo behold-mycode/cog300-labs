@@ -2,3 +2,12 @@
 
 #error{padding:12px 15px;border:1px solid #dcae96;border-radius:8px;color:#8a3c24;background:#fff0e7;font-size:13px}
 .run-controls{display:flex;gap:12px;margin-top:20px}.run-controls button{flex:1}.run-controls #stop{margin-top:0}.run-controls #start{font-weight:600}#drive>select{margin-left:12px;max-width:75%}main{max-width:760px}.keys{margin:20px 0}
+
+.arena{margin-top:20px;padding:24px;border:1px solid #d5ddd4;border-radius:14px;background:white}
+.arena h2{margin:0 0 16px;font-size:21px}
+#radarPlot{display:block;width:100%;height:auto;background:#132d2c;border-radius:8px}
+#radarSummary{font-variant-numeric:tabular-nums;min-height:1.4em}
+.radar-actions,.radar-settings{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}
+.radar-settings{padding-top:16px;border-top:1px solid #d5ddd4}
+.radar-settings label{display:grid;gap:6px;font-size:13px}
+.radar-settings input{padding:8px;width:128px;border:1px solid #cbd5cc;border-radius:6px}

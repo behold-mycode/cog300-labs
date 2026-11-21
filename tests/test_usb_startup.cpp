@@ -15,7 +15,9 @@ int main(){
  assert(ready&&mode==MANUAL&&calibrationSaved()&&!leftSonarEnabled());
  assert(raceConfig.sensorOffset==90);stopRobot();assert(loadCalibration());serviceOdometry();assert(!leftSonarEnabled());
  command("MODE RACE");assert(mode==MANUAL&&!automaticSetupActive());
- command("MODE OBJECT");assert(mode==OBJECT);tape(1);tick(20);assert(mode==MANUAL&&!motorLeft&&!motorRight);
+ command("MODE OBJECT");assert(mode==MANUAL&&!lastCommandOk);
+ command("RADAR PROFILE 70 110");assert(lastCommandOk);
+ command("MODE OBJECT");assert(mode==MANUAL&&!lastCommandOk);tape(1);tick(20);assert(mode==MANUAL&&!motorLeft&&!motorRight);
  command("RUN START");assert(mode==MANUAL&&!lastCommandOk);
  tape(2);command("MODE LINE");nowMs+=501;serviceControlTimeout();assert(mode==MANUAL&&!motorDemandActive());
 }

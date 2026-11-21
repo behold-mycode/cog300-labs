@@ -105,6 +105,18 @@ class IntegrationTests(unittest.TestCase):
                 steps(3)
                 self.assertTrue(link.snapshot()['ready'])
                 self.assertEqual(wire.state,(0,0))
+                self.assertTrue(link.snapshot()['radar']['capable'])
+                action('radar_profile',dict(minMm=50,maxMm=100))
+                action('radar_clearance',dict(radius=0))
+                action('radar_servo',dict(rightUs=900,centerUs=1500,leftUs=2100))
+                action('radar_step',dict(step=2))
+                self.assertTrue(all(motors==(0,0) for motors in steps(60,mode='RADAR_SCAN')))
+                radar = link.snapshot()['radar']
+                self.assertTrue(radar['samples'])
+                self.assertEqual(radar['settings']['step'],2)
+                self.assertEqual(link.telemetry['mode'],'RADAR_SCAN')
+                steps(5)
+                self.assertEqual(link.telemetry['mode'],'MANUAL')
             finally: wire.finish()
 
 if __name__ == '__main__': unittest.main()

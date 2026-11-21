@@ -28,7 +28,7 @@ void serviceMapExport() {
     Serial.print(F("MAP_NODE,"));Serial.print(n);Serial.print(',');Serial.print(node.x);Serial.print(',');Serial.print(node.y);
     for(int p=0;p<node.count;++p) {
       Serial.print(',');Serial.print(node.ports[p].bearing);Serial.print(':');
-      Serial.print(node.ports[p].edge);Serial.print(':');Serial.print(node.ports[p].blocked?1:0);
+      Serial.print((int)node.ports[p].edge);Serial.print(':');Serial.print(node.ports[p].blocked?1:0);
     }
     Serial.println();
   } else if(record<=g.nodeCount+g.edgeCount) {

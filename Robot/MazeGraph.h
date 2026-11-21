@@ -7,13 +7,16 @@ constexpr float PI_F = 3.14159265358979323846f;
 inline float wrap(float a) { while (a > PI_F) a -= 2*PI_F; while (a <= -PI_F) a += 2*PI_F; return a; }
 inline float angleDistance(float a, float b) { return fabsf(wrap(a-b)); }
 constexpr int NONE = -1;
-struct Port { float bearing = 0; int16_t edge = NONE; bool blocked = false; };
+// Keep the full maze capacity alongside the radar history in the UNO's 32 KiB SRAM.
+// The compiler handles unaligned members of these packed, in-memory records.
+struct __attribute__((packed)) Port { float bearing = 0; int8_t edge = NONE; bool blocked = false; };
 struct Node { float x = 0, y = 0; uint8_t count = 0; Port ports[6]; };
-struct Edge { uint8_t a = 0, ap = 0, b = 0, bp = 0; float length = 0; uint16_t traversals = 0; };
+struct __attribute__((packed)) Edge { uint8_t a = 0, ap = 0, b = 0, bp = 0; float length = 0; uint16_t traversals = 0; };
 struct Choice { int node = NONE, port = NONE; bool exploring = false; };
 class Graph {
  public:
   static const int MAX_NODES = 64, MAX_EDGES = 128, MAX_PORTS = 6;
+  static_assert(MAX_EDGES<=128,"Port edge index must fit in int8_t");
   Node nodes[MAX_NODES]; Edge edges[MAX_EDGES];
   uint16_t nodeCount = 0, edgeCount = 0;
   void clear() { nodeCount = edgeCount = 0; }
