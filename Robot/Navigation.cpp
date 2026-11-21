@@ -1,22 +1,30 @@
 #include "Robot.h"
 #include <math.h>
 #include "LineWheelControl.h"
+static uint32_t lastLineUs=0,maxLineGapUs=0;
+static void recordLineTick(){
+  uint32_t now=micros();
+  if(lastLineUs && now-lastLineUs>maxLineGapUs)maxLineGapUs=now-lastLineUs;
+  lastLineUs=now;
+}
 static bool batteryLinePending=false;
 static uint32_t batteryLineArmedAt=0;
 static line::Follower lineFollower;
 static line::WheelControl lineWheels;
 static line::Input lineInput(){
   line::Input i{millis(),odometry.pose,lineMask()};
-  i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);return i;
+  i.appliedLeft=motorLeft;i.appliedRight=motorRight;readWheelSpeeds(i.leftSpeed,i.rightSpeed,i.edgeSequence);return i;
 }
 
 void beginRaceLine(){
+  lastLineUs=maxLineGapUs=0;
   lineWheels.reset();
   lineFollower.begin(lineInput());
 }
 void serviceRaceLine(wall::Input input,uint8_t tape){
+  recordLineTick();
   line::Input i{input.now,input.pose,tape};
-  i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);
+  i.appliedLeft=motorLeft;i.appliedRight=motorRight;readWheelSpeeds(i.leftSpeed,i.rightSpeed,i.edgeSequence);
   auto target=lineFollower.step(i);
   for(auto& range:input.ranges){
     if(range.noReturn&&(uint32_t)(input.now-range.stamp)<300){range.valid=true;range.mm=4000;}
@@ -24,7 +32,7 @@ void serviceRaceLine(wall::Input input,uint8_t tape){
   raceNavigator.reason=lineFollower.reason;
   auto limited=raceNavigator.guarded(wallNavigator.config,input,{target.left,target.right});
   auto pwm=lineWheels.step({limited.left,limited.right},i,settings.power);
-  navigationState=raceNavigator.reason;requestMotor(pwm.left,pwm.right);
+  navigationState=raceNavigator.reason;requestLineMotor(pwm.left,pwm.right,target.brakeInside && target.left==0,target.brakeInside && target.right==0);
 }
 
 Mode mode=MANUAL;
@@ -65,6 +73,7 @@ void startNavigation(Mode selected) {
     resetWallFeedback();objectSearch.begin(motionInput());
   }
   if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
+    lastLineUs=maxLineGapUs=0;
     if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
     if(!feedbackReady()){navigationState="ENCODERS_REQUIRED";return;}
     if(selected!=STOP_ON_TAPE&&!lineFollower.begin(lineInput())){
@@ -150,9 +159,11 @@ void serviceNavigation() {
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
+    recordLineTick();
     auto input=lineInput();
-    auto power=lineWheels.step(lineFollower.step(input),input,settings.power);
-    navigationState=lineFollower.reason;requestMotor(power.left,power.right);
+    auto target=lineFollower.step(input);
+    auto power=lineWheels.step(target,input,settings.power);
+    navigationState=lineFollower.reason;requestLineMotor(power.left,power.right,target.brakeInside && target.left==0,target.brakeInside && target.right==0);
     if(lineFollower.state==line::Follower::STOPPED){const char*why=lineFollower.reason;stopRobot();navigationState=why;}
     return;
   }
@@ -244,7 +255,7 @@ void reportLineTuning(){
 
 void lineWirelessStatus(char* out,size_t size){
  const auto& c=lineFollower.config;auto i=lineInput();
- snprintf(out,size,"\"phase\":%d,\"speed\":[%.1f,%.1f],\"tune\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%d]",
-  (int)lineFollower.state,i.leftSpeed,i.rightSpeed,c.cruiseSpeed,c.turnSpeed,c.correctionSpeed,c.captureSpeed,
+ snprintf(out,size,"\"maxLineGapUs\":%lu,\"phase\":%d,\"speed\":[%.1f,%.1f],\"tune\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%d]",
+  (unsigned long)maxLineGapUs,(int)lineFollower.state,i.leftSpeed,i.rightSpeed,c.cruiseSpeed,c.turnSpeed,c.correctionSpeed,c.captureSpeed,
   lineWheels.referenceSpeed,lineWheels.feedForwardOffset,lineWheels.kp,lineWheels.ki,lineWheels.startPower,lineWheels.cruise,lineWheels.minimum);
 }

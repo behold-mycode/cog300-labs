@@ -8,11 +8,13 @@ struct Input {
   uint8_t tape =
       0; // normalized L/C/R: bit set means tape, independent of polarity
   float leftSpeed = 0, rightSpeed = 0;
+  uint32_t edgeSequence=0;
   int appliedLeft = 0, appliedRight = 0;
 };
-// Physical wheel velocities, mm/s. Zero means coast, never active braking.
+// Physical wheel velocities, mm/s. A tight arc can explicitly brake its stationary inside wheel.
 struct Command {
   float left = 0, right = 0;
+  bool brakeInside=false;
 };
 struct Config {
   float cruiseSpeed = 250, turnSpeed = 250, correctionSpeed = 250,
@@ -38,6 +40,7 @@ class Follower {
   bool opposite = false, centred = false, clearBand = false, knownTape = false;
   float bend = 0, oppositeBend = 0;
   Wheels turnStart{}, oppositeStart{};
+  float turnHeading=0;
   void checkpoint(const Input &i) {
     count = 1;
     trail[0] = wheels(i);
@@ -56,7 +59,7 @@ class Follower {
   }
   Command arc(float speed) const {
     float inside = speed * (1 - bend);
-    return side > 0 ? Command{inside, speed} : Command{speed, inside};
+    return side > 0 ? Command{inside, speed, inside==0} : Command{speed, inside, inside==0};
   }
   float probeSpeed() const {
     return fmaxf(30.f, fminf(config.captureSpeed, 125.f));
@@ -174,12 +177,11 @@ public:
         if (observed) {
           if (!side || bend == 0) {
             side = observed;
-            turnStart = p;
+            turnStart = p;turnHeading=i.pose.heading;
             opposite = false;
           }
           if (observed == side) {
-            if (opposite)
-              turnStart = p;
+            if (opposite) turnStart=p;
             opposite = false;
             bend = (i.tape == 1 || i.tape == 4)
                        ? 1.f
@@ -190,10 +192,11 @@ public:
               oppositeStart = p;
               oppositeBend = bend;
             }
-            bend = fmaxf(0.f, oppositeBend - motion(p, oppositeStart) / 25.f);
+            bend = fmaxf(0.f, oppositeBend - motion(p, oppositeStart) /
+                        (side*(i.pose.heading-turnHeading)>.20f ? 25.f : 50.f));
             if (bend == 0) {
               side = observed;
-              turnStart = p;
+              turnStart = p;turnHeading=i.pose.heading;
               opposite = false;
               bend = .80f;
             }

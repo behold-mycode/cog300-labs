@@ -54,6 +54,8 @@ extern bool controlSession,controlExpired;
 extern maze::Odometry odometry;
 extern uint32_t odometryEpoch;
 extern maze::Explorer explorer;
+void requestLineMotor(int left,int right,bool brakeLeft,bool brakeRight);
+void readWheelSpeeds(float& left,float& right,uint32_t& sample);
 void setupMotor();void requestMotor(int left,int right);void stopMotor();void settleMotor();void serviceMotor();
 void startTest(int left,int right,uint32_t duration);
 void setupSensor();void serviceSensor();
