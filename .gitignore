@@ -8,3 +8,4 @@ __pycache__/
 
 # Per-robot access-point password
 Robot/WirelessSecrets.h
+Robot/FirmwareIdentity.h

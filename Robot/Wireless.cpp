@@ -5,6 +5,7 @@
 #include <WiFiS3.h>
 #include "Modem.h"
 #include "AsyncRadio.h"
+#include "FirmwareUpdate.h"
 #include "WirelessPageGzip.h"
 #if __has_include("WirelessSecrets.h")
 #include "WirelessSecrets.h"
@@ -13,7 +14,12 @@
 #define ROBOT_WIFI_PASSWORD ""
 #endif
 
-// WiFiS3 is used only during stopped startup. During operation each call sends
+#if ROBOT_OTA_CONFIGURED
+static_assert(sizeof(ROBOT_WIFI_PASSWORD) >= 9 && sizeof(ROBOT_WIFI_PASSWORD) <= 64,
+              "OTA builds require an 8-63 character access point password");
+#endif
+
+// WiFiS3 is used during stopped startup and signed firmware installation. During operation each call sends
 // at most 16 UART bytes (~1.4ms at 115200), reads at most 128 buffered bytes,
 // and never waits for a network/modem response. No core/library patches needed.
 namespace {
@@ -75,6 +81,19 @@ void status(bool ok,uint32_t returnedToken){
 void prepareResponse(){
  bool ok=true;const bool page=request.get("/");const char*type="application/json";
  if(page){responseBody=reinterpret_cast<const char*>(wirelessPageGzip);type="text/html; charset=utf-8";}
+#if ROBOT_OTA_CONFIGURED
+ else if(request.get("/firmware")){
+  firmwareInfo(statusBody,sizeof(statusBody));responseBody=statusBody;
+ }
+ else if(const char* manifest=request.firmwareManifest()){
+  if(firmwareAuthorized(manifest)){
+   receiveFirmware(clientSocket,manifest);
+   beginOperation(CLOSE);
+   return;
+  }
+  ok=false;responseBody="{\"error\":\"update refused: stop robot, release control and check signing key\"}";
+ }
+#endif
  else if(request.get("/status")){status(true,0);responseBody=statusBody;}
  else{
   char command[96];ok=request.command(command);uint32_t token=0;
