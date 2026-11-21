@@ -11,9 +11,17 @@ static bool batteryLinePending=false;
 static uint32_t batteryLineArmedAt=0;
 static line::Follower lineFollower;
 static line::WheelControl lineWheels;
-static line::Input lineInput(){
-  line::Input i{millis(),odometry.pose,lineMask()};
-  i.appliedLeft=motorLeft;i.appliedRight=motorRight;readWheelSpeeds(i.leftSpeed,i.rightSpeed,i.edgeSequence);return i;
+static line::Input lineInput(uint8_t tape){
+  line::Input input{millis(),odometry.pose,tape};
+  input.appliedLeft=motorLeft;input.appliedRight=motorRight;
+  readWheelSpeeds(input.leftSpeed,input.rightSpeed,input.edgeSequence);
+  return input;
+}
+static line::Input lineInput(){return lineInput(lineMask());}
+static void applyLineDrive(line::Input input,line::Command target){
+  auto power=lineWheels.step(target,input,settings.power);
+  requestLineMotor(power.left,power.right,target.brakeInside && !target.left,
+                   target.brakeInside && !target.right);
 }
 
 void beginRaceLine(){
@@ -23,16 +31,16 @@ void beginRaceLine(){
 }
 void serviceRaceLine(wall::Input input,uint8_t tape){
   recordLineTick();
-  line::Input i{input.now,input.pose,tape};
-  i.appliedLeft=motorLeft;i.appliedRight=motorRight;readWheelSpeeds(i.leftSpeed,i.rightSpeed,i.edgeSequence);
+  auto i=lineInput(tape);
   auto target=lineFollower.step(i);
   for(auto& range:input.ranges){
     if(range.noReturn&&(uint32_t)(input.now-range.stamp)<300){range.valid=true;range.mm=4000;}
   }
   raceNavigator.reason=lineFollower.reason;
   auto limited=raceNavigator.guarded(wallNavigator.config,input,{target.left,target.right});
-  auto pwm=lineWheels.step({limited.left,limited.right},i,settings.power);
-  navigationState=raceNavigator.reason;requestLineMotor(pwm.left,pwm.right,target.brakeInside && target.left==0,target.brakeInside && target.right==0);
+  target.left=limited.left;target.right=limited.right;
+  applyLineDrive(i,target);
+  navigationState=raceNavigator.reason;
 }
 
 Mode mode=MANUAL;
@@ -162,9 +170,8 @@ void serviceNavigation() {
     recordLineTick();
     auto input=lineInput();
     auto target=lineFollower.step(input);
-    auto power=lineWheels.step(target,input,settings.power);
-    navigationState=lineFollower.reason;requestLineMotor(power.left,power.right,target.brakeInside && target.left==0,target.brakeInside && target.right==0);
-    if(lineFollower.state==line::Follower::STOPPED){const char*why=lineFollower.reason;stopRobot();navigationState=why;}
+    applyLineDrive(input,target);
+    navigationState=lineFollower.reason;
     return;
   }
   if(mode==RACE){serviceRace();return;}
@@ -198,12 +205,13 @@ void serviceNavigation() {
 static bool observationTrace=false;
 void setObservationTrace(bool enabled) { observationTrace=enabled; }
 void serviceObservation() {
+  if(mode==LINE && !observationTrace)return;
   static uint32_t last=0,sequence=0;
   uint32_t now=millis();if(sequence&&(uint32_t)(now-last)<20) return;last=now;
   SensorReading f=sensorReading(0),r=sensorReading(1);
   maze::Observation o;o.sequence=++sequence;o.stamp=now;o.pose=odometry.pose;o.tape=lineMask();
   o.front={f.cm*10,f.sampledMs,f.status==RANGE_VALID};o.right={r.cm*10,r.sampledMs,r.status==RANGE_VALID};
-  if(odometry.configured&&lineTapeLevel>=0) explorer.observe(o);
+  if(mode!=LINE&&odometry.configured&&lineTapeLevel>=0) explorer.observe(o);
   if(!observationTrace) return;
   Serial.print(F("OBS,"));Serial.print(now);Serial.print(',');Serial.print(sequence);Serial.print(',');Serial.print((int)o.tape);
   Serial.print(',');Serial.print(o.pose.x);Serial.print(',');Serial.print(o.pose.y);Serial.print(',');Serial.print(o.pose.heading);

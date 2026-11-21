@@ -355,7 +355,7 @@ class RobotLink:
         if not self.serial: return
         try:
             now = self.clock()
-            if now - self.last_browser > BROWSER_TIMEOUT and not self.browser_paused:
+            if self.ready and self.mode == 'MANUAL' and now - self.last_browser > BROWSER_TIMEOUT and not self.browser_paused:
                 self._send('STOP')
                 self.browser_paused = True
                 self.keys, self.mode = [], 'MANUAL'

@@ -1,7 +1,8 @@
 # COGS 300 Robot
 
-**Working checkpoint: `direct-rollback-ir-v1` (2026-11-18).** After correcting the centre IR sensor, which had been reporting floor even over tape, the user reports that the installed robot now works very well. This checkpoint matches that installed direct follower and preserves the GUI, live IR indicators, tuning and path tracing. The later encoder yaw-damping candidate was never uploaded and is excluded. Earlier startup failures occurred with the misadjusted centre sensor, so they cannot establish that the driving algorithm caused those failures.
+This experimental branch focuses on autonomous line following. The intended tournament order is line following → wall maze → object detection. Wall navigation and object search are available as separate modes. Automatic handoff into object search is future work.
 
+See [Wi-Fi control](WiFi-Control.md) for the onboard browser and [robot wiring](Robot-Wiring.md) for sensor connections. The November 18 driving checkpoint is tagged `working-robot-2026-11-18`. Earlier line-controller designs and implementation plans are available at that tag. Floor performance of the new controller is unverified.
 
 ## Download and set up
 
@@ -13,7 +14,7 @@
 
 Keep Terminal open while using the controller. For setup help and troubleshooting, see [`controller/README.md`](controller/README.md). Current wiring diagrams are in [`documentation/`](documentation/).
 
-Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** The line feedback rebuild has been uploaded; wall-maze behavior remains physically unvalidated.
+Firmware 7 adds an experimental **wall-maze controller** with encoder-regulated wheel speeds, footprint-aware pivot checks, Bayesian wall/opening estimates, and route recording/backtracking. Start with [Wall-Maze-Setup.md](Wall-Maze-Setup.md) for the new wiring, required measurements, tests and limits. **D11 is now reserved for the left sonar ECHO; disconnect the old LED.** Wall-maze behavior remains physically unvalidated.
 
 The controller exposes line following, both Lab 07 tape-stop demonstrations, object search, three-sonar line/wall maze, explicit wheel calibration, and manual driving. The firmware owns configuration. See the current USB guide above; older standalone and observation-first documents describe historical/opt-in behavior.
 

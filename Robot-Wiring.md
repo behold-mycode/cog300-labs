@@ -23,7 +23,7 @@ Open [Robot-Wiring.svg](Robot-Wiring.svg) for the complete overview.
 | Right HC-SR04 TRIG / ECHO | A2 / A3 |
 | Left HC-SR04 TRIG / ECHO | D0 / D11; remove old D11 LED |
 | All HC-SR04 VCC / GND | Regulated 5V / common GND |
-| Left / centre / right floor LM393 DO or OUT | D3 / D2 / D4 |
+| Left / centre / right floor LM393 DO or OUT | D4 / D2 / D3 |
 | Left slotted encoder DO or OUT | D12 |
 | Right slotted encoder DO or OUT | A4, used as a digital input |
 | LM393 module VCC / GND | Regulated 5V / common GND for the planned 5V-compatible modules; follow the actual labelled terminals, not connector order |

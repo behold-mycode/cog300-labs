@@ -243,7 +243,7 @@ public:
             knownTape &&
             maze::angleDistance(i.pose.heading,
                                 approachHeading + fullTurn * .5f) < .22f;
-        if (!clearBand || !(i.tape & 2) || incoming)
+        if (!clearBand || (i.tape!=2 && i.tape!=3 && i.tape!=6) || incoming)
           return spin();
         probeOrigin = p;
         state = VERIFY;
@@ -263,8 +263,10 @@ public:
           state = FOLLOW;
           return step(i);
         }
-        float v = probeSpeed();
-        return {v, v};
+        const float v = probeSpeed();
+        if(i.tape==6)return {.2f*v,v};
+        if(i.tape==3)return {v,.2f*v};
+        return {v,v};
       }
       state = UNDO_PROBE;
     }

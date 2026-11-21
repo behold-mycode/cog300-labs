@@ -6,14 +6,13 @@ void setup() {
   setupSensor();
   setupLine();
   Serial.begin(115200);
-  configureHardware(hardware::CAR);loadCalibration();setupStandalone();setupWireless();
+  configureHardware(hardware::CAR);lineTapeLevel=0;loadCalibration();setupStandalone();setupWireless();
   // Eight-cell PI calibration in actual PWM units; full 0..255 output available.
   #if ROBOT_EIGHT_CELL_PROFILE
   configureLineSpeeds(330,150,330,125);
   configureLineMotor(200,18.82f,.2353f,.5647f,61);
   configureLineDrive(66,0);
   #endif
-  lineTapeLevel=0; // Installed IR modules read LOW on white tape.
   if(ROBOT_LINE_ONLY){
     armBatteryLine();
     Serial.println(F("ROBOT_BOOT 7 LINE_ONLY automatic start in 1500ms"));

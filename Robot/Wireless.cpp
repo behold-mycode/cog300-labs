@@ -19,7 +19,7 @@ namespace {
 enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE } operation=ACCEPT;
 wireless::Reply reply;
 wireless::Request request;
-bool apReady=false,pending=false;
+bool apReady=false,pending=false,resync=false;
 int serverSocket=-1,clientSocket=-1;
 uint32_t started=0,clientSince=0,nextPoll=0,wifiMaxUs=0;
 char transmit[320]{};size_t txSize=0,txOffset=0;
@@ -28,9 +28,12 @@ const char* responseBody=nullptr;
 size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
 
 void radioFailure(){
- apReady=false;pending=false;
- if(mode!=LINE&&wirelessControlToken()){stopRobot();releaseWirelessControl();navigationState="WIFI_RADIO_ERROR";}
- Serial.println(F("WIFI_RADIO_ERROR reset board to retry; USB available"));
+ pending=false;resync=true;releaseWirelessControl();
+ // A timed-out reply can still arrive. Drain it before issuing another AT command.
+ nextPoll=millis()+250;
+ if(operation==CLOSE)clientSocket=-1;
+ request.reset();
+ Serial.println(F("WIFI_RETRY"));
 }
 void beginOperation(Operation op,int amount=0){
  operation=op;const char* name="";
@@ -108,6 +111,11 @@ void advance(){
 }
 void step(){
  if(!apReady)return;
+ if(resync){
+  for(int n=0;n<128&&Serial2.available();++n){Serial2.read();nextPoll=millis()+250;}
+  if((int32_t)(millis()-nextPoll)<0)return;
+  resync=false;beginOperation(clientSocket>=0?CLOSE:ACCEPT);return;
+ }
  if(!pending){if((int32_t)(millis()-nextPoll)>=0)beginOperation(clientSocket<0?ACCEPT:AVAILABLE);return;}
  if(txOffset<txSize){
   size_t n=txSize-txOffset;if(n>16)n=16;

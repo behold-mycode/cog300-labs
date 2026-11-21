@@ -1,5 +1,4 @@
-> **Working checkpoint: `direct-rollback-ir-v1` (2026-11-18).** After correcting the centre IR sensor, which had been reporting floor even over tape, the user reports that the installed robot now works very well. This checkpoint matches that installed direct follower and preserves the GUI, live IR indicators, tuning and path tracing. The later encoder yaw-damping candidate was never uploaded and is excluded. Earlier startup failures occurred with the misadjusted centre sensor, so they cannot establish that the driving algorithm caused those failures.
-> The material below is historical experimentation, not the current control specification.
+> Historical tuning and floor observations through the November 18 checkpoint. Current operating instructions are in [Wi-Fi control](WiFi-Control.md).
 
 > Current source is direct-rollback-v1, restored after continuous-live-v3 failed physical startup tests. The four LINESPEED fields again mean straight, lost-line outside wheel, correction outside wheel, and gentle-correction inside wheel. Encoder feedback is back to 120 ms. The remaining notes below describe earlier experiments.
 

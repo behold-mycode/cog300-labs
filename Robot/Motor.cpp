@@ -86,7 +86,7 @@ static int linePower(int wanted,bool reversing,bool left,uint32_t now,ReverseEnt
   uint32_t elapsed=now-entry.started;
   if(elapsed>=40){entry.ramping=false;return wanted;}
   const int cap=55+5*(int)elapsed;
-  return sign(wanted)*min(abs(wanted),cap);
+  return sign(wanted)*(abs(wanted)<cap?abs(wanted):cap);
 }
 void serviceMotor() {
   uint32_t now = millis();

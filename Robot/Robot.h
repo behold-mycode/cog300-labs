@@ -43,7 +43,6 @@ extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
 extern const char* navigationState;
-float lineSensorOffset();
 void armBatteryLine();void serviceBatteryLine();
 bool configureLineDrive(int cruise,int minimum);
 void reportLineControl();void reportLineTuning();
