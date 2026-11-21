@@ -65,6 +65,29 @@ void startTest(int left, int right, uint32_t duration) {
   stopRobot(); requestMotor(left, right);
   testDuration = duration; testPending = left || right;
 }
+struct ReverseEntry {
+  bool ramping=false;
+  uint32_t started=0;
+};
+static ReverseEntry leftEntry,rightEntry;
+static int linePower(int wanted,bool reversing,bool left,uint32_t now,ReverseEntry& entry){
+  if(!wanted){entry.ramping=false;return 0;}
+  if(reversing){
+    const int applied=left?motorLeft:motorRight;
+    const uint32_t offAt=left?leftOffAt:rightOffAt;
+    // Interrupt the old drive first. Give a freshly powered wheel one
+    // encoder interval at cruise even if it never completed its first edge.
+    if(applied || now-offAt<18 || !wheelQuietForReversal(left)){
+      entry.ramping=false;return 0;
+    }
+    entry.started=now;entry.ramping=true;
+  }
+  if(!entry.ramping)return wanted;
+  uint32_t elapsed=now-entry.started;
+  if(elapsed>=40){entry.ramping=false;return wanted;}
+  const int cap=55+5*(int)elapsed;
+  return sign(wanted)*min(abs(wanted),cap);
+}
 void serviceMotor() {
   uint32_t now = millis();
   if (testRunning && (uint32_t)(now - testStarted) >= testDuration) {
@@ -79,11 +102,10 @@ void serviceMotor() {
   bool leftReverses = wantedLeft && lastLeftSign && sign(wantedLeft) != lastLeftSign;
   bool rightReverses = wantedRight && lastRightSign && sign(wantedRight) != lastRightSign;
   if(lineDrive){
-    // Preserve the reversal dwell on the affected wheel; the outside wheel keeps driving.
-    bool waitLeft=leftReverses&&(motorLeft||(uint32_t)(now-leftOffAt)<SETTLE_MS);
-    bool waitRight=rightReverses&&(motorRight||(uint32_t)(now-rightOffAt)<SETTLE_MS);
-    int left=waitLeft?0:wantedLeft,right=waitRight?0:wantedRight;
-    bool bl=waitLeft||(!left&&wantBrakeLeft),br=waitRight||(!right&&wantBrakeRight);
+    int left=linePower(wantedLeft,leftReverses,true,now,leftEntry);
+    int right=linePower(wantedRight,rightReverses,false,now,rightEntry);
+    bool bl=!left&&(leftReverses||wantBrakeLeft);
+    bool br=!right&&(rightReverses||wantBrakeRight);
     if(left!=motorLeft||right!=motorRight||bl!=appliedBrakeLeft||br!=appliedBrakeRight)
       output(left,right,bl,br);
     return;

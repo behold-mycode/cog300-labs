@@ -49,6 +49,19 @@ static void rightEncoderChanged() {
   int direction=encQuadrature ? (digitalRead(ENC_RA)==digitalRead(ENC_RB)?1:-1)*encInvertR : rightDirection;
   rightTicks+=direction;stampEdge(rightClock,direction);++edgeSequence;
 }
+bool wheelQuietForReversal(bool left) {
+  // With one encoder output we can observe edge spacing even while coasting.
+  // A quiet interval of one edge at the trial entry speed bounds average
+  // motion only when encoder pulses are reliable.
+  constexpr float entrySpeedMmS = 100.f;
+  noInterrupts();
+  const uint32_t now = micros();
+  const uint32_t stamp = left ? leftClock.stamp : rightClock.stamp;
+  const bool seen = (left ? leftClock.direction : rightClock.direction) != 0;
+  interrupts();
+  const float scale = left ? odometry.leftScale : odometry.rightScale;
+  return !seen || (now-stamp) >= scale * 1000000.f / entrySpeedMmS;
+}
 bool encodersEnabled() { return encEnabled; }
 bool configureEncoders(int kind,bool invertL,bool invertR) {
   if(kind<0||kind>2) return false;
