@@ -1,13 +1,46 @@
 #include "Robot.h"
 #include <math.h>
 #include "LineWheelControl.h"
+static uint32_t lastLineUs=0,maxLineGapUs=0;
+static void recordLineTick(){
+  uint32_t now=micros();
+  if(lastLineUs && now-lastLineUs>maxLineGapUs)maxLineGapUs=now-lastLineUs;
+  lastLineUs=now;
+}
 static bool batteryLinePending=false;
 static uint32_t batteryLineArmedAt=0;
 static line::Follower lineFollower;
 static line::WheelControl lineWheels;
-static line::Input lineInput(){
-  line::Input i{millis(),odometry.pose,lineMask()};
-  i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);return i;
+static line::Input lineInput(uint8_t tape){
+  line::Input input{millis(),odometry.pose,tape};
+  input.appliedLeft=motorLeft;input.appliedRight=motorRight;
+  readWheelSpeeds(input.leftSpeed,input.rightSpeed,input.edgeSequence);
+  return input;
+}
+static line::Input lineInput(){return lineInput(lineMask());}
+static void applyLineDrive(line::Input input,line::Command target){
+  auto power=lineWheels.step(target,input,settings.power);
+  requestLineMotor(power.left,power.right,target.brakeInside && !target.left,
+                   target.brakeInside && !target.right);
+}
+
+void beginRaceLine(){
+  lastLineUs=maxLineGapUs=0;
+  lineWheels.reset();
+  lineFollower.begin(lineInput());
+}
+void serviceRaceLine(wall::Input input,uint8_t tape){
+  recordLineTick();
+  auto i=lineInput(tape);
+  auto target=lineFollower.step(i);
+  for(auto& range:input.ranges){
+    if(range.noReturn&&(uint32_t)(input.now-range.stamp)<300){range.valid=true;range.mm=4000;}
+  }
+  raceNavigator.reason=lineFollower.reason;
+  auto limited=raceNavigator.guarded(wallNavigator.config,input,{target.left,target.right});
+  target.left=limited.left;target.right=limited.right;
+  applyLineDrive(i,target);
+  navigationState=raceNavigator.reason;
 }
 
 Mode mode=MANUAL;
@@ -48,10 +81,9 @@ void startNavigation(Mode selected) {
     resetWallFeedback();objectSearch.begin(motionInput());
   }
   if(selected==LINE||selected==STOP_AT_END||selected==STOP_ON_TAPE){
+    lastLineUs=maxLineGapUs=0;
     if(lineTapeLevel<0){navigationState="LINE_NOT_CALIBRATED";return;}
     if(!feedbackReady()){navigationState="ENCODERS_REQUIRED";return;}
-    lineFollower.config.sensorOffset=lineSensorOffset();
-    lineFollower.config.track=odometry.track;
     if(selected!=STOP_ON_TAPE&&!lineFollower.begin(lineInput())){
       navigationState=lineFollower.reason;return;
     }
@@ -69,7 +101,6 @@ void startNavigation(Mode selected) {
   mode=selected;navigationState="WAITING_FOR_SENSOR";
   if(ROBOT_LINE_ONLY&&selected==LINE){
     standaloneActive=true;controlSession=false;controlExpired=false;
-    lineFollower.config.continuousSearch=true;
   }
 }
 // Obstacle observation constrains all autonomous commands. No competing controller
@@ -117,7 +148,7 @@ void serviceNavigation() {
   if(mode==MANUAL) return;
   if(automaticSetupActive()){serviceAutomaticSetup();return;}
   if((mode==MAZE||mode==WALL_MAZE||mode==RACE||mode==LINE||mode==OBJECT||mode==STOP_AT_END||mode==STOP_ON_TAPE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
-  if(feedbackReady() && !progress.check(odometry.pose,
+  if(mode!=LINE && !(mode==RACE && !raceNavigator.wallStage()) && feedbackReady() && !progress.check(odometry.pose,
       {(int8_t)(motorLeft>0?1:motorLeft<0?-1:0),(int8_t)(motorRight>0?1:motorRight<0?-1:0)},
       millis(),navigationConfig.stallMs)) {
     if(mode==WALL_MAZE)wallNavigator.fail("ENCODER_STALL");else explorer.fail("ENCODER_STALL");stopRobot();navigationState="ENCODER_STALL";return;
@@ -136,10 +167,11 @@ void serviceNavigation() {
   }
   if(mode==LINE||mode==STOP_AT_END){
     if(mode==STOP_AT_END&&!lineMask()){stopRobot();navigationState="TAPE_ENDED";return;}
+    recordLineTick();
     auto input=lineInput();
-    auto power=lineWheels.step(lineFollower.step(input),input,settings.power);
-    navigationState=lineFollower.reason;requestMotor(power.left,power.right);
-    if(lineFollower.state==line::Follower::STOPPED){const char*why=lineFollower.reason;stopRobot();navigationState=why;}
+    auto target=lineFollower.step(input);
+    applyLineDrive(input,target);
+    navigationState=lineFollower.reason;
     return;
   }
   if(mode==RACE){serviceRace();return;}
@@ -173,12 +205,13 @@ void serviceNavigation() {
 static bool observationTrace=false;
 void setObservationTrace(bool enabled) { observationTrace=enabled; }
 void serviceObservation() {
+  if(mode==LINE && !observationTrace)return;
   static uint32_t last=0,sequence=0;
   uint32_t now=millis();if(sequence&&(uint32_t)(now-last)<20) return;last=now;
   SensorReading f=sensorReading(0),r=sensorReading(1);
   maze::Observation o;o.sequence=++sequence;o.stamp=now;o.pose=odometry.pose;o.tape=lineMask();
   o.front={f.cm*10,f.sampledMs,f.status==RANGE_VALID};o.right={r.cm*10,r.sampledMs,r.status==RANGE_VALID};
-  if(odometry.configured&&lineTapeLevel>=0) explorer.observe(o);
+  if(mode!=LINE&&odometry.configured&&lineTapeLevel>=0) explorer.observe(o);
   if(!observationTrace) return;
   Serial.print(F("OBS,"));Serial.print(now);Serial.print(',');Serial.print(sequence);Serial.print(',');Serial.print((int)o.tape);
   Serial.print(',');Serial.print(o.pose.x);Serial.print(',');Serial.print(o.pose.y);Serial.print(',');Serial.print(o.pose.heading);
@@ -197,7 +230,7 @@ void reportLineControl(){
   Serial.print(F("LINECTRL,"));Serial.print((int)lineFollower.state);
   Serial.print(',');Serial.print(lineWheels.cruise);Serial.print(',');Serial.print(lineWheels.minimum);
   Serial.print(',');Serial.print(lineWheels.saturated?1:0);
-  Serial.print(',');Serial.print(lineFollower.targetHeading);Serial.print(',');Serial.print(lineFollower.remaining);
+  Serial.print(F(",0,0")); // Reserved legacy heading/remaining fields; no geometric planner.
   Serial.print(',');Serial.print(i.leftSpeed);Serial.print(',');Serial.println(i.rightSpeed);
 }
 
@@ -205,13 +238,13 @@ void armBatteryLine(){batteryLinePending=true;batteryLineArmedAt=millis();}
 void serviceBatteryLine(){
   if(!batteryLinePending||(uint32_t)(millis()-batteryLineArmedAt)<1500)return;
   batteryLinePending=false;
-  lineFollower.config.continuousSearch=true;
   startNavigation(LINE);
   standaloneActive=mode==LINE;
 }
 
-void configureLineSpeeds(float cruise,float turn,float correction,float capture){
-  stopRobot();auto& c=lineFollower.config;
+void configureLineSpeeds(float cruise,float turn,float correction,float capture,bool keepRunning){
+  if(!keepRunning)stopRobot();
+  auto& c=lineFollower.config;
   c.cruiseSpeed=cruise;c.turnSpeed=turn;c.correctionSpeed=correction;c.captureSpeed=capture;
 }
 bool configureLineMotor(float reference,float offset,float kp,float ki,int start){
@@ -230,7 +263,7 @@ void reportLineTuning(){
 
 void lineWirelessStatus(char* out,size_t size){
  const auto& c=lineFollower.config;auto i=lineInput();
- snprintf(out,size,"\"phase\":%d,\"speed\":[%.1f,%.1f],\"tune\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%d]",
-  (int)lineFollower.state,i.leftSpeed,i.rightSpeed,c.cruiseSpeed,c.turnSpeed,c.correctionSpeed,c.captureSpeed,
+ snprintf(out,size,"\"maxLineGapUs\":%lu,\"phase\":%d,\"speed\":[%.1f,%.1f],\"tune\":[%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%d]",
+  (unsigned long)maxLineGapUs,(int)lineFollower.state,i.leftSpeed,i.rightSpeed,c.cruiseSpeed,c.turnSpeed,c.correctionSpeed,c.captureSpeed,
   lineWheels.referenceSpeed,lineWheels.feedForwardOffset,lineWheels.kp,lineWheels.ki,lineWheels.startPower,lineWheels.cruise,lineWheels.minimum);
 }

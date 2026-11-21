@@ -10,6 +10,10 @@
 #ifndef ROBOT_ENABLE_WIFI
 #define ROBOT_ENABLE_WIFI 1
 #endif
+// Select the motor calibration independently of the available PWM range.
+#ifndef ROBOT_EIGHT_CELL_PROFILE
+#define ROBOT_EIGHT_CELL_PROFILE 1
+#endif
 #include <stdint.h>
 #include "Odometry.h"
 #include "Explorer.h"
@@ -39,16 +43,19 @@ extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
 extern const char* navigationState;
-float lineSensorOffset();
 void armBatteryLine();void serviceBatteryLine();
 bool configureLineDrive(int cruise,int minimum);
 void reportLineControl();void reportLineTuning();
-void configureLineSpeeds(float cruise,float turn,float correction,float capture);
+void configureLineSpeeds(float cruise,float turn,float correction,float capture,bool keepRunning=false);
 bool configureLineMotor(float reference,float offset,float kp,float ki,int start);
 extern int motorLeft,motorRight,lineTapeLevel;
 extern bool controlSession,controlExpired;
 extern maze::Odometry odometry;
+extern uint32_t odometryEpoch;
 extern maze::Explorer explorer;
+bool wheelQuietForReversal(bool left);
+void requestLineMotor(int left,int right,bool brakeLeft,bool brakeRight);
+void readWheelSpeeds(float& left,float& right,uint32_t& sample);
 void setupMotor();void requestMotor(int left,int right);void stopMotor();void settleMotor();void serviceMotor();
 void startTest(int left,int right,uint32_t duration);
 void setupSensor();void serviceSensor();
@@ -72,6 +79,7 @@ void resetWallFeedback();void reportWallTrace();void resetWallCalibration();void
 extern race::Config raceConfig;
 extern race::Navigator raceNavigator;
 extern bool standaloneActive,lastCommandOk;
+void beginRaceLine();void serviceRaceLine(wall::Input input,uint8_t tape);
 bool startRace();bool startStandalone();void serviceRace();void setupStandalone();void serviceButton();
 wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
 bool saveCalibration();bool loadCalibration();bool calibrationSaved();

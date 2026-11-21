@@ -85,10 +85,26 @@ class IntegrationTests(unittest.TestCase):
                 wire.exchange('@ir 0 1 0')
                 steps(6,mode='RACE');self.assertEqual(link.telemetry['mode'],'RACE')
                 self.assertGreater(wire.state[0],0);self.assertGreater(wire.state[1],0)
+                # Browser sleeps while the server continues servicing real firmware.
+                for _ in range(2400):
+                    now += .05
+                    wire.exchange('@tick 50'); link.tick()
+                self.assertTrue(link.snapshot()['connected'])
+                self.assertFalse(link.snapshot()['ready'])
+                self.assertEqual(wire.state, (0,0))
+                steps(3)  # Neutral browser acknowledgement restores controls, not motion.
+                self.assertTrue(link.snapshot()['ready'])
+                self.assertEqual(wire.state, (0,0))
                 wire.exchange('@tick 501')  # Entire host freezes, including heartbeat worker.
                 self.assertEqual(wire.state,(0,0))
                 link.tick(); self.assertFalse(link.ready)
-                wire.exchange('DRIVE 255 255'); self.assertEqual(wire.state,(0,0))
+                self.assertTrue(link.snapshot()['connected'])
+                steps(3, mode='RACE')  # Delayed browser commands cannot resume motion.
+                self.assertEqual(wire.state,(0,0))
+                self.assertFalse(link.snapshot()['ready'])
+                steps(3)
+                self.assertTrue(link.snapshot()['ready'])
+                self.assertEqual(wire.state,(0,0))
             finally: wire.finish()
 
 if __name__ == '__main__': unittest.main()

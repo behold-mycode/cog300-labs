@@ -1,4 +1,9 @@
 #pragma once
+// Legacy replay fixtures explicitly retain their original motor calibration.
+// The eight-cell replays override this to test the production boot profile.
+#ifndef ROBOT_EIGHT_CELL_PROFILE
+#define ROBOT_EIGHT_CELL_PROFILE 0
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

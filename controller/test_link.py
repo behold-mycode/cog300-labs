@@ -54,7 +54,7 @@ class LinkTests(unittest.TestCase):
         self.serial.feed('DATA,100,RACE,RACE_SEARCHING_LINE,60,15,20,-20');self.link.tick()
         self.assertEqual(self.link.telemetry['mode'], 'RACE')
         self.now += .7;self.link.tick()
-        self.assertFalse(self.link.ready);self.assertEqual(self.serial.sent[-1], 'STOP')
+        self.assertFalse(self.link.snapshot()['ready']);self.assertIn('STOP', self.serial.sent)
 
     def test_saved_calibration_actions(self):
         self.ready()
@@ -121,17 +121,66 @@ class LinkTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.link.frame(self.owner, 9, ['Up'], 'MANUAL')
         with self.assertRaises(ValueError): self.link.frame('other', 11, ['Up'], 'MANUAL')
         self.assertEqual(self.link.keys, [])
-    def test_browser_loss_stops_autonomy_and_requires_reconnect(self):
+    def test_browser_loss_stops_without_closing_usb_or_resuming_stale_input(self):
         self.ready(); self.link.frame(self.owner, 3, [], 'FOLLOW'); self.now += .1; self.link.tick()
         self.assertIn('MODE FOLLOW', self.serial.sent)
-        self.now += .6; self.link.tick()
-        self.assertFalse(self.link.ready); self.assertTrue(self.serial.closed)
+        self.now += .6; self.serial.feed('ALIVE'); self.link.tick()
+        self.assertFalse(self.link.snapshot()['ready'])
+        self.assertFalse(self.serial.closed)
         self.assertIn('STOP', self.serial.sent)
-        with self.assertRaises(ValueError): self.link.frame(self.owner, 4, [], 'FOLLOW')
+        self.assertEqual(self.link.mode, 'MANUAL')
+        self.serial.sent.clear()
+        # Several minutes with no browser, but a healthy firmware connection.
+        for _ in range(1800):
+            self.now += .1; self.serial.feed('ALIVE'); self.link.tick()
+        self.assertFalse(self.serial.closed)
+        self.assertIn('HEARTBEAT', self.serial.sent)
+        for seq, keys, mode in [(4, [], 'FOLLOW'), (5, ['Up'], 'MANUAL')]:
+            self.link.frame(self.owner, seq, keys, mode)
+            self.now += .11; self.serial.feed('ALIVE'); self.link.tick()
+            self.assertFalse(self.link.snapshot()['ready'])
+        self.assertFalse(any(c.startswith(('MODE FOLLOW', 'DRIVE')) for c in self.serial.sent))
+        # UI sees not-ready, clears local commands, and acknowledges neutral.
+        self.link.frame(self.owner, 6, [], 'MANUAL')
+        self.assertTrue(self.link.snapshot()['ready'])
+        self.assertEqual(self.link.mode, 'MANUAL')
+        self.link.frame(self.owner, 7, [], 'FOLLOW')
+        self.now += .11; self.link.tick()
+        self.assertIn('MODE FOLLOW', self.serial.sent)
+
     def test_serial_loss_despite_live_browser(self):
         self.ready(); self.now += 1.1
         self.link.frame(self.owner, 3, [], 'MANUAL'); self.link.tick()
         self.assertFalse(self.link.ready)
+    def test_silent_firmware_keeps_port_and_retries_handshake(self):
+        self.ready()
+        self.now += 1.1; self.link.frame(self.owner, 3, [], 'LINE'); self.link.tick()
+        self.assertFalse(self.serial.closed)
+        self.assertFalse(self.link.snapshot()['ready'])
+        for seq in range(4, 30):
+            self.now += 1
+            self.link.frame(self.owner, seq, [], 'LINE'); self.link.tick()
+        self.assertFalse(self.serial.closed)
+        self.assertGreater(self.serial.sent.count('HELLO'), 5)
+        self.serial.feed('ROBOT_READY 7'); self.link.tick()
+        self.assertFalse(self.link.snapshot()['ready'])  # Still needs neutral acknowledgement.
+        self.link.frame(self.owner, 30, [], 'MANUAL'); self.link.tick()
+        self.assertTrue(self.link.snapshot()['ready'])
+        self.assertNotIn('MODE LINE', self.serial.sent)
+
+    def test_board_reset_and_watchdog_recover_without_losing_owner(self):
+        for notice in ('ROBOT_BOOT 7', 'CONTROL_TIMEOUT'):
+            with self.subTest(notice=notice):
+                self.setUp(); self.ready()
+                self.serial.feed(notice); self.link.tick()
+                self.assertFalse(self.serial.closed)
+                self.assertEqual(self.link.owner, self.owner)
+                self.assertFalse(self.link.snapshot()['ready'])
+                self.now += 2.1; self.link.tick()
+                self.serial.feed('ROBOT_READY 7'); self.link.tick()
+                self.link.frame(self.owner, 3, [], 'MANUAL')
+                self.assertTrue(self.link.snapshot()['ready'])
+
     def test_config_and_validation(self):
         self.ready(); settings = dict(power=120, minimum=40, invertA=True, invertB=False, followCm=25, wallCm=30)
         self.link.configure(self.owner, 3, settings)

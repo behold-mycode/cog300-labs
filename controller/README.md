@@ -7,7 +7,7 @@ The app only connects to the robot, selects a mode, starts/stops it, and provide
 3. Connect to the serial port, choose a mode and press **Start**. Selecting a mode alone stops motion.
 4. Hold arrow keys or WASD for manual control; release to stop. Space, Escape and **Stop** stop all modes. Manual keys select manual mode.
 
-Laptop-controlled operation retains its heartbeat stop: leaving the window, losing the browser/USB connection or disconnecting stops motion. Standalone button/Wi-Fi control is disabled in the default build.
+Manual keyboard driving stops when the browser loses focus or its heartbeat expires. Autonomous line following continues during browser inactivity. Explicit desktop disconnect and USB serial fault recovery can stop a USB-controlled run. The onboard Wi-Fi controller operates independently.
 
 Modes: Line following, Drive until tape, Stop at tape end, Object search, Line + wall maze (three sonars), Wheel calibration, Manual driving. Selection stops; Start runs. Connecting never overwrites calibration.
 
