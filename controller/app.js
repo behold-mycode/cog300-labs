@@ -1,6 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
+let arenaCapable=false;
 let owner=null, seq=0, renderedSeq=-1, ready=false, mode='MANUAL', framePending=false;
 const pressed=new Set();
 const mapping={ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',KeyW:'Up',KeyS:'Down',KeyA:'Left',KeyD:'Right'};
@@ -22,7 +23,8 @@ function render(state){
   $('status').textContent=state.status;
   $('connect').textContent=owner?'Disconnect':'Connect';
   $('connect').disabled=Boolean(state.connected&&!owner);
-  $('start').disabled=!ready;
+  arenaCapable=state.radar?.capable===true;
+  $('start').disabled=!ready||($('mode').value==='OBJECT'&&!arenaCapable);
   const t=state.telemetry||{};
   if(state.mode==='MANUAL'&&t.mode==='MANUAL'&&!['STOPPED','DRIVING','TIMED_TEST'].includes(t.state))localStop();
   $('robotState').textContent=state.connected?(t.state||'Stopped').replaceAll('_',' ').toLowerCase():'Not connected';
@@ -40,7 +42,76 @@ function render(state){
   $('irHelp').textContent=irLive
     ? `Live readings · ${tapeLevel===0||tapeLevel===1?`${tapeLevel} = tape, ${1-tapeLevel} = floor.`:'Tape polarity not set.'} Keep the robot stopped while adjusting sensors.`
     : 'No live readings. Connect the robot to calibrate.';
+  for(const id of ['benchScan','armMaze','setWidth','setRadius','setServo','setStep']) $(id).disabled=!ready||!arenaCapable;
+  $('armMaze').textContent='Start wall-maze course';
+  const profile=state.radar?.settings||{};
+  $('radarSettingsStatus').textContent=state.connected
+    ? `${profile.minMm==null?'Target width unconfirmed':`Confirmed target width ${profile.minMm}–${profile.maxMm} mm`} · ${profile.radius==null?'Entry radius unconfirmed':`Confirmed entry radius ${profile.radius} mm`}.` : '';
+  if(state.connected&&arenaCapable) $('radarSettingsStatus').textContent+=` Bench step ${profile.step||3}°.`;
+  $('servoStatus').textContent=profile.rightUs==null?'':`Confirmed right / forward / left: ${profile.rightUs} / ${profile.centerUs} / ${profile.leftUs} µs.`;
+  $('scannerSupport').hidden=!state.ready||arenaCapable;
+  drawRadar(state.radar || {});
   $('demo').textContent=state.demo?'DEMO · NO HARDWARE':'';
+}
+function drawRadar(radar){
+  const samples=radar.samples||[], lock=radar.lock;
+  const echoes=samples.filter(sample=>sample[1]>0);
+  let summary=radar.moving?'Robot moving · scan cleared.':'Waiting for scan data.';
+  if(samples.length){
+    summary=`Sweep ${radar.sweep} · ${echoes.length} echoes / ${samples.length} bearings · ${radar.age.toFixed(1)} s ago.`;
+    if(lock)summary+=` Target ${Math.abs(lock[0])}° ${lock[0]<0?'right':'left'}, range ${lock[1]} mm, apparent width ${lock[2]} mm.`;
+  }else if(radar.age!=null)summary=`Scan expired · last sample ${radar.age.toFixed(1)} s ago.`;
+  $('radarSummary').textContent=summary;
+  $('benchWidths').hidden=!Array.isArray(radar.bench);
+  if(Array.isArray(radar.bench)){
+    // Keep the preceding stationary sweep readable as the next one arrives.
+    const scans=[{sweep:radar.sweep,contours:radar.bench},radar.previousBench].filter(Boolean);
+    const items=[];
+    for(const scan of scans){
+      for(const contour of scan.contours){
+        const item=document.createElement('li');
+        const bearing=contour.bearing===0?'ahead':`${Math.abs(contour.bearing)}° ${contour.bearing>0?'left':'right'}`;
+        item.textContent=`Sweep ${scan.sweep} · ${bearing} · range ${contour.range} mm · ${contour.status==='bounded'?'apparent width':'visible span'} ${contour.width} mm (${contour.status})`;
+        items.push(item);
+      }
+    }
+    if(items.length===0){
+      const item=document.createElement('li');item.textContent='Waiting for adjacent returns.';items.push(item);
+    }
+    $('contourList').replaceChildren(...items);
+  }
+  const ctx=$('radarPlot').getContext?.('2d');
+  if(!ctx)return;
+  const outer=Math.max(1000,Math.ceil(Math.max(0,...echoes.map(s=>s[1]),lock?.[1]||0)/500)*500);
+  const originX=320,originY=296,radius=268;
+  const project=(a,r)=>[originX-Math.sin(a*Math.PI/180)*r/outer*radius,originY-Math.cos(a*Math.PI/180)*r/outer*radius];
+  ctx.clearRect(0,0,640,332);ctx.lineWidth=1;ctx.strokeStyle='#486360';ctx.fillStyle='#b6cebf';ctx.font='13px sans-serif';
+  for(const fraction of [.25,.5,.75,1]){
+    ctx.beginPath();ctx.arc(originX,originY,radius*fraction,Math.PI,2*Math.PI);ctx.stroke();
+    ctx.fillText(`${Math.round(outer*fraction)} mm`,originX+4,originY-radius*fraction+15);
+  }
+  for(const angle of [-90,-45,0,45,90]){
+    ctx.beginPath();ctx.moveTo(originX,originY);ctx.lineTo(...project(angle,outer));ctx.stroke();
+  }
+  ctx.fillText('LEFT',38,319);ctx.fillText('ROBOT',298,319);ctx.fillText('RIGHT',561,319);
+  const lockPoint=lock&&echoes.filter(p=>p[2]>0&&Math.abs(p[1]-lock[1])<=Math.max(40,.1*lock[1]))
+    .sort((a,b)=>Math.abs(a[0]-lock[0])-Math.abs(b[0]-lock[0]))[0];
+  const lockSegment=lockPoint&&Math.abs(lockPoint[0]-lock[0])<=5?lockPoint[2]:null;
+  let previous=null;
+  for(const [angle,distance,segment] of samples){
+    if(distance<1){previous=null;continue;}
+    const xy=project(angle,distance);
+    ctx.fillStyle=segment===lockSegment?'#ffc574':'#87dfb5';ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2;
+    if(previous&&segment>0&&previous.segment===segment&&(Array.isArray(radar.bench)?Math.abs(previous.angle-angle)===(radar.settings?.step||3):[2,5].includes(Math.abs(previous.angle-angle)))){
+      ctx.beginPath();ctx.moveTo(...previous.xy);ctx.lineTo(...xy);ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(...xy,3,0,2*Math.PI);ctx.fill();
+    previous={xy,segment,angle};
+  }
+  if(lock){
+    ctx.strokeStyle='#ffc574';ctx.lineWidth=3;ctx.beginPath();
+    ctx.arc(...project(lock[0],lock[1]),8,0,2*Math.PI);ctx.stroke();
+  }
 }
 async function sendFrame(){
   if(!owner)return;
@@ -75,9 +146,29 @@ $('connect').addEventListener('click',async()=>{
 });
 $('mode').addEventListener('change',stop);
 $('start').addEventListener('click',()=>{
-  if(!ready)return;
+  if(!ready||($('mode').value==='OBJECT'&&!arenaCapable))return;
   pressed.clear();paintKeys();mode=$('mode').value;void sendFrame();$('drive').focus();
 });
+function startRadar(run){
+  if(!ready||!arenaCapable)return;
+  pressed.clear();paintKeys();mode=run;void sendFrame();
+}
+$('radarStop').addEventListener('click',stop);
+$('benchScan').addEventListener('click',()=>startRadar('RADAR_SCAN'));
+$('armMaze').addEventListener('click',()=>startRadar('RADAR_ARM'));
+async function setRadar(action,values){
+  if(!ready)return;
+  localStop();$('error').hidden=true;
+  const current=owner,requestSeq=++seq;
+  try{
+    const state=await api('radar',{owner:current,seq:requestSeq,action,values});
+    if(owner===current&&requestSeq>=renderedSeq){renderedSeq=requestSeq;render(state);}
+  }catch(error){showError(error);void sendFrame();}
+}
+$('setWidth').addEventListener('click',()=>setRadar('radar_profile',{minMm:$('minWidth').valueAsNumber,maxMm:$('maxWidth').valueAsNumber}));
+$('setStep').addEventListener('click',()=>setRadar('radar_step',{step:Number($('benchStep').value)}));
+$('setServo').addEventListener('click',()=>setRadar('radar_servo',{rightUs:$('servoRight').valueAsNumber,centerUs:$('servoCenter').valueAsNumber,leftUs:$('servoLeft').valueAsNumber}));
+$('setRadius').addEventListener('click',()=>setRadar('radar_clearance',{radius:$('clearRadius').valueAsNumber}));
 $('stop').addEventListener('click',stop);
 window.addEventListener('keydown',event=>{
   if(event.code==='Space'||event.code==='Escape'){event.preventDefault();stop();return;}

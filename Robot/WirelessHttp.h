@@ -58,8 +58,9 @@ class Request {
   const char*b=bytes+header;
   for(size_t j=0;j<length;++j)if(b[j]<32||b[j]>126)return false;
   // Explicit allowlist prevents network joystick/test commands and session changes.
-  const char*allowed[]={"LINECFG ","LINESPEED ","LINEMOTOR "};
-  bool ok=!strcmp(b,"STOP")||!strcmp(b,"CLAIM")||!strcmp(b,"RELEASE")||!strcmp(b,"HEARTBEAT")||!strcmp(b,"MODE LINE");
+  const char*allowed[]={"LINECFG ","LINESPEED ","LINEMOTOR ", "RADAR STEP ","RADAR PROFILE ","RADAR SERVO ","RADAR CLEARANCE "};
+  bool ok=!strcmp(b,"STOP")||!strcmp(b,"CLAIM")||!strcmp(b,"RELEASE")||!strcmp(b,"HEARTBEAT")||!strcmp(b,"MODE LINE")
+      ||!strcmp(b,"MODE CALIBRATE")||!strcmp(b,"RADAR ARM")||!strcmp(b,"RADAR SCAN");
   for(auto a:allowed)if(!strncmp(b,a,strlen(a)))ok=true;
   if(!ok)return false;
   memcpy(out,b,length+1);return true;

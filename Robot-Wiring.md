@@ -1,10 +1,10 @@
 # Current robot wiring and startup
 
-**2026-11-17 update:** today’s build uses laptop USB, front/right sonars, three floor sensors and two encoders. The left sonar/button below are future connections. Standalone is disabled by default. Follow [USB-Lab-Setup.md](USB-Lab-Setup.md) for current startup and measurements; the older startup narrative below is superseded.
-
-This is the consolidated connection plan for the **UNO R4 WiFi, L298N, three HC-SR04 sonars, three LM393 floor sensors, two single-output LM393 slot encoders and a start/stop button**. It supersedes the older USB-bench drawings in `documentation/`. Signal assignments match the current firmware; installation has not been physically inspected.
+The arena layout fits the UNO R4 WiFi with the L298N, three floor sensors, two single-output wheel encoders, one scanning front HC-SR04 and two fixed side HC-SR04s. With the left sensor and SG90 installed, **18 of the 20 D0–D13 and A0–A5 signal pins are assigned**. D13 and A5 remain available with the current encoders. USB programming and phone Wi-Fi control remain available.
 
 Open [Robot-Wiring.svg](Robot-Wiring.svg) for the complete overview.
+
+For the scanning build, connect the SG90 signal to D1 and disconnect the optional button on that pin. The front sonar keeps its A0/A1 connection. Power the servo from its own regulated supply with a common ground. [Scanner setup and calibration](Object-Detection-Design.md)
 
 ## Connections
 
@@ -27,7 +27,8 @@ Open [Robot-Wiring.svg](Robot-Wiring.svg) for the complete overview.
 | Left slotted encoder DO or OUT | D12 |
 | Right slotted encoder DO or OUT | A4, used as a digital input |
 | LM393 module VCC / GND | Regulated 5V / common GND for the planned 5V-compatible modules; follow the actual labelled terminals, not connector order |
-| Momentary normally-open button | Between D1 and GND; internal pull-up, no external voltage |
+| SG90 signal | D1, reserved for servo PWM in the scanner build |
+| SG90 power and ground | Dedicated regulated servo supply and common Arduino ground |
 
 AO, if present, is unused. Single-output encoders use **one OUT wire each**, not quadrature A/B wiring. D13 and A5 are free. The firmware counts both rising and falling edges. D0/D1 are therefore unavailable for a separate UART; USB serial is unaffected. A4 is unavailable for I2C SDA.
 
@@ -41,24 +42,24 @@ For a single-pack standalone build, the additional proposed component is a suita
 
 ## Facts needed in the firmware hardware profile
 
-`Robot/HardwareProfile.h` owns the physical profile; there are no app forms. Nine measurements are currently unknown, and zero means unknown rather than an assumed kit size:
+`Robot/HardwareProfile.h` owns the physical profile; there are no app forms. The current car dimensions are recorded there. Recheck these quantities if the bracket or side sensors move:
 
 1. Left and right millimetres per encoder edge: wheel circumference divided by counted transitions per revolution, or measured travel divided by counts. Both signal edges count; a disc with N openings usually gives 2N transitions, but verify the disc.
 2. Wheel track: lateral distance between the wheel contact centre lines.
 3. Axle centre to front, axle centre to rear, and half the total chassis width, including protrusions.
 4. Front sonar forward offset from the axle centre; side-sonar forward offset and lateral offset from the centreline. Side sonars currently share symmetric mounting offsets.
 
-LM393 identifies the comparator, not wheel diameter, disc pattern or chassis dimensions. These values were not present in the saved drawings. Incorrect values directly affect turning clearance and odometry. The firmware reports `HARDWARE_DIMENSIONS_REQUIRED` until the profile is provided; it must not guess them.
+LM393 identifies the comparator, not wheel diameter, disc pattern or chassis dimensions. Measure offsets from the axle centre on the assembled car. Incorrect values directly affect turning clearance and odometry. The firmware reports `HARDWARE_DIMENSIONS_REQUIRED` until the profile is provided; it must not guess them.
 
 ## Robot-owned first start
 
-With a valid compiled physical profile, boot enables the three sonars and both single-channel encoders and tries to restore matching saved calibration. Changing dimensions or the compiled motor polarity invalidates that calibration. Boot never starts motion.
+The current hardware profile enables the front and right sonars and both single-output encoders. After installing the left HC-SR04, set `p.leftSonarInstalled=true` in `Robot/HardwareProfile.h`, verify the two side sensors have symmetric offsets, then rebuild, upload and recalibrate. The changed profile invalidates the old saved wheel calibration. Changing dimensions or the compiled motor polarity invalidates that calibration. Boot never starts motion.
 
 When calibration is absent, the first explicit Start runs a bounded forward measurement in **clear straight space**, followed by a coast-to-stop measurement. It needs all sensors working, at least 650mm of measured clearance ahead of the chassis at the initial check, and side clearance beyond the chassis turning radius plus 30mm. Place the centre floor sensor over a narrow line, or put all three on bare floor; a broad tape patch is not an acceptable bare-floor reference. The observed starting pattern determines tape polarity under that placement assumption.
 
 Single-output encoder direction is inferred from motor commands; it cannot independently prove physical direction or detect slipping. The profile retains the previously established A/right reversed, B/left normal polarity. Verify that unchanged wiring before the first floor run.
 
-The routine ramps motor output, balances forward travel with encoder feedback, measures each wheel's response, measures coasting, chooses conservative speed/braking values and saves them. It has travel, time, sensor freshness, encoder-count consistency and drift checks. Stop, disconnect in a tethered session, or the physical button cancels it. The check itself moves the robot after Start; it is not a stationary sensor test, and its synthetic tests are not a physical safety guarantee.
+The routine ramps motor output, balances forward travel with encoder feedback, measures each wheel's response, measures coasting, chooses conservative speed/braking values and saves them. It has travel, time, sensor freshness, encoder-count consistency and drift checks. Stop, disconnect in a tethered session, or the phone’s Stop control cancels it. The check itself moves the robot after Start; it is not a stationary sensor test, and its synthetic tests are not a physical safety guarantee.
 
 Afterward the same Start enters the maze solver. It follows usable lines, changes to wall navigation on sustained line loss, and reacquires lines in corridors. Dead ends, route recording and backtracking use the onboard graph. Ambiguous localization or insufficient clearance still stops rather than claiming a successful route. The user stops and picks up the robot at the goal; there is no goal detector.
 

@@ -41,6 +41,7 @@ void serviceRace(){
  bool settled=(uint32_t)(input.now-quietSince)>=250;
  bool stable=(uint32_t)(input.now-cueSince)>=200;
  if(raceWallStarted){
+  if(raceUsesArenaExit()){serviceWall();return;}
   // Finish a measured junction manoeuvre before changing guidance. Tape does
   // not cancel a pivot halfway or silently overwrite an unresolved map event.
   if(cue==1&&wallNavigator.state==wall::Navigator::CORRIDOR){

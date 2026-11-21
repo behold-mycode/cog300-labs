@@ -1,4 +1,5 @@
 #include "Robot.h"
+#include "RadarSensor.h"
 #include "WirelessHttp.h"
 #if defined(ARDUINO_UNOR4_WIFI) && ROBOT_ENABLE_WIFI
 #include <WiFiS3.h>
@@ -23,7 +24,7 @@ bool apReady=false,pending=false,resync=false;
 int serverSocket=-1,clientSocket=-1;
 uint32_t started=0,clientSince=0,nextPoll=0,wifiMaxUs=0;
 char transmit[320]{};size_t txSize=0,txOffset=0;
-char responseHeader[240]{},statusBody[850]{};
+char responseHeader[240]{},statusBody[1000]{};
 const char* responseBody=nullptr;
 size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
 
@@ -59,6 +60,17 @@ void status(bool ok,uint32_t returnedToken){
   (unsigned long)millis(),(unsigned long)odometryEpoch,
   encodersEnabled()&&odometry.configured&&odometry.sampled?"true":"false",
   pose.x,pose.y,pose.heading,line);
+ if (radarReady()) {
+  radarWirelessStatus(line, sizeof(line));
+  size_t used = strlen(statusBody);
+  const size_t extra = strlen(line);
+  if (used && statusBody[used-1] == '}' && extra && used + extra + 2 <= sizeof(statusBody)) {
+   statusBody[used-1] = ',';
+   memcpy(statusBody + used, line, extra);
+   statusBody[used+extra] = '}';
+   statusBody[used+extra+1] = 0;
+  }
+ }
 }
 void prepareResponse(){
  bool ok=true;const bool page=request.get("/");const char*type="application/json";
@@ -68,7 +80,7 @@ void prepareResponse(){
   char command[96];ok=request.command(command);uint32_t token=0;
   if(ok){bool claim=!strcmp(command,"CLAIM");auto supplied=request.token();
    ok=processWirelessCommand(command,supplied);
-   if(ok&&(claim||supplied==wirelessControlToken()))token=wirelessControlToken();
+   if((ok&&claim)||(supplied&&supplied==wirelessControlToken()))token=wirelessControlToken();
   }
   status(ok,token);responseBody=statusBody;
  }

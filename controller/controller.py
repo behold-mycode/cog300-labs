@@ -89,11 +89,17 @@ def make_server(link, demo=False, port=0):
                     elif path == '/api/frame':
                         link.frame(body['owner'], body['seq'], body['keys'], body['mode'])
                         result = link.snapshot()
+                    elif path == '/api/radar':
+                        if body['action'] not in ('radar_profile', 'radar_clearance', 'radar_servo', 'radar_step'):
+                            raise ValueError('Unknown radar setting.')
+                        link.action(body['owner'], body['seq'], body['action'], body['values'])
+                        result = link.snapshot()
                     elif path == '/api/disconnect':
                         link._authorize(body['owner'], body['seq'])
                         link.disconnect(); result = link.snapshot()
                     else:
                         self.respond(404, {'error': 'Not found'}); return
+                result['demo'] = demo
                 self.respond(200, result)
             except (ValueError, KeyError, TypeError) as error:
                 self.respond(400, {'error': str(error)})

@@ -19,7 +19,7 @@
 #include "Explorer.h"
 #include "WallNavigator.h"
 #include "Race.h"
-#include "ObjectSearch.h"
+
 #include "HardwareProfile.h"
 
 const uint8_t ENA=5,IN1=6,IN2=7,IN3=8,IN4=9,ENB=10;
@@ -38,7 +38,7 @@ struct NavigationConfig {
   float frontStopCm=20,wallBandCm=2;
   uint32_t stallMs=1500; // Failure deadline, never a movement duration.
 };
-enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE,RACE,OBJECT,CALIBRATE };
+enum Mode { MANUAL,FOLLOW,WALL,LINE,MAZE,STOP_ON_TAPE,STOP_AT_END,WALL_MAZE,RACE,OBJECT,CALIBRATE,RADAR_SCAN };
 extern Settings settings;
 extern NavigationConfig navigationConfig;
 extern Mode mode;
@@ -67,6 +67,10 @@ SensorReading sensorReading(uint8_t sensor);float sensorDistanceCm(uint8_t senso
 void setupLine();uint8_t lineMask();void reportLine();
 void serviceObservation();void setObservationTrace(bool enabled);
 void cancelNavigation();void stopRobot();void startNavigation(Mode selected);void serviceNavigation();const char* modeName();
+float lineSensorOffset();
+void radarWirelessStatus(char* out,size_t size);
+bool radarProfile(int minimum,int maximum);
+void radarBenchStep(int step);bool raceUsesArenaExit();bool radarStartBench();bool radarArmExit();void radarClearance(int mm);
 void readCommands();void processCommand(char* line);void serviceControlTimeout();void serviceTelemetry();void reportStatus();
 bool configureEncoders(int kind,bool invertL,bool invertR);bool encodersEnabled();
 void updateEncoderDirections(int left,int right);
@@ -81,7 +85,7 @@ extern race::Navigator raceNavigator;
 extern bool standaloneActive,lastCommandOk;
 void beginRaceLine();void serviceRaceLine(wall::Input input,uint8_t tape);
 bool startRace();bool startStandalone();void serviceRace();void setupStandalone();void serviceButton();
-wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
+const wall::Input& motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
 bool saveCalibration();bool loadCalibration();bool calibrationSaved();
 int encoderKind();bool encoderInvertLeft();bool encoderInvertRight();uint32_t sonarInterval();
 void setupWireless();void serviceWireless();void suspendWireless();

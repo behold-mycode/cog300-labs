@@ -1,4 +1,5 @@
 #include "Robot.h"
+#include "RadarSensor.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,7 @@ bool processWirelessCommand(char* line,uint32_t token){
   if(!wifiToken||token!=wifiToken)return false;
   if(!strcmp(line,"HEARTBEAT")){wifiLastControl=millis();return true;}
   if(!strcmp(line,"RELEASE")){releaseWirelessControl();return true;}
-  bool allowed=!strcmp(line,"MODE LINE")||!strncmp(line,"LINECFG ",8)||
+  bool allowed=!strcmp(line,"MODE LINE")||!strcmp(line,"MODE CALIBRATE")||!strncmp(line,"RADAR ",6)||!strncmp(line,"LINECFG ",8)||
     !strncmp(line,"LINESPEED ",10)||!strncmp(line,"LINEMOTOR ",10);
   if(!allowed)return false;
   bool starting=!strcmp(line,"MODE LINE");
@@ -138,7 +139,7 @@ void processCommand(char* line) {
     // Reconnecting a different desktop must not overwrite the calibration of a
     // live map with its startup defaults.
     reportConfiguration();
-    reportLineControl();reportLineTuning();Serial.println(F("ROBOT_READY 7")); return;
+    reportLineControl();reportLineTuning();Serial.println(F("CAPS ARENA_1"));Serial.println(F("ROBOT_READY 7")); return;
   }
   if (!strcmp(cmd, "HEARTBEAT") && count == 1) {
     if (controlSession) { lastControl = millis(); Serial.println(F("ALIVE")); }
@@ -151,10 +152,11 @@ void processCommand(char* line) {
     Serial.println(F("LINECFG reference_pwm minimum_pwm (0 disables floor); stops; RAM only."));
     Serial.println(F("HELLO opens 500ms watchdog session; HEARTBEAT keeps it alive."));
     Serial.println(F("DRIVE left right (-255..255; session required)"));
-    Serial.println(F("MODE LINE|STOP_ON_TAPE|STOP_AT_END|OBJECT|CALIBRATE|RACE|WALL_MAZE|MANUAL; TEST left right ms (1..5000)"));
+    Serial.println(F("MODE LINE|STOP_ON_TAPE|STOP_AT_END|CALIBRATE|RACE|WALL_MAZE|MANUAL; TEST left right ms (1..5000)"));
     Serial.println(F("CONFIG power minimum invertA invertB followCm wallCm [tapeLevel: -1 unknown, 0 LOW, 1 HIGH]"));
     Serial.println(F("Example: CONFIG 255 255 1 0 20 10; power 1..255, minimum 0..power"));
     Serial.println(F("SONAR leftEnabled intervalMs (25..100; two sensors >=35); D0 TRIG/D11 ECHO replaces LED"));
+    Serial.println(F("RADAR SCAN | PROFILE minWidthMm maxWidthMm | CLEARANCE pivotRadiusMm | ARM starts the wall course; maze exit tape activates pursuit"));
     Serial.println(F("BODY front rear halfWidth frontSonarX sideSonarX sideSonarY (mm from axle)"));
     Serial.println(F("WALLCFG cruise turnSpeed margin deceleration reaction matchRadius corridorWidth (mm,s)"));
     Serial.println(F("SPEEDCFG fullLeft fullRight kp ki acceleration (full speeds at PWM255, mm/s)"));
@@ -183,6 +185,26 @@ void processCommand(char* line) {
     stopRobot();raceConfig=cfg;Serial.println(F("OK RACECFG"));return;
   }
   int a, b, c, d, e, f, g = -1;
+  if(!strcmp(cmd,"RADAR")){
+    if(!controlSession && !wirelessDispatch){invalid();return;}
+    bool ok=false;
+    if(count==4 && !strcmp(args[1],"PROFILE") && number(args[2],1,2000,a) && number(args[3],a,2000,b))
+      ok=radarProfile(a,b);
+    else if(count==3 && !strcmp(args[1],"STEP") && number(args[2],1,5,a) && a!=4){
+      radarBenchStep(a);ok=true;
+    }else if(count==5 && !strcmp(args[1],"SERVO") && number(args[2],800,2200,a) &&
+            number(args[3],800,2200,b) && number(args[4],800,2200,c)){
+      stopRobot();ok=radarServoCalibration(a,b,c);
+      if(!ok)navigationState="RADAR_SERVO_CALIBRATION_FAILED";
+    }else if(count==3 && !strcmp(args[1],"CLEARANCE") && number(args[2],0,2000,a)){
+      radarClearance(a);ok=true;
+    }else if(count==2 && !strcmp(args[1],"SCAN"))ok=radarStartBench();
+    else if(count==2 && !strcmp(args[1],"ARM"))ok=radarArmExit();
+    else{invalid();return;}
+    if(!ok){const char* why=navigationState;stopRobot();navigationState=why;lastCommandOk=false;
+      Serial.print(F("ERROR "));Serial.println(why);return;}
+    Serial.print(F("OK RADAR "));Serial.println(args[1]);return;
+  }
   if(!strcmp(cmd,"SONAR")&&count==3){
     if(explorer.graph.nodeCount||!number(args[1],0,1,a)||!number(args[2],25,100,b)||!configureSonars(a,b)){invalid();return;}
     Serial.println(F("OK SONAR"));return;
@@ -274,7 +296,10 @@ void processCommand(char* line) {
     if(strcmp(args[1],"MANUAL")&&!controlSession&&!wirelessDispatch&&!(ROBOT_LINE_ONLY&&!strcmp(args[1],"LINE"))){invalid();return;}
     if (!strcmp(args[1], "MANUAL")) startNavigation(MANUAL);
     else if (!strcmp(args[1], "CALIBRATE")) startNavigation(CALIBRATE);
-    else if (!strcmp(args[1], "OBJECT")) startNavigation(OBJECT);
+    else if (!strcmp(args[1], "OBJECT")){
+      startNavigation(OBJECT);
+      if(mode!=OBJECT){lastCommandOk=false;Serial.print(F("ERROR "));Serial.println(navigationState);return;}
+    }
     else if (!strcmp(args[1], "FOLLOW")) startNavigation(FOLLOW);
     else if (!strcmp(args[1], "RACE")) startNavigation(RACE);
     else if (!strcmp(args[1], "WALL_MAZE")) startNavigation(WALL_MAZE);

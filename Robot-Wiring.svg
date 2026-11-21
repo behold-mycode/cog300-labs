@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1470" viewBox="0 0 1200 1470"><rect width="1200" height="1470" fill="#f5f7f8"/>
 <text x="40" y="48" font-family="Arial,sans-serif" font-size="32" font-weight="bold" fill="#173344">COGS 300 robot · consolidated wiring</text>
 <text x="40" y="80" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">UNO R4 WiFi · labelled terminals, not physical connector positions</text>
-<text x="40" y="109" font-family="Arial,sans-serif" font-size="17" font-weight="normal" fill="#765021">Planned additions shown. Firmware pin match verified; physical installation not yet verified.</text>
+<text x="40" y="109" font-family="Arial,sans-serif" font-size="17" font-weight="normal" fill="#765021">Arena layout with front SG90 and optional fixed left sonar. Signal assignments checked against firmware.</text>
 <rect x="35" y="133" width="1130" height="112" rx="12" fill="#fff" stroke="#b9c9d0"/>
 <text x="55" y="163" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">L298N motor driver</text>
 <text x="435" y="162" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D5 → ENA     D6 → IN1     D7 → IN2</text>
@@ -11,7 +11,7 @@
 <text x="55" y="289" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">HC-SR04 · front</text>
 <text x="435" y="288" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">A0 → TRIG     A1 ← ECHO</text>
 <text x="435" y="317" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">VCC → 5V; GND → common ground</text>
-<text x="435" y="346" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Face forward</text>
+<text x="435" y="346" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Mount on SG90; centre faces forward in wall mode</text>
 <rect x="35" y="385" width="1130" height="112" rx="12" fill="#fff" stroke="#b9c9d0"/>
 <text x="55" y="415" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">HC-SR04 · right</text>
 <text x="435" y="414" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">A2 → TRIG     A3 ← ECHO</text>
@@ -21,10 +21,10 @@
 <text x="55" y="541" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">HC-SR04 · left</text>
 <text x="435" y="540" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D0 → TRIG     D11 ← ECHO</text>
 <text x="435" y="569" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">VCC → 5V; GND → common ground</text>
-<text x="435" y="598" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Remove the old D11 LED</text>
+<text x="435" y="598" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Face left and disconnect the old D11 LED</text>
 <rect x="35" y="637" width="1130" height="112" rx="12" fill="#fff" stroke="#b9c9d0"/>
 <text x="55" y="667" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">LM393 · floor sensors</text>
-<text x="435" y="666" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D3 ← left OUT     D2 ← centre OUT     D4 ← right OUT</text>
+<text x="435" y="666" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D4 ← left OUT     D2 ← centre OUT     D3 ← right OUT</text>
 <text x="435" y="695" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">VCC → regulated 5V; GND → common ground</text>
 <text x="435" y="724" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Three downward-facing modules; AO unused</text>
 <rect x="35" y="763" width="1130" height="112" rx="12" fill="#fff" stroke="#b9c9d0"/>
@@ -33,22 +33,22 @@
 <text x="435" y="821" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">VCC → regulated 5V; GND → common ground</text>
 <text x="435" y="850" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">One signal per wheel; count both edges</text>
 <rect x="35" y="889" width="1130" height="112" rx="12" fill="#fff" stroke="#b9c9d0"/>
-<text x="55" y="919" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">Start / stop button</text>
-<text x="435" y="918" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D1 ── normally-open pushbutton ── GND</text>
-<text x="435" y="947" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Internal pull-up; do not connect to battery voltage</text>
-<text x="435" y="976" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Hold ≥0.8 s then release to start; press to stop</text>
+<text x="55" y="919" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#173344">SG90 · front scanner</text>
+<text x="435" y="918" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D1 → servo signal (50 Hz); disconnect the optional D1 pushbutton</text>
+<text x="435" y="947" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Servo V+ → dedicated regulated servo supply</text>
+<text x="435" y="976" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Servo GND and supply negative → Arduino common ground</text>
 <rect x="35" y="1028" width="1130" height="205" rx="12" fill="#fff4e8" stroke="#b9c9d0"/>
-<text x="55" y="1060" font-family="Arial,sans-serif" font-size="23" font-weight="bold" fill="#173344">POWER · current laptop-connected arrangement</text>
-<text x="55" y="1093" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">Laptop USB-C → Arduino → 5V sensor rail + L298N logic 5V</text>
-<text x="55" y="1120" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">4 rechargeable AA positive → L298N VS / +12V terminal → motors</text>
+<text x="55" y="1060" font-family="Arial,sans-serif" font-size="23" font-weight="bold" fill="#173344">Power distribution</text>
+<text x="55" y="1093" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">Arduino USB power → board → 5V sensor rail and L298N logic 5V</text>
+<text x="55" y="1120" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">Motor pack positive → L298N VS / +12V terminal → motors</text>
 <text x="55" y="1147" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">AA negative + Arduino GND + L298N GND + every sensor GND → common ground</text>
 <text x="55" y="1174" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">Remove ENA and ENB caps. Keep 5V-EN removed.</text>
 <text x="55" y="1201" font-family="Arial,sans-serif" font-size="19" font-weight="normal" fill="#173344">REMOVE the old Arduino-5V-to-VS bridge before connecting the AA motor pack.</text>
 <rect x="35" y="1250" width="1130" height="169" rx="12" fill="#edf3f9" stroke="#b9c9d0"/>
-<text x="55" y="1281" font-family="Arial,sans-serif" font-size="23" font-weight="bold" fill="#173344">STANDALONE POWER · proposed, not installed</text>
-<text x="55" y="1311" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Same AA pack → suitable regulated 5V buck-boost converter → Arduino USB power</text>
-<text x="55" y="1337" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Motor power stays on its separate pack-to-VS branch; keep common ground.</text>
-<text x="55" y="1363" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">The converter is an additional part. Do not connect the raw AA pack to Arduino 5V.</text>
-<text x="55" y="1389" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">See Robot-Wiring.md for the physical measurements still needed in firmware.</text>
-<text x="40" y="1450" font-family="Arial,sans-serif" font-size="17" font-weight="normal" fill="#526c78">This drawing supersedes the old two-sonar USB-bench wiring diagrams.</text>
+<text x="55" y="1281" font-family="Arial,sans-serif" font-size="23" font-weight="bold" fill="#173344">Signal pin budget · single-output wheel encoders</text>
+<text x="55" y="1311" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">18 of 20 D0–D13 and A0–A5 pins assigned with all three sonars and the servo installed.</text>
+<text x="55" y="1337" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">Spare: D13 and A5. Optional quadrature encoders would use both.</text>
+<text x="55" y="1363" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">D0 and D1 serve the scanner build. USB programming and the onboard Wi-Fi link remain available.</text>
+<text x="55" y="1389" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#173344">After installing the left sonar, enable leftSonarInstalled in the hardware profile and recalibrate.</text>
+<text x="40" y="1450" font-family="Arial,sans-serif" font-size="17" font-weight="normal" fill="#526c78">Servo and Arduino supply positives stay separate. Join grounds. See Robot-Wiring.md for setup.</text>
 </svg>

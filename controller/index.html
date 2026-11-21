@@ -10,7 +10,6 @@
 <option value="LINE">Line following · Lab 07</option>
 <option value="STOP_ON_TAPE">Drive until tape · Lab 07</option>
 <option value="STOP_AT_END">Stop at tape end · Lab 07</option>
-<option value="OBJECT">Object search · Lab 08</option>
 <option value="RACE">Line + wall maze · three sonars</option>
 <option value="CALIBRATE">Wheel calibration · clear floor</option>
 <option value="MANUAL">Manual driving</option>
@@ -27,5 +26,33 @@
 <div class="keys" aria-hidden="true"><kbd id="keyUp">↑</kbd><div><kbd id="keyLeft">←</kbd><kbd id="keyDown">↓</kbd><kbd id="keyRight">→</kbd></div></div>
 <p class="instruction">Hold arrows or WASD for manual driving. Release to stop.</p>
 <p class="hint">Changing mode stops the robot. Press Start to run it.<br>USB control stops if this window loses focus or disconnects.</p>
+</section>
+<section class="arena" aria-labelledby="radarHeading">
+<h2 id="radarHeading">Arena sonar</h2>
+<p id="scannerSupport" role="status" hidden>Upload the arena scanner firmware to enable object search and sonar controls.</p>
+<canvas id="radarPlot" width="640" height="332" role="img" aria-describedby="radarSummary" aria-label="Latest sonar contour viewed from above">See the scan summary below.</canvas>
+<p id="radarSummary">Waiting for scan data.</p>
+<div id="benchWidths" hidden><h3>Measured contours</h3><p class="hint">Bounded widths include both observed edges. A clipped or incomplete surface shows only the visible span.</p><ul id="contourList"></ul></div>
+<p class="hint">Forward is up. Dots are echoes. Lines join returns on the same surface. The amber ring marks a confirmed target.</p>
+<div class="radar-actions"><button id="benchScan" disabled>Scan with wheels stopped</button><button id="armMaze" disabled>Start wall-maze course</button><button id="radarStop">Stop</button></div>
+<div class="radar-settings">
+<label>Bench angle step<select id="benchStep"><option value="1">1°</option><option value="2">2°</option><option value="3" selected>3°</option><option value="5">5°</option></select></label>
+<button id="setStep" disabled>Apply bench step</button></div>
+<div class="radar-settings">
+<label>Minimum target width (mm)<input id="minWidth" type="number" min="1" max="2000" step="1"></label>
+<label>Maximum target width (mm)<input id="maxWidth" type="number" min="1" max="2000" step="1"></label>
+<button id="setWidth" disabled>Apply width range</button>
+<label>Clear radius at entry (mm)<input id="clearRadius" type="number" min="0" max="2000" step="1" value="0"></label>
+<button id="setRadius" disabled>Apply clear radius</button>
+</div>
+<p id="radarSettingsStatus" role="status" class="hint"></p>
+<p class="hint">Enter the measured free radius around the axle at the starting or entry pose. Leave it at 0 if unmeasured. Applying a setting stops the wheels.</p>
+<details><summary>Servo angle calibration</summary>
+<p class="hint">Enter the pulse measured at each physical bearing. Values apply for this power cycle. Use 800–2200 µs, increasing or decreasing by at least 100 µs between bearings.</p>
+<div class="radar-settings">
+<label>60° right (µs)<input id="servoRight" type="number" min="800" max="2200" step="1"></label>
+<label>Forward (µs)<input id="servoCenter" type="number" min="800" max="2200" step="1"></label>
+<label>60° left (µs)<input id="servoLeft" type="number" min="800" max="2200" step="1"></label>
+<button id="setServo" disabled>Apply servo pulses</button></div><p id="servoStatus" class="hint"></p></details>
 </section><footer>COGS 300 <span id="demo"></span></footer>
 </main></body></html>

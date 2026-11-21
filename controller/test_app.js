@@ -13,7 +13,7 @@ function element(id) {
     focus(){}, click(){}, closest(){return null;}};
 }
 element('mode').value='RACE';
-let state = {connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertA:true,invertB:false,followCm:20,wallCm:10,lineTapeLevel:-1},navigation:{encoders:1,odometry:1,geometry:1,localized:1},telemetry:{tapeLevel:1,race:{configured:1,saved:1,speed:50,offset:100,angle:1.8,stage:0},dynamics:true,wall:{sonar:1,calibrated:1,localized:1,leftRange:15,frontWall:.1,rightWall:.9,leftWall:.9,targetL:50,targetR:50,speedL:49,speedR:51}},log:[]};
+let state = {radar:{capable:true},connected:true,ready:true,status:'Connected',settings:{power:255,minimum:255,invertA:true,invertB:false,followCm:20,wallCm:10,lineTapeLevel:-1},navigation:{encoders:1,odometry:1,geometry:1,localized:1},telemetry:{tapeLevel:1,race:{configured:1,saved:1,speed:50,offset:100,angle:1.8,stage:0},dynamics:true,wall:{sonar:1,calibrated:1,localized:1,leftRange:15,frontWall:.1,rightWall:.9,leftWall:.9,targetL:50,targetR:50,speedL:49,speedR:51}},log:[]};
 const document = {getElementById:element, querySelectorAll:()=>[], createElement:()=>element('new'),
   hasFocus:()=>true, hidden:false, addEventListener:(name,fn)=>events['doc:'+name]=fn};
 const context = vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},
@@ -36,9 +36,12 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   element('mode').value='RACE';await element('mode').handlers.change();await flush();
   assert.equal(frames().at(-1).body.mode,'MANUAL'); // Selection never starts motion.
   await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'RACE');
-  element('mode').value='OBJECT';await element('mode').handlers.change();await flush();
+  element('mode').value='STOP_ON_TAPE';await element('mode').handlers.change();await flush();
   assert.equal(frames().at(-1).body.mode,'MANUAL');
-  await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'OBJECT');
+  await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'STOP_ON_TAPE');
+  await element('benchScan').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'RADAR_SCAN');
+  await element('radarStop').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'MANUAL');
+  await element('armMaze').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'RADAR_ARM');
   element('mode').value='MANUAL';await element('mode').handlers.change();await flush();
   assert.equal(frames().at(-1).body.mode,'MANUAL');
   await element('start').handlers.click();await flush();assert.equal(frames().at(-1).body.mode,'MANUAL');
@@ -63,7 +66,7 @@ const frames=()=>requests.filter(r=>r.url.endsWith('/frame'));
   assert.equal(frames().at(-1).body.mode,'MANUAL');
   assert.equal(element('badge').textContent,'Connected');
   const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
-  assert.deepEqual([...html.matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]),['LINE','STOP_ON_TAPE','STOP_AT_END','OBJECT','RACE','CALIBRATE','MANUAL']);
+  assert.deepEqual([...html.split('<select id="mode">')[1].split('</select>')[0].matchAll(/<option value="([^"]+)"/g)].map(m=>m[1]),['LINE','STOP_ON_TAPE','STOP_AT_END','RACE','CALIBRATE','MANUAL']);
   assert.ok(!html.includes('<form')&&!html.includes('maintenance')&&!html.includes('Calibration'));
   console.log('PASS browser events: connect, keys, combinations, release, modes, stop, blur, repeat, fields, visibility, sequence');
 })().catch(error=>{console.error(error);process.exitCode=1;});

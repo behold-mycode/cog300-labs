@@ -8,6 +8,7 @@ DEFAULTS = dict(power=255, minimum=255, invertA=True, invertB=False,
                 followCm=20, wallCm=10, lineTapeLevel=-1)
 ARROWS = {'Up', 'Down', 'Left', 'Right'}
 MODES = {'MANUAL', 'FOLLOW', 'WALL', 'LINE', 'MAZE', 'STOP_ON_TAPE', 'STOP_AT_END', 'WALL_MAZE', 'RACE', 'OBJECT', 'CALIBRATE'}
+RADAR_RUNS = {'RADAR_SCAN': 'RADAR SCAN', 'RADAR_ARM': 'RADAR ARM'}
 BROWSER_TIMEOUT = .6
 
 
@@ -63,7 +64,91 @@ class RobotLink:
         self.maze_map = dict(nodes={}, edges={}, complete=False)
         self.trace_rows=[];self.trace_recording=False
         self.history = deque(maxlen=600)
+        self.arena_capable = False
+        self.radar_settings = {}
+        self.pending_radar_setting = None
         self.buffer = bytearray()
+        self.reset_radar()
+
+    def reset_radar(self):
+        self.previous_bench = None
+        self.sweep = None
+        self.samples = {}
+        self.radar_lock = None
+        self.lock_updated = None
+        self.radar_updated = None
+        self.radar_moving = False
+
+    def bench_contours(self):
+        # Both neighboring bearings must have been observed to bound a surface.
+        spacing = self.radar_settings.get('step',3)
+        points = self.samples
+        contours = []
+        run = []
+        def finish():
+            if len(run) < 2:
+                return
+            first, last = run[0][0], run[-1][0]
+            distance = sum(p[1] for p in run)/len(run)
+            left, right = points.get(first-spacing), points.get(last+spacing)
+            if first == -60 or last == 60:
+                status = 'edge clipped'
+            elif left is None or right is None:
+                status = 'incomplete'
+            else:
+                status = 'bounded'
+            width = round(2*distance*math.sin(math.radians(last-first+spacing)/2))
+            contours.append(dict(bearing=(first+last)/2, range=round(distance),
+                                 width=width, status=status))
+        for angle, distance, segment in sorted(points.values()):
+            if run and (angle != run[-1][0]+spacing or segment != run[-1][2] or distance <= 0):
+                finish()
+                run = []
+            if distance > 0 and segment > 0:
+                run.append((angle, distance, segment))
+        finish()
+        return contours
+
+    def bench_active(self):
+        return self.sent_mode == 'RADAR_SCAN' or self.telemetry.get('mode') == 'RADAR_SCAN'
+
+    def radar_record(self, line):
+        try:
+            kind, *fields = line.split(',')
+            if kind == 'RADAR':
+                sweep, angle, distance, segment = map(int, fields)
+                if not (0 <= sweep <= 0xffff and -90 <= angle <= 90 and
+                        (distance == -1 or 0 < distance <= 10000) and 0 <= segment <= 255):
+                    return
+                if self.radar_moving:
+                    return
+                if self.sweep != sweep:
+                    if self.sweep is not None and ((sweep - self.sweep) & 0xffff) >= 0x8000:
+                        return
+                    if self.sweep is not None and self.bench_active():
+                        self.previous_bench = dict(sweep=self.sweep, contours=self.bench_contours())
+                    self.samples = {}
+                    self.sweep = sweep
+                self.samples[angle] = [angle, distance, segment]
+                self.radar_updated = self.clock()
+            elif kind == 'LOCK':
+                angle, distance, width = map(int, fields)
+                self.radar_lock = None
+                if not self.radar_moving and self.samples and -90 <= angle <= 90 and 0 < distance <= 10000 and 0 < width <= 4000:
+                    self.radar_lock = [angle, distance, width]
+                    self.lock_updated = self.clock()
+        except ValueError:
+            return
+
+    def radar_snapshot(self):
+        age = None if self.radar_updated is None else max(0, self.clock() - self.radar_updated)
+        fresh = age is not None and age <= 2 and not self.radar_moving
+        bench = fresh and self.bench_active()
+        return dict(capable=self.arena_capable, bench=self.bench_contours() if bench else None,
+                    previousBench=self.previous_bench if bench else None,
+                    settings=self.radar_settings.copy(), sweep=self.sweep, age=age, moving=self.radar_moving,
+                    samples=list(self.samples.values()) if fresh else [],
+                    lock=self.radar_lock if fresh and self.lock_updated is not None and self.clock()-self.lock_updated <= 2 else None)
 
     def log(self, text):
         self.history.append(time.strftime('%H:%M:%S') + ' ' + text)
@@ -79,6 +164,10 @@ class RobotLink:
         self.browser_paused = False
         self.phase = 'Waiting for firmware 7'
         self.keys, self.mode = [], 'MANUAL'
+        self.reset_radar()
+        self.arena_capable = False
+        self.radar_settings = {}
+        self.pending_radar_setting = None
         self.buffer.clear(); self.telemetry = {}; self.navigation = {}
         self.map_exporting = False
         self.pending_navigation = None
@@ -100,9 +189,15 @@ class RobotLink:
     def frame(self, owner, seq, keys, mode):
         if (not isinstance(keys, list) or len(keys) > 4 or
                 any(not isinstance(k, str) or k not in ARROWS for k in keys) or
-                not isinstance(mode, str) or mode not in MODES):
+                not isinstance(mode, str) or mode not in MODES | RADAR_RUNS.keys()):
             raise ValueError('Invalid keyboard or mode input.')
         self._authorize(owner, seq)
+        if self.ready and (mode == 'OBJECT' or mode in RADAR_RUNS) and not self.arena_capable:
+            self.keys, self.mode = [], 'MANUAL'
+            self._send('STOP')
+            raise ValueError('Upload the arena scanner firmware to start this mode.')
+        if mode=='OBJECT':
+            raise ValueError('Object finding starts at the maze exit tape.')
         self.last_browser = self.clock()
         if self.browser_paused:
             if keys or mode != 'MANUAL': return
@@ -138,6 +233,10 @@ class RobotLink:
 
     def action(self, owner, seq, action, values):
         commands = {
+            'radar_step': ('RADAR STEP', [('step',1,5)]),
+            'radar_servo': ('RADAR SERVO', [('rightUs',800,2200),('centerUs',800,2200),('leftUs',800,2200)]),
+            'radar_profile': ('RADAR PROFILE', [('minMm',1,2000),('maxMm',1,2000)]),
+            'radar_clearance': ('RADAR CLEARANCE', [('radius',0,2000)]),
             'race_config': ('RACECFG', [('speed',1,300),('offset',1,999),('angle',.5,3.1)]),
             'save_calibration': ('SAVE', []), 'load_calibration': ('LOAD', []),
             'sonar': ('SONAR', [('enabled',0,1),('interval',25,100)]),
@@ -161,9 +260,18 @@ class RobotLink:
             v=values[name]
             if type(v) not in (int,float) or not math.isfinite(v) or not low <= v <= high:
                 raise ValueError(name + ' is outside its valid range.')
-            if action in ('encoders','map_confirm','trace','sonar') and type(v) is not int:
+            if action in ('encoders','map_confirm','trace','sonar','radar_profile','radar_clearance','radar_servo','radar_step') and type(v) is not int:
                 raise ValueError(name + ' must be an integer.')
             args.append(format(v,'.6g'))
+        if action == 'radar_step' and values['step'] not in (1,2,3,5):
+            raise ValueError('Bench spacing must be 1, 2, 3 or 5 degrees.')
+        if action == 'radar_servo':
+            step1 = values['centerUs'] - values['rightUs']
+            step2 = values['leftUs'] - values['centerUs']
+            if step1 * step2 <= 0 or min(abs(step1),abs(step2)) < 100:
+                raise ValueError('Servo pulses must increase or decrease in steps of at least 100 µs.')
+        if action == 'radar_profile' and values['maxMm'] < values['minMm']:
+            raise ValueError('Maximum width must be at least the minimum width.')
         if action=='sonar' and values['enabled']==0 and values['interval']<35:
             raise ValueError('Two sensors need at least 35 ms spacing.')
         if action=='body' and (values['frontSensor']>values['front'] or values['sideY']>values['halfWidth'] or not -values['rear']<=values['sideX']<=values['front']):
@@ -172,9 +280,13 @@ class RobotLink:
         if len(command)>90: raise ValueError('Calibration command too long.')
         self._authorize(owner,seq)
         if not self.ready: raise ValueError('Connect before configuring navigation.')
+        if action.startswith('radar_') and not self.arena_capable:
+            raise ValueError('Upload the arena scanner firmware to configure the radar.')
         if self.map_exporting: raise ValueError('Wait for map export to finish.')
         self.keys,self.mode=[], 'MANUAL'; self.sent_mode='MANUAL'; self.sent_motion=(0,0)
         self.last_browser=self.clock()
+        if action in ('radar_profile','radar_clearance','radar_servo','radar_step'):
+            self.pending_radar_setting = values.copy()
         if action=='trace':
             self.trace_recording=bool(values['enabled'])
             if self.trace_recording: self.trace_rows=[]
@@ -230,7 +342,9 @@ class RobotLink:
             except (OSError, ValueError): pass
             try: self.serial.close()
             except OSError: pass
+        self.reset_radar()
         self.trace_recording=False
+        self.arena_capable = False
         self.serial = self.owner = None
         self.browser_paused = False
         self.ready = False; self.keys, self.mode = [], 'MANUAL'
@@ -245,6 +359,10 @@ class RobotLink:
         self.keys, self.mode = [], 'MANUAL'
         self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
         self.map_exporting = False; self.pending_navigation = None
+        self.reset_radar()
+        self.arena_capable = False
+        self.radar_settings = {}
+        self.pending_radar_setting = None
         self.trace_recording = False
         self.phase = 'Waiting for firmware 7'
         self.started = self.clock() - 2
@@ -253,7 +371,7 @@ class RobotLink:
         self.log(reason + ' — retrying firmware handshake; USB retained.')
 
     def _receive(self, line):
-        if line != 'ALIVE' and not line.startswith('OBS,'): self.log('< ' + line)
+        if line != 'ALIVE' and not line.startswith(('OBS,','RADAR,')): self.log('< ' + line)
         if line.startswith('CONFIG_REPORT,') and (self.phase == 'Waiting for firmware 7' or self.pending_navigation == 'OK LOAD'):
             try:
                 v=[int(x) for x in line.split(',')[1:]]
@@ -261,9 +379,14 @@ class RobotLink:
                 self.settings=validate_settings(dict(power=v[0],minimum=v[1],invertA=bool(v[2]),invertB=bool(v[3]),followCm=v[4],wallCm=v[5],lineTapeLevel=v[6]))
             except ValueError: pass
         elif self.pending_navigation and line == self.pending_navigation:
+            if self.pending_radar_setting is not None:
+                self.radar_settings.update(self.pending_radar_setting)
+                self.pending_radar_setting = None
             self.pending_navigation=None;self.ready=True;self.phase='Navigation settings applied'
         elif line.startswith('BUSY '):
             self.phase=line.replace('_',' ')
+        elif line == 'CAPS ARENA_1' and self.phase == 'Waiting for firmware 7':
+            self.arena_capable = True
         elif line == 'ROBOT_READY 7' and self.phase == 'Waiting for firmware 7':
             self.ready = True; self.phase = 'Connected'; self.last_rx = self.clock()
             # Firmware owns calibration. Connecting must never overwrite it.
@@ -278,10 +401,21 @@ class RobotLink:
             self.last_rx = self.clock()
         elif line.startswith('CONTROL_TIMEOUT'):
             self._recover('Firmware watchdog expired')
+        elif line.startswith('ERROR ') and (self.sent_mode in RADAR_RUNS or self.pending_radar_setting is not None):
+            self._send('STOP')
+            self.pending_radar_setting = self.pending_navigation = None
+            self.keys, self.mode = [], 'MANUAL'
+            self.sent_mode, self.sent_motion = 'MANUAL', (0, 0)
+            self.ready, self.browser_paused = True, True
+            self.phase = line[6:].replace('_', ' ').capitalize()
         elif line.startswith('ERROR'):
             self.disconnect('Firmware error: ' + line)
-        elif line.startswith('ROBOT_BOOT') and self.ready:
+        elif line.startswith('ROBOT_BOOT') and self.phase != 'Waiting for firmware 7':
             self._recover('Board reset')
+        elif line.startswith(('RADAR,','LOCK,')):
+            self.radar_record(line)
+        elif line in ('OK RADAR SCAN','OK RADAR ARM'):
+            self.phase = 'Scanning with wheels stopped' if line.endswith('SCAN') else 'Exit marker armed'
         elif line.startswith('NAV,'):
             try:
                 v = [float(x) for x in line.split(',')[1:]]
@@ -321,6 +455,9 @@ class RobotLink:
             try:
                 v=[int(x) for x in line.split(',')[1:]]
                 if len(v)==3 and v[2] in (0,1,2) and all(-2**31<=x<2**31 for x in v[:2]):
+                    previous = self.telemetry.get('encoderCounts')
+                    if previous is not None and previous != v[:2]:
+                        self.reset_radar()
                     self.telemetry.update(encoderCounts=v[:2],encoderKind=v[2])
             except ValueError: pass
         elif line.startswith('IR,'):
@@ -338,10 +475,15 @@ class RobotLink:
             except ValueError: pass
         elif line.startswith('DATA,'):
             parts = line.split(',')
-            if len(parts) != 8 or parts[2] not in MODES: return
+            if len(parts) != 8 or parts[2] not in MODES | {'RADAR_SCAN'}: return
             try:
                 values = [float(p) for p in parts[4:]]
                 if not all(math.isfinite(v) for v in values): return
+                if values[2] or values[3]:
+                    self.reset_radar()
+                    self.radar_moving = True
+                else:
+                    self.radar_moving = False
                 self.telemetry.update(ms=int(parts[1]), mode=parts[2], state=parts[3],
                                       front=values[0], right=values[1], left=values[2], motorRight=values[3])
             except ValueError: return
@@ -384,7 +526,17 @@ class RobotLink:
             self._send('HEARTBEAT')
             if not self.ready: return
             if self.mode != self.sent_mode:
-                self._send('MODE ' + self.mode)
+                self.reset_radar()
+                if self.mode == 'MANUAL' and self.sent_mode in RADAR_RUNS:
+                    self._send('STOP')
+                else:
+                    if self.mode == 'RADAR_ARM' and self.telemetry.get('mode') not in ('WALL', 'WALL_MAZE'):
+                        self._send('STOP')
+                    if self.mode == 'RADAR_SCAN':
+                        # A previous session may have used another bench step.
+                        step = self.radar_settings.get('step',3)
+                        self._send(f'RADAR STEP {step}')
+                    self._send(RADAR_RUNS.get(self.mode, 'MODE ' + self.mode))
                 self.sent_mode = self.mode; self.sent_motion = (0, 0)
             if self.mode == 'MANUAL':
                 motion = wheel_command(self.keys, self.settings['power'])
@@ -402,7 +554,7 @@ class RobotLink:
         return dict(connected=self.serial is not None, ready=self.ready and not self.browser_paused,
                     status=(self.phase + ' — USB open; motors disabled') if not self.ready and self.serial else
                            'Browser inactive — motors stopped; USB connected' if self.browser_paused else self.phase,
-                    mode=self.mode, settings=self.settings, telemetry=self.telemetry, navigation=self.navigation, mazeMap=self.maze_map, mapExporting=self.map_exporting,
+                    mode=self.mode, settings=self.settings, radar=self.radar_snapshot(), telemetry=self.telemetry.copy(), navigation=self.navigation, mazeMap=self.maze_map, mapExporting=self.map_exporting,
                     traceRows=len(self.trace_rows),traceRecording=self.trace_recording,log=list(self.history))
 
 
@@ -411,18 +563,38 @@ class DemoSerial:
     def __init__(self, _port):
         self.pending = bytearray(); self.mode = 'MANUAL'; self.left = self.right = 0
         self.last_log = 0.
+        self.demo_ray = 0
+        self.demo_step = 3
     def write(self, data):
         cmd = data.decode().strip()
-        if cmd == 'HELLO': self.pending.extend(b'ROBOT_READY 7\n')
+        if cmd == 'HELLO': self.pending.extend(b'CAPS ARENA_1\nROBOT_READY 7\n')
         elif cmd == 'MAP DUMP': self.pending.extend(b'MAP_BEGIN,0,0\nMAP_END\n')
         elif cmd in ('SAVE','LOAD'):
             self.pending.extend(('OK '+cmd+'\n').encode())
         elif cmd.startswith(('RACECFG ','SONAR ','BODY ','WALLCFG ','SPEEDCFG ','ENC ','ODOM ','GEOMETRY ','DYNAMICS ','MODEL ','TRACE ','MAP ')):
             prefix=' '.join(cmd.split()[:2]) if cmd.startswith('MAP ') else cmd.split()[0]
             self.pending.extend(('OK '+prefix+'\n').encode())
+        elif cmd.startswith('RADAR '):
+            action = cmd.split()[1]
+            if action == 'SCAN':
+                self.mode = 'RADAR_SCAN'
+                self.demo_ray = 0
+                self.left = self.right = 0
+            elif action == 'STEP':
+                self.demo_step = int(cmd.split()[2])
+            elif action == 'ARM':
+                self.mode = 'WALL'
+            self.pending.extend(('OK RADAR ' + action + '\n').encode())
         elif cmd.startswith('CONFIG '): self.pending.extend(b'OK CONFIG\n')
         elif cmd == 'HEARTBEAT':
             self.pending.extend(b'ALIVE\n')
+            if self.mode == 'RADAR_SCAN':
+                sweep, index = divmod(self.demo_ray, 120 // self.demo_step + 1)
+                angle = index * self.demo_step - 60
+                distance = 510 if -9 <= angle <= 9 else 780 if 27 <= angle <= 45 else -1
+                segment = 1 if distance == 510 else 2 if distance == 780 else 0
+                self.pending.extend(f'RADAR,{sweep},{angle},{distance},{segment}\n'.encode())
+                self.demo_ray += 1
             if time.monotonic() - self.last_log >= .5:
                 self.last_log = time.monotonic()
                 self.pending.extend(f'DATA,1000,{self.mode},DEMO,30,20,{self.left},{self.right}\n'.encode())
