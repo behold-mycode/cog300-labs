@@ -77,6 +77,7 @@ void resetWallFeedback();void reportWallTrace();void resetWallCalibration();void
 extern race::Config raceConfig;
 extern race::Navigator raceNavigator;
 extern bool standaloneActive,lastCommandOk;
+void beginRaceLine();void serviceRaceLine(wall::Input input,uint8_t tape);
 bool startRace();bool startStandalone();void serviceRace();void setupStandalone();void serviceButton();
 wall::Input motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
 bool saveCalibration();bool loadCalibration();bool calibrationSaved();

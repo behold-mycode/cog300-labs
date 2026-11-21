@@ -42,10 +42,10 @@ static void reportConfiguration(){
       Serial.print(settings.wallCm);Serial.print(',');Serial.println(lineTapeLevel);
 }
 void serviceControlTimeout() {
-  if(wifiToken&&(uint32_t)(millis()-wifiLastControl)>=1500){
+  if(mode!=LINE&&wifiToken&&(uint32_t)(millis()-wifiLastControl)>=1500){
     stopRobot();releaseWirelessControl();navigationState="WIFI_TIMEOUT";
   }
-  if (controlSession && (uint32_t)(millis() - lastControl) >= CONTROL_TIMEOUT_MS) {
+  if (mode!=LINE && controlSession && (uint32_t)(millis() - lastControl) >= CONTROL_TIMEOUT_MS) {
     stopRobot(); controlSession = false; controlExpired = true;
     Serial.println(F("CONTROL_TIMEOUT"));
   }
@@ -97,6 +97,12 @@ void processCommand(char* line) {
     int cruise,minimum;
     if(!number(args[1],1,255,cruise)||!number(args[2],0,255,minimum)||minimum>cruise){invalid();return;}
     if(!configureLineDrive(cruise,minimum)){invalid();return;}Serial.println(F("OK LINECFG"));reportLineControl();reportLineTuning();return;
+  }
+  if(!strcmp(cmd,"LINESPEED") && count==2){
+    float v;
+    if(!realNumber(args[1],30,600,v)){invalid();return;}
+    configureLineSpeeds(v,fminf(v,150.f),v,fminf(v,125.f),mode==LINE);
+    Serial.println(F("OK LINESPEED"));reportLineTuning();return;
   }
   if(!strcmp(cmd,"LINESPEED") && count==5){
     float cruise,turn,correction,capture;

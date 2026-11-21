@@ -68,15 +68,16 @@ public:
     lastStep = i.now;
     stepping = true;
     saturated = false;
-    output = {
-        wheel(0, want.left, i.leftSpeed, i.appliedLeft, dt, i.now, maximum),
-        wheel(1, want.right, i.rightSpeed, i.appliedRight, dt, i.now, maximum)};
+    output = {wheel(0, want.left, i.leftSpeed, i.appliedLeft,
+                    fabsf(want.left) >= fabsf(want.right), dt, i.now, maximum),
+              wheel(1, want.right, i.rightSpeed, i.appliedRight,
+                    fabsf(want.right) >= fabsf(want.left), dt, i.now, maximum)};
     return output;
   }
 
 private:
-  int wheel(int n, float want, float measured, int applied, float dt,
-            uint32_t now, int maximum) {
+  int wheel(int n, float want, float measured, int applied,
+            bool allowStartBoost, float dt, uint32_t now, int maximum) {
     if (!want) {
       integral[n] = lastTarget[n] = 0;
       return 0;
@@ -101,7 +102,9 @@ private:
         (raw > minimum || error > 0))
       integral[n] = wall::limit(integral[n] + ki * error * dt, -100, 100);
     raw = ff + kp * error + integral[n];
-    if ((uint32_t)(now - started[n]) < 120 && measured * sign < 30)
+    // A startup boost on the slower wheel would straighten a tight arc.
+    if (allowStartBoost && (uint32_t)(now - started[n]) < 120 &&
+        measured * sign < 30)
       raw = fmaxf(raw, startPower);
     const int low = minimum < maximum ? minimum : maximum;
     saturated |= raw < low || raw > maximum;

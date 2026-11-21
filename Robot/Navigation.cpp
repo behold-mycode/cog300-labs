@@ -10,6 +10,23 @@ static line::Input lineInput(){
   i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);return i;
 }
 
+void beginRaceLine(){
+  lineWheels.reset();
+  lineFollower.begin(lineInput());
+}
+void serviceRaceLine(wall::Input input,uint8_t tape){
+  line::Input i{input.now,input.pose,tape};
+  i.appliedLeft=motorLeft;i.appliedRight=motorRight;lineWheels.observe(i);
+  auto target=lineFollower.step(i);
+  for(auto& range:input.ranges){
+    if(range.noReturn&&(uint32_t)(input.now-range.stamp)<300){range.valid=true;range.mm=4000;}
+  }
+  raceNavigator.reason=lineFollower.reason;
+  auto limited=raceNavigator.guarded(wallNavigator.config,input,{target.left,target.right});
+  auto pwm=lineWheels.step({limited.left,limited.right},i,settings.power);
+  navigationState=raceNavigator.reason;requestMotor(pwm.left,pwm.right);
+}
+
 Mode mode=MANUAL;
 NavigationConfig navigationConfig;
 maze::Explorer explorer;
@@ -67,7 +84,6 @@ void startNavigation(Mode selected) {
   mode=selected;navigationState="WAITING_FOR_SENSOR";
   if(ROBOT_LINE_ONLY&&selected==LINE){
     standaloneActive=true;controlSession=false;controlExpired=false;
-    lineFollower.config.allowOffTapeStart=true;
   }
 }
 // Obstacle observation constrains all autonomous commands. No competing controller
@@ -115,7 +131,7 @@ void serviceNavigation() {
   if(mode==MANUAL) return;
   if(automaticSetupActive()){serviceAutomaticSetup();return;}
   if((mode==MAZE||mode==WALL_MAZE||mode==RACE||mode==LINE||mode==OBJECT||mode==STOP_AT_END||mode==STOP_ON_TAPE) && !feedbackReady()) { hold("ENCODERS_REQUIRED");return; }
-  if(feedbackReady() && !progress.check(odometry.pose,
+  if(mode!=LINE && !(mode==RACE && !raceNavigator.wallStage()) && feedbackReady() && !progress.check(odometry.pose,
       {(int8_t)(motorLeft>0?1:motorLeft<0?-1:0),(int8_t)(motorRight>0?1:motorRight<0?-1:0)},
       millis(),navigationConfig.stallMs)) {
     if(mode==WALL_MAZE)wallNavigator.fail("ENCODER_STALL");else explorer.fail("ENCODER_STALL");stopRobot();navigationState="ENCODER_STALL";return;
@@ -203,7 +219,6 @@ void armBatteryLine(){batteryLinePending=true;batteryLineArmedAt=millis();}
 void serviceBatteryLine(){
   if(!batteryLinePending||(uint32_t)(millis()-batteryLineArmedAt)<1500)return;
   batteryLinePending=false;
-  lineFollower.config.allowOffTapeStart=true;
   startNavigation(LINE);
   standaloneActive=mode==LINE;
 }

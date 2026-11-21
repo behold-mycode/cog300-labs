@@ -15,9 +15,8 @@ bool startRace(){
  if(!leftSonarEnabled()){navigationState="LEFT_SONAR_REQUIRED";return false;}
  if(lineTapeLevel<0||!prepareWallCalibration()||!raceConfig.valid())return beginAutomaticSetup();
  wallNavigator.clear();explorer.clear();resetOdometry();resetWallFeedback();raceWallStarted=false;resumeWallGraph=false;resetCue();
- if(!lineMask()){raceWallStarted=startWall();return raceWallStarted;}
- bool ok=raceNavigator.begin(raceConfig,wallNavigator.config,motionInput(),lineMask());
- navigationState=raceNavigator.reason;return ok;
+ if(!lineMask()){raceWallStarted=startWall();if(raceWallStarted)raceNavigator.enterWall();return raceWallStarted;}
+ raceNavigator.lineStage();beginRaceLine();return true;
 }
 bool startStandalone(){
  if(wirelessControlToken())return false;
@@ -47,24 +46,23 @@ void serviceRace(){
   if(cue==1&&wallNavigator.state==wall::Navigator::CORRIDOR){
    stopMotor();pauseWall();navigationState="SOLVER_ACQUIRING_LINE";
    if(stable&&settled){
-    if(raceNavigator.begin(raceConfig,wallNavigator.config,input,tape)){
-     raceWallStarted=false;resumeWallGraph=true;resetWallFeedback();resetCue();
-    }
+    raceNavigator.lineStage();beginRaceLine();
+    raceWallStarted=false;resumeWallGraph=true;resetWallFeedback();resetCue();
    }
    return;
   }
   if(wallNavigator.paused&&wallNavigator.state==wall::Navigator::CORRIDOR)wallNavigator.resumeAfterLine(input);
   serviceWall();return;
  }
- auto d=raceNavigator.step(raceConfig,wallNavigator.config,input,tape);
- navigationState=raceNavigator.reason;driveVelocity(d);
- if(raceNavigator.wallStage()){
+ if(!raceNavigator.corridor(wallNavigator.config,input,tape)){
+   serviceRaceLine(input,tape);return;
+ }
+ stopMotor();
+ raceNavigator.enterWall();
   resetWallFeedback();
   bool ok=resumeWallGraph?wallNavigator.resumeAfterLine(input):startWall();
   if(ok){raceWallStarted=true;resumeWallGraph=false;resetCue();navigationState="SOLVER_FOLLOWING_WALLS";}
   else{const char*why=resumeWallGraph?"SOLVER_MAP_RESUME_FAILED":navigationState;stopRobot();navigationState=why;}
- }
- if(raceNavigator.state==race::Navigator::FAULT){const char*why=raceNavigator.reason;stopRobot();navigationState=why;}
 }
 
 void reportRace(){

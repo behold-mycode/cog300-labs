@@ -29,7 +29,7 @@ size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
 
 void radioFailure(){
  apReady=false;pending=false;
- if(wirelessControlToken()){stopRobot();releaseWirelessControl();navigationState="WIFI_RADIO_ERROR";}
+ if(mode!=LINE&&wirelessControlToken()){stopRobot();releaseWirelessControl();navigationState="WIFI_RADIO_ERROR";}
  Serial.println(F("WIFI_RADIO_ERROR reset board to retry; USB available"));
 }
 void beginOperation(Operation op,int amount=0){
@@ -129,7 +129,7 @@ void setupWireless(){
 }
 void serviceWireless(){uint32_t start=micros();step();uint32_t elapsed=micros()-start;if(elapsed>wifiMaxUs)wifiMaxUs=elapsed;}
 void reportWireless(){
- Serial.print(apReady?F("WIFI_READY http://192.168.4.1 build=direct-rollback-ir-v1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
+ Serial.print(apReady?F("WIFI_READY http://192.168.4.1 build=sticky-line-v1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
 }
 void suspendWireless(){} // Runtime transport remains incremental in every mode.
 #else
