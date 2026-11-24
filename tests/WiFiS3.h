@@ -4,16 +4,19 @@
 #include <sstream>
 #include <cassert>
 #define WL_AP_LISTENING 7
+#define WL_AP_CONNECTED 8
+static int radioState=WL_AP_LISTENING;
 static int modemCalls=0;
 static std::deque<std::string> webRequests;
 static std::string webOutput;
 static bool radioSilent=false;
 struct IPAddress{IPAddress(int,int,int,int){}};
-struct FakeWiFi {void config(IPAddress){++modemCalls;}int beginAP(const char*,const char*){++modemCalls;return WL_AP_LISTENING;}} WiFi;
+struct FakeWiFi {void end(){++modemCalls;}void config(IPAddress){++modemCalls;}int beginAP(const char*,const char*){++modemCalls;return radioState;}} WiFi;
 struct FakeRadio {
  std::deque<char> rx;std::string tx,body;int payload=0,remaining=0;size_t maxWrite=0;
  void respond(const std::string&s){if(!radioSilent)for(char c:s)rx.push_back(c);}
  void command(){
+  if(tx=="AT+GETSTATUS?\r\n"){tx.clear();respond("+GETSTATUS: "+std::to_string(radioState)+"\r\nOK\r\n");return;}
   auto equal=tx.find('=');std::string name=tx.substr(2,equal-2),argument=tx.substr(equal+1);tx.clear();
   int amount=0;auto comma=argument.find(',');if(comma!=std::string::npos)amount=atoi(argument.c_str()+comma+1);
   if(name=="+SERVERAVAILABLE"){

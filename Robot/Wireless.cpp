@@ -23,7 +23,7 @@ static_assert(sizeof(ROBOT_WIFI_PASSWORD) >= 9 && sizeof(ROBOT_WIFI_PASSWORD) <=
 // at most 16 UART bytes (~1.4ms at 115200), reads at most 128 buffered bytes,
 // and never waits for a network/modem response. No core/library patches needed.
 namespace {
-enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE } operation=ACCEPT;
+enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE, HEALTH } operation=ACCEPT;
 wireless::Reply reply;
 wireless::Request request;
 bool apReady=false,pending=false,resync=false;
@@ -34,7 +34,21 @@ char responseHeader[240]{},statusBody[1000]{};
 const char* responseBody=nullptr;
 size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
 
+bool retryEnabled=false;
+unsigned failures=0;
+uint32_t nextHealth=0, nextRestart=0;
+
+bool stoppedForRadioRestart(){
+ return mode==MANUAL && !motorDemandActive() && !motorLeft && !motorRight && !controlSession;
+}
+void scheduleRestart(){
+ apReady=false;pending=false;resync=false;serverSocket=clientSocket=-1;
+ releaseWirelessControl();request.reset();nextRestart=millis()+3000;
+}
+
 void radioFailure(){
+ if(failures<3)++failures;
+ if(failures>=3 && stoppedForRadioRestart()){scheduleRestart();return;}
  pending=false;resync=true;releaseWirelessControl();
  // A timed-out reply can still arrive. Drain it before issuing another AT command.
  nextPoll=millis()+250;
@@ -44,12 +58,13 @@ void radioFailure(){
 }
 void beginOperation(Operation op,int amount=0){
  operation=op;const char* name="";
- switch(op){case ACCEPT:name="SERVERAVAILABLE";break;case AVAILABLE:name="AVAILABLE";break;
+ switch(op){case HEALTH:name="GETSTATUS";break;case ACCEPT:name="SERVERAVAILABLE";break;case AVAILABLE:name="AVAILABLE";break;
  case RECEIVE:name="CLIENTRECEIVE";break;case SEND:name="CLIENTSEND";break;case CLOSE:name="CLIENTCLOSE";break;}
  char expected[40];snprintf(expected,sizeof(expected),"+%s:",name);reply.begin(op==SEND?"":expected);
  int socket=op==ACCEPT?serverSocket:clientSocket;
  int n=(op==RECEIVE||op==SEND)?snprintf(transmit,sizeof(transmit),"AT+%s=%d,%d\r\n",name,socket,amount):
   snprintf(transmit,sizeof(transmit),"AT+%s=%d\r\n",name,socket);
+ if(op==HEALTH)n=snprintf(transmit,sizeof(transmit),"AT+GETSTATUS?\r\n");
  txSize=(size_t)n;txOffset=0;
  if(op==SEND){
   for(int j=0;j<amount;++j){size_t index=responseOffset+j;transmit[txSize++]=index<headerSize?responseHeader[index]:responseBody[index-headerSize];}
@@ -116,7 +131,14 @@ void advance(){
   return;
  }
  switch(operation){
+ case HEALTH:{
+  const int state=atoi(reply.data);
+  if(state!=WL_AP_LISTENING && state!=WL_AP_CONNECTED && stoppedForRadioRestart()){
+   scheduleRestart();return;
+  }
+  nextPoll=millis();break;}
  case ACCEPT:
+  failures=0;
   clientSocket=atoi(reply.data);
   if(clientSocket<0){nextPoll=millis()+20;return;}
   clientSince=millis();request.reset();beginOperation(AVAILABLE);break;
@@ -141,13 +163,24 @@ void advance(){
  }
 }
 void step(){
- if(!apReady)return;
+ if(!apReady){
+  if(retryEnabled && stoppedForRadioRestart() && (int32_t)(millis()-nextRestart)>=0){
+   WiFi.end();setupWireless();
+  }
+  return;
+ }
  if(resync){
   for(int n=0;n<128&&Serial2.available();++n){Serial2.read();nextPoll=millis()+250;}
   if((int32_t)(millis()-nextPoll)<0)return;
   resync=false;beginOperation(clientSocket>=0?CLOSE:ACCEPT);return;
  }
- if(!pending){if((int32_t)(millis()-nextPoll)>=0)beginOperation(clientSocket<0?ACCEPT:AVAILABLE);return;}
+ if(!pending){
+  if((int32_t)(millis()-nextPoll)<0)return;
+  if(clientSocket<0 && (int32_t)(millis()-nextHealth)>=0 && stoppedForRadioRestart()){
+   nextHealth=millis()+5000;beginOperation(HEALTH);
+  }else beginOperation(clientSocket<0?ACCEPT:AVAILABLE);
+  return;
+ }
  if(txOffset<txSize){
   size_t n=txSize-txOffset;if(n>16)n=16;
   Serial2.write((uint8_t*)transmit+txOffset,n);txOffset+=n;
@@ -159,12 +192,15 @@ void step(){
 }
 void setupWireless(){
  if(strlen(ROBOT_WIFI_PASSWORD)<8||strlen(ROBOT_WIFI_PASSWORD)>63){Serial.println(F("WIFI_DISABLED configure WirelessSecrets.h"));return;}
+ retryEnabled=true;
  WiFi.config(IPAddress(192,168,4,1));
- if(WiFi.beginAP(ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD)!=WL_AP_LISTENING){Serial.println(F("WIFI_FAILED USB available"));return;}
+ if(WiFi.beginAP(ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD)!=WL_AP_LISTENING){Serial.println(F("WIFI_AP_RETRY"));scheduleRestart();return;}
  std::string result;
- if(!modem.write("+BEGINSERVER:",result,"AT+BEGINSERVER=80\r\n")){Serial.println(F("WIFI_SERVER_FAILED"));return;}
+ if(!modem.write("+BEGINSERVER:",result,"AT+BEGINSERVER=80\r\n")){Serial.println(F("WIFI_SERVER_FAILED"));scheduleRestart();return;}
  serverSocket=atoi(result.c_str());apReady=serverSocket>=0;
- if(apReady)Serial.println(F("WIFI_READY http://192.168.4.1"));
+ if(!apReady){scheduleRestart();return;}
+ failures=0;nextHealth=millis()+5000;nextPoll=millis();
+ Serial.println(F("WIFI_READY http://192.168.4.1"));
 }
 void serviceWireless(){uint32_t start=micros();step();uint32_t elapsed=micros()-start;if(elapsed>wifiMaxUs)wifiMaxUs=elapsed;}
 void reportWireless(){
