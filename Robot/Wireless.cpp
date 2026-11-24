@@ -1,4 +1,5 @@
 #include "Robot.h"
+#include <limits.h>
 #include "RadarSensor.h"
 #include "WirelessHttp.h"
 #if defined(ARDUINO_UNOR4_WIFI) && ROBOT_ENABLE_WIFI
@@ -23,7 +24,7 @@ static_assert(sizeof(ROBOT_WIFI_PASSWORD) >= 9 && sizeof(ROBOT_WIFI_PASSWORD) <=
 // at most 16 UART bytes (~1.4ms at 115200), reads at most 128 buffered bytes,
 // and never waits for a network/modem response. No core/library patches needed.
 namespace {
-enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE, HEALTH } operation=ACCEPT;
+enum Operation { ACCEPT, AVAILABLE, RECEIVE, SEND, CLOSE, HEALTH, RESET_RADIO, AP_MODE, AP_ADDRESS, AP_START, SERVER_START } operation=ACCEPT;
 wireless::Reply reply;
 wireless::Request request;
 bool apReady=false,pending=false,resync=false;
@@ -38,9 +39,6 @@ bool retryEnabled=false;
 unsigned failures=0;
 uint32_t nextHealth=0, nextRestart=0;
 
-bool stoppedForRadioRestart(){
- return mode==MANUAL && !motorDemandActive() && !motorLeft && !motorRight && !controlSession;
-}
 void scheduleRestart(){
  apReady=false;pending=false;resync=false;serverSocket=clientSocket=-1;
  releaseWirelessControl();request.reset();nextRestart=millis()+3000;
@@ -48,8 +46,8 @@ void scheduleRestart(){
 
 void radioFailure(){
  if(failures<3)++failures;
- if(failures>=3 && stoppedForRadioRestart()){scheduleRestart();return;}
- pending=false;resync=true;releaseWirelessControl();
+ if(!apReady || failures>=3){scheduleRestart();return;}
+ pending=false;resync=true; // Ownership still expires normally if heartbeats stop.
  // A timed-out reply can still arrive. Drain it before issuing another AT command.
  nextPoll=millis()+250;
  if(operation==CLOSE)clientSocket=-1;
@@ -57,14 +55,29 @@ void radioFailure(){
  Serial.println(F("WIFI_RETRY"));
 }
 void beginOperation(Operation op,int amount=0){
- operation=op;const char* name="";
- switch(op){case HEALTH:name="GETSTATUS";break;case ACCEPT:name="SERVERAVAILABLE";break;case AVAILABLE:name="AVAILABLE";break;
- case RECEIVE:name="CLIENTRECEIVE";break;case SEND:name="CLIENTSEND";break;case CLOSE:name="CLIENTCLOSE";break;}
+ operation=op;
+ const char* name="";
+ int n=0;
+ switch(op){
+ case RESET_RADIO:name="SOFTRESETWIFI";n=snprintf(transmit,sizeof(transmit),"AT+%s\r\n",name);break;
+ case AP_MODE:name="WIFIMODE";n=snprintf(transmit,sizeof(transmit),"AT+%s=2\r\n",name);break;
+ case AP_ADDRESS:name="SOFTAPCONFIG";n=snprintf(transmit,sizeof(transmit),"AT+%s=192.168.4.1,192.168.4.1,255.255.255.0\r\n",name);break;
+ case AP_START:name="BEGINSOFTAP";n=snprintf(transmit,sizeof(transmit),"AT+%s=%s,%s,1\r\n",name,ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD);break;
+ case SERVER_START:name="BEGINSERVER";n=snprintf(transmit,sizeof(transmit),"AT+%s=80\r\n",name);break;
+ case HEALTH:name="GETSTATUS";n=snprintf(transmit,sizeof(transmit),"AT+%s?\r\n",name);break;
+ case ACCEPT:name="SERVERAVAILABLE";break;
+ case AVAILABLE:name="AVAILABLE";break;
+ case RECEIVE:name="CLIENTRECEIVE";break;
+ case SEND:name="CLIENTSEND";break;
+ case CLOSE:name="CLIENTCLOSE";break;
+ }
+ if(!n){
+  const int socket=op==ACCEPT?serverSocket:clientSocket;
+  n=(op==RECEIVE||op==SEND)?snprintf(transmit,sizeof(transmit),"AT+%s=%d,%d\r\n",name,socket,amount):
+   snprintf(transmit,sizeof(transmit),"AT+%s=%d\r\n",name,socket);
+ }
+ if(n<0 || (size_t)n>=sizeof(transmit)){scheduleRestart();return;}
  char expected[40];snprintf(expected,sizeof(expected),"+%s:",name);reply.begin(op==SEND?"":expected);
- int socket=op==ACCEPT?serverSocket:clientSocket;
- int n=(op==RECEIVE||op==SEND)?snprintf(transmit,sizeof(transmit),"AT+%s=%d,%d\r\n",name,socket,amount):
-  snprintf(transmit,sizeof(transmit),"AT+%s=%d\r\n",name,socket);
- if(op==HEALTH)n=snprintf(transmit,sizeof(transmit),"AT+GETSTATUS?\r\n");
  txSize=(size_t)n;txOffset=0;
  if(op==SEND){
   for(int j=0;j<amount;++j){size_t index=responseOffset+j;transmit[txSize++]=index<headerSize?responseHeader[index]:responseBody[index-headerSize];}
@@ -131,9 +144,21 @@ void advance(){
   return;
  }
  switch(operation){
+ case RESET_RADIO:beginOperation(AP_MODE);break;
+ case AP_MODE:beginOperation(AP_ADDRESS);break;
+ case AP_ADDRESS:beginOperation(AP_START);break;
+ case AP_START:
+  if(atoi(reply.data)!=1){scheduleRestart();return;}
+  beginOperation(SERVER_START);break;
+ case SERVER_START:{
+  char* end=nullptr;
+  long socket=strtol(reply.data,&end,10);
+  if(end==reply.data || *end || socket<0 || socket>INT_MAX){scheduleRestart();return;}
+  serverSocket=(int)socket;apReady=true;failures=0;nextPoll=millis();nextHealth=millis()+5000;
+  Serial.println(F("WIFI_READY http://192.168.4.1"));break;}
  case HEALTH:{
   const int state=atoi(reply.data);
-  if(state!=WL_AP_LISTENING && state!=WL_AP_CONNECTED && stoppedForRadioRestart()){
+  if(state!=WL_AP_LISTENING && state!=WL_AP_CONNECTED){
    scheduleRestart();return;
   }
   nextPoll=millis();break;}
@@ -163,10 +188,10 @@ void advance(){
  }
 }
 void step(){
- if(!apReady){
-  if(retryEnabled && stoppedForRadioRestart() && (int32_t)(millis()-nextRestart)>=0){
-   WiFi.end();setupWireless();
-  }
+ if(!apReady && !pending){
+  if(!retryEnabled)return;
+  for(int n=0;n<128&&Serial2.available();++n){Serial2.read();}
+  if((int32_t)(millis()-nextRestart)>=0)beginOperation(RESET_RADIO);
   return;
  }
  if(resync){
@@ -176,7 +201,7 @@ void step(){
  }
  if(!pending){
   if((int32_t)(millis()-nextPoll)<0)return;
-  if(clientSocket<0 && (int32_t)(millis()-nextHealth)>=0 && stoppedForRadioRestart()){
+  if(clientSocket<0 && (int32_t)(millis()-nextHealth)>=0){
    nextHealth=millis()+5000;beginOperation(HEALTH);
   }else beginOperation(clientSocket<0?ACCEPT:AVAILABLE);
   return;

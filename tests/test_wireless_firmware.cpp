@@ -23,8 +23,11 @@ int main(){
  // The complete page is transferred incrementally; no blocking WiFiS3 calls.
  assert(modemCalls==initialCalls&&Serial2.maxWrite<=16);
  post("CLAIM");run(200);token=wirelessControlToken();post("MODE LINE",token);run(200);assert(mode==LINE);
- radioSilent=true;run(2500);assert(mode==LINE&&motorDemandActive()&&!wirelessControlToken());
- radioSilent=false;run(2600);post("CLAIM");run(200);
+ radioSilent=true;run(2500);assert(mode==LINE&&motorDemandActive()&&wirelessControlToken()==token);
+ radioSilent=false;run(400);post("HEARTBEAT",token);run(200);assert(wirelessControlToken()==token);
+ radioState=0;run(5200);assert(!apReady&&mode==LINE&&motorDemandActive());
+ radioState=WL_AP_LISTENING;run(3500);assert(apReady&&mode==LINE&&Serial2.maxWrite<=16);
+ post("CLAIM");run(200);
  assert(mode==LINE&&wirelessControlToken()&&modemCalls==initialCalls);
  post("STOP");run(200);assert(mode==MANUAL&&!motorDemandActive());
 }
