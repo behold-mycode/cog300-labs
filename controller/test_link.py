@@ -27,6 +27,17 @@ class LinkTests(unittest.TestCase):
         self.serial.feed('CAPS ARENA_1'); self.serial.feed('ROBOT_READY 7'); self.link.tick()
         self.serial.feed('OK CONFIG'); self.link.tick()
         self.assertTrue(self.link.ready)
+    def test_manual_pwm_and_release(self):
+        self.ready()
+        self.link.frame(self.owner, 3, ['Up'], 'MANUAL', 128)
+        self.now += .11
+        self.link.tick()
+        self.assertEqual(self.serial.sent[-1], 'DRIVE 128 128')
+        self.link.frame(self.owner, 4, [], 'MANUAL', 128)
+        self.now += .11
+        self.link.tick()
+        self.assertEqual(self.serial.sent[-1], 'STOP')
+
     def test_old_firmware_blocks_arena_commands(self):
         self.serial.feed('ROBOT_READY 7'); self.link.tick()
         for seq, mode in enumerate(('OBJECT','RADAR_SCAN','RADAR_ARM'),1):

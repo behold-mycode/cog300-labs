@@ -55,6 +55,7 @@ class RobotLink:
         self.ready = False
         self.browser_paused = False
         self.phase = 'Disconnected'
+        self.manual_power = 255
         self.settings = DEFAULTS.copy()
         self.keys, self.mode = [], 'MANUAL'
         self.telemetry = {}
@@ -186,7 +187,9 @@ class RobotLink:
             raise ValueError('Stale controller request ignored.')
         self.seq = seq
 
-    def frame(self, owner, seq, keys, mode):
+    def frame(self, owner, seq, keys, mode, manual_power=255):
+        if type(manual_power) is not int or not 0 <= manual_power <= 255:
+            raise ValueError('Manual PWM must be an integer from 0 to 255.')
         if (not isinstance(keys, list) or len(keys) > 4 or
                 any(not isinstance(k, str) or k not in ARROWS for k in keys) or
                 not isinstance(mode, str) or mode not in MODES | RADAR_RUNS.keys()):
@@ -203,6 +206,7 @@ class RobotLink:
             if keys or mode != 'MANUAL': return
             self.browser_paused = False
         # Never queue movement while waiting for handshake/settings acknowledgement.
+        self.manual_power = manual_power
         self.keys = keys if self.ready and mode == 'MANUAL' else []
         self.mode = mode if self.ready else 'MANUAL'
         if self.map_exporting: self.keys,self.mode=[], 'MANUAL'
@@ -539,7 +543,7 @@ class RobotLink:
                     self._send(RADAR_RUNS.get(self.mode, 'MODE ' + self.mode))
                 self.sent_mode = self.mode; self.sent_motion = (0, 0)
             if self.mode == 'MANUAL':
-                motion = wheel_command(self.keys, self.settings['power'])
+                motion = wheel_command(self.keys, min(self.manual_power, self.settings['power']))
                 if motion != (0, 0): self._send('DRIVE %d %d' % motion)
                 elif self.sent_motion != (0, 0): self._send('STOP')
                 self.sent_motion = motion

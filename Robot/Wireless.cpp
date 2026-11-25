@@ -31,12 +31,13 @@ bool apReady=false,pending=false,resync=false;
 int serverSocket=-1,clientSocket=-1;
 uint32_t started=0,clientSince=0,nextPoll=0,wifiMaxUs=0;
 char transmit[320]{};size_t txSize=0,txOffset=0;
-char responseHeader[240]{},statusBody[1000]{};
+char responseHeader[240]{},statusBody[1128]{};
 const char* responseBody=nullptr;
 size_t responseOffset=0,headerSize=0,bodySize=0,sendingSize=0;
 
 bool retryEnabled=false;
 unsigned failures=0;
+uint32_t radioRestartAttempts=0;
 uint32_t nextHealth=0, nextRestart=0;
 
 void scheduleRestart(){
@@ -59,7 +60,7 @@ void beginOperation(Operation op,int amount=0){
  const char* name="";
  int n=0;
  switch(op){
- case RESET_RADIO:name="SOFTRESETWIFI";n=snprintf(transmit,sizeof(transmit),"AT+%s\r\n",name);break;
+ case RESET_RADIO:++radioRestartAttempts;name="SOFTRESETWIFI";n=snprintf(transmit,sizeof(transmit),"AT+%s\r\n",name);break;
  case AP_MODE:name="WIFIMODE";n=snprintf(transmit,sizeof(transmit),"AT+%s=2\r\n",name);break;
  case AP_ADDRESS:name="SOFTAPCONFIG";n=snprintf(transmit,sizeof(transmit),"AT+%s=192.168.4.1,192.168.4.1,255.255.255.0\r\n",name);break;
  case AP_START:name="BEGINSOFTAP";n=snprintf(transmit,sizeof(transmit),"AT+%s=%s,%s,1\r\n",name,ROBOT_WIFI_SSID,ROBOT_WIFI_PASSWORD);break;
@@ -88,9 +89,9 @@ void beginOperation(Operation op,int amount=0){
 void status(bool ok,uint32_t returnedToken){
  char line[420];lineWirelessStatus(line,sizeof(line));
  const auto& pose=odometry.pose;
- snprintf(statusBody,sizeof(statusBody),"{\"ok\":%s,\"token\":%lu,\"owner\":\"%s\",\"state\":\"%s\",\"mode\":\"%s\",\"ir\":%u,\"pwm\":[%d,%d],\"radioMaxUs\":%lu,\"ms\":%lu,\"poseEpoch\":%lu,\"poseReady\":%s,\"pose\":[%.1f,%.1f,%.4f],%s}",
+ snprintf(statusBody,sizeof(statusBody),"{\"ok\":%s,\"token\":%lu,\"owner\":\"%s\",\"state\":\"%s\",\"mode\":\"%s\",\"ir\":%u,\"pwm\":[%d,%d],\"bootCause\":\"%s\",\"resetFlags\":[%u,%u],\"radioRestarts\":%lu,\"radioMaxUs\":%lu,\"ms\":%lu,\"poseEpoch\":%lu,\"poseReady\":%s,\"pose\":[%.1f,%.1f,%.4f],%s}",
   ok?"true":"false",(unsigned long)returnedToken,controlSession?"USB":wirelessControlToken()?"Wi-Fi":"none",
-  navigationState,modeName(),lineMask(),motorLeft,motorRight,(unsigned long)wifiMaxUs,
+  navigationState,modeName(),lineMask(),motorLeft,motorRight,bootResetCause,(unsigned)bootFlags0,(unsigned)bootFlags1,(unsigned long)radioRestartAttempts,(unsigned long)wifiMaxUs,
   (unsigned long)millis(),(unsigned long)odometryEpoch,
   encodersEnabled()&&odometry.configured&&odometry.sampled?"true":"false",
   pose.x,pose.y,pose.heading,line);
@@ -229,7 +230,10 @@ void setupWireless(){
 }
 void serviceWireless(){uint32_t start=micros();step();uint32_t elapsed=micros()-start;if(elapsed>wifiMaxUs)wifiMaxUs=elapsed;}
 void reportWireless(){
- Serial.print(apReady?F("WIFI_READY http://192.168.4.1 build=sticky-line-v1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.println(wifiMaxUs);
+ Serial.print(apReady?F("WIFI_READY http://192.168.4.1 build=sticky-line-v1 max_service_us="):F("WIFI_DISABLED max_service_us="));Serial.print(wifiMaxUs);
+ Serial.print(F(" boot="));Serial.print(bootResetCause);
+ Serial.print(F(" flags="));Serial.print((unsigned)bootFlags0);Serial.print(',');Serial.print((unsigned)bootFlags1);
+ Serial.print(F(" radio_restarts="));Serial.println(radioRestartAttempts);
 }
 void suspendWireless(){} // Runtime transport remains incremental in every mode.
 #else
