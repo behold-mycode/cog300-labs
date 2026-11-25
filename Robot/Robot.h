@@ -88,6 +88,9 @@ bool startRace();bool startStandalone();void serviceRace();void setupStandalone(
 const wall::Input& motionInput();void driveVelocity(wall::Speeds target);bool prepareWallCalibration(bool requireLeft=true);
 bool saveCalibration();bool loadCalibration();bool calibrationSaved();
 int encoderKind();bool encoderInvertLeft();bool encoderInvertRight();uint32_t sonarInterval();
+extern const char* bootResetCause;
+extern uint8_t bootFlags0;
+extern uint16_t bootFlags1;
 void setupWireless();void serviceWireless();void suspendWireless();
 
 bool motorDemandActive();

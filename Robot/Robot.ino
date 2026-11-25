@@ -1,7 +1,22 @@
 // UNO R4 WiFi / L298N. Serial Monitor: 115200 baud, Newline.
 #include "Robot.h"
 
+const char* bootResetCause = "Unknown";
+uint8_t bootFlags0 = 0;
+uint16_t bootFlags1 = 0;
+
 void setup() {
+#ifdef R_SYSTEM
+  bootFlags0 = R_SYSTEM->RSTSR0;
+  bootFlags1 = R_SYSTEM->RSTSR1;
+  if (bootFlags0 & 0x0e) bootResetCause = "Low voltage";
+  else if (bootFlags1 & 3) bootResetCause = "Watchdog";
+  else if (bootFlags1 & 4) bootResetCause = "Software reset";
+  else if (bootFlags1 & 0x1f00) bootResetCause = "CPU or memory fault";
+  else if (bootFlags0 & 1) bootResetCause = "Power on";
+  R_SYSTEM->RSTSR0 = 0;
+  R_SYSTEM->RSTSR1 = 0;
+#endif
   setupMotor();
   setupSensor();
   setupLine();

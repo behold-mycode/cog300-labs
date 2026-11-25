@@ -87,7 +87,7 @@ def make_server(link, demo=False, port=0):
                                 raise ValueError('Port is unavailable. Refresh the port list.')
                         result = {'owner': link.connect(device)}
                     elif path == '/api/frame':
-                        link.frame(body['owner'], body['seq'], body['keys'], body['mode'])
+                        link.frame(body['owner'], body['seq'], body['keys'], body['mode'], body.get('manualPower', 255))
                         result = link.snapshot()
                     elif path == '/api/radar':
                         if body['action'] not in ('radar_profile', 'radar_clearance', 'radar_servo', 'radar_step'):

@@ -5,7 +5,11 @@ static void post(const char*command,uint32_t token=0){
 }
 static void run(int n){for(int j=0;j<n;++j){nowMs++;serviceControlTimeout();serviceOdometry();serviceNavigation();serviceMotor();serviceWireless();}}
 int main(){
- setup();lineTapeLevel=0;tape(5);serviceOdometry();assert(apReady);int initialCalls=modemCalls;
+ radioState=0;setup();assert(!apReady);
+ radioState=WL_AP_LISTENING;run(3200);assert(apReady);
+ radioState=0;run(5200);assert(!apReady);
+ radioState=WL_AP_LISTENING;run(3100);assert(apReady);
+ lineTapeLevel=0;tape(5);serviceOdometry();assert(apReady);int initialCalls=modemCalls;
  post("CLAIM");run(200);auto token=wirelessControlToken();assert(token);assert(webOutput.find("\"ok\":true")!=std::string::npos);
  post("MODE LINE",token);run(200);assert(mode==LINE&&motorDemandActive());assert(modemCalls==initialCalls);
  post("HEARTBEAT",token);run(200);assert(mode==LINE);
@@ -19,8 +23,11 @@ int main(){
  // The complete page is transferred incrementally; no blocking WiFiS3 calls.
  assert(modemCalls==initialCalls&&Serial2.maxWrite<=16);
  post("CLAIM");run(200);token=wirelessControlToken();post("MODE LINE",token);run(200);assert(mode==LINE);
- radioSilent=true;run(2500);assert(mode==LINE&&motorDemandActive()&&!wirelessControlToken());
- radioSilent=false;run(2600);post("CLAIM");run(200);
+ radioSilent=true;run(2500);assert(mode==LINE&&motorDemandActive()&&wirelessControlToken()==token);
+ radioSilent=false;run(400);post("HEARTBEAT",token);run(200);assert(wirelessControlToken()==token);
+ radioState=0;run(5200);assert(!apReady&&mode==LINE&&motorDemandActive());
+ radioState=WL_AP_LISTENING;run(3500);assert(apReady&&mode==LINE&&Serial2.maxWrite<=16);
+ post("CLAIM");run(200);
  assert(mode==LINE&&wirelessControlToken()&&modemCalls==initialCalls);
  post("STOP");run(200);assert(mode==MANUAL&&!motorDemandActive());
 }

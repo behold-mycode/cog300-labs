@@ -12,7 +12,7 @@
 <option value="STOP_AT_END">Stop at tape end · Lab 07</option>
 <option value="RACE">Line + wall maze · three sonars</option>
 <option value="CALIBRATE">Wheel calibration · clear floor</option>
-<option value="MANUAL">Manual driving</option>
+<option selected value="MANUAL">Manual driving</option>
 </select>
 <div class="run-controls"><button id="start" class="primary" disabled>Start</button><button id="stop">Stop <span>SPACE / ESC</span></button></div>
 <p id="robotState" role="status">Stopped</p>
@@ -23,8 +23,11 @@
 <div><span>RIGHT · D3</span><strong id="irRight">—</strong></div>
 </div>
 <p id="irHelp" class="hint">Keep the robot stopped while adjusting sensors. Waiting for live readings.</p>
-<div class="keys" aria-hidden="true"><kbd id="keyUp">↑</kbd><div><kbd id="keyLeft">←</kbd><kbd id="keyDown">↓</kbd><kbd id="keyRight">→</kbd></div></div>
-<p class="instruction">Hold arrows or WASD for manual driving. Release to stop.</p>
+<label for="manualPower">Manual motor power (PWM)</label>
+<select id="manualPower"><option>64</option><option selected>128</option><option>192</option><option>255</option></select>
+<div class="keys" aria-label="Manual drive directions"><button id="keyUp" aria-label="Forward" disabled>↑</button><div><button id="keyLeft" aria-label="Turn left" disabled>←</button><button id="keyDown" aria-label="Reverse" disabled>↓</button><button id="keyRight" aria-label="Turn right" disabled>→</button></div></div>
+<p class="instruction">Hold a direction button, arrow key, or WASD. Release to stop.</p>
+<button id="meterRun" disabled>Drive forward for 3 seconds</button>
 <p class="hint">Changing mode stops the robot. Press Start to run it.<br>USB control stops if this window loses focus or disconnects.</p>
 </section>
 <section class="arena" aria-labelledby="radarHeading">

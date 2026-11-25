@@ -4,6 +4,7 @@ const token = new URLSearchParams(location.hash.slice(1)).get('token') || '';
 let arenaCapable=false;
 let owner=null, seq=0, renderedSeq=-1, ready=false, mode='MANUAL', framePending=false;
 const pressed=new Set();
+let meterUntil=0;
 const mapping={ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',KeyW:'Up',KeyS:'Down',KeyA:'Left',KeyD:'Right'};
 async function api(path,body){
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),1200);
@@ -13,18 +14,24 @@ async function api(path,body){
   }finally{clearTimeout(timer);}
 }
 function showError(e){$('error').textContent=e.message||String(e);$('error').hidden=false;}
-function keyNames(){return [...new Set([...pressed].map(code=>mapping[code]))];}
+function keyNames(){
+  const keys=new Set([...pressed].map(code=>mapping[code] || code));
+  if(meterUntil && performance.now()<meterUntil)keys.add('Up');
+  return [...keys];
+}
 function paintKeys(){const keys=keyNames();for(const key of ['Up','Down','Left','Right'])$('key'+key).classList.toggle('active',keys.includes(key));}
-function localStop(){pressed.clear();mode='MANUAL';paintKeys();}
+function localStop(){meterUntil=0;pressed.clear();mode='MANUAL';paintKeys();}
 function render(state){
   ready=Boolean(state.ready&&owner);
   if(!ready && mode==='MANUAL')localStop();
+  for(const id of ['keyUp','keyDown','keyLeft','keyRight','meterRun'])$(id).disabled=!ready;
   $('badge').textContent=ready?'Connected':state.connected?'Connecting':'Disconnected';
   $('status').textContent=state.status;
   $('connect').textContent=owner?'Disconnect':'Connect';
   $('connect').disabled=Boolean(state.connected&&!owner);
   arenaCapable=state.radar?.capable===true;
   $('start').disabled=!ready||($('mode').value==='OBJECT'&&!arenaCapable);
+  paintKeys();
   const t=state.telemetry||{};
   if(state.mode==='MANUAL'&&t.mode==='MANUAL'&&!['STOPPED','DRIVING','TIMED_TEST'].includes(t.state))localStop();
   $('robotState').textContent=state.connected?(t.state||'Stopped').replaceAll('_',' ').toLowerCase():'Not connected';
@@ -117,7 +124,7 @@ async function sendFrame(){
   if(!owner)return;
   const requestOwner=owner,requestSeq=++seq;
   try{
-    const state=await api('frame',{owner:requestOwner,seq:requestSeq,keys:keyNames(),mode});
+    const state=await api('frame',{owner:requestOwner,seq:requestSeq,keys:keyNames(),mode,manualPower:Number($('manualPower').value)});
     if(owner===requestOwner&&requestSeq>=renderedSeq){renderedSeq=requestSeq;render(state);}
   }catch(error){
     if(requestOwner!==owner||requestSeq<seq)return;
@@ -147,11 +154,11 @@ $('connect').addEventListener('click',async()=>{
 $('mode').addEventListener('change',stop);
 $('start').addEventListener('click',()=>{
   if(!ready||($('mode').value==='OBJECT'&&!arenaCapable))return;
-  pressed.clear();paintKeys();mode=$('mode').value;void sendFrame();$('drive').focus();
+  localStop();mode=$('mode').value;void sendFrame();$('drive').focus();
 });
 function startRadar(run){
   if(!ready||!arenaCapable)return;
-  pressed.clear();paintKeys();mode=run;void sendFrame();
+  localStop();mode=run;void sendFrame();
 }
 $('radarStop').addEventListener('click',stop);
 $('benchScan').addEventListener('click',()=>startRadar('RADAR_SCAN'));
@@ -169,12 +176,30 @@ $('setWidth').addEventListener('click',()=>setRadar('radar_profile',{minMm:$('mi
 $('setStep').addEventListener('click',()=>setRadar('radar_step',{step:Number($('benchStep').value)}));
 $('setServo').addEventListener('click',()=>setRadar('radar_servo',{rightUs:$('servoRight').valueAsNumber,centerUs:$('servoCenter').valueAsNumber,leftUs:$('servoLeft').valueAsNumber}));
 $('setRadius').addEventListener('click',()=>setRadar('radar_clearance',{radius:$('clearRadius').valueAsNumber}));
+$('manualPower').addEventListener('change',()=>{stop();$('drive').focus();});
+function selectManual(){mode='MANUAL';$('mode').value=mode;}
+for(const direction of ['Up','Down','Left','Right']){
+  const button=$('key'+direction);
+  button.addEventListener('pointerdown',event=>{
+    if(!ready || event.button!==0 || !event.isPrimary)return;
+    button.setPointerCapture(event.pointerId);
+    selectManual();meterUntil=0;pressed.add(direction);paintKeys();void sendFrame();
+  });
+  function release(){
+    if(pressed.delete(direction)){paintKeys();void sendFrame();}
+  }
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,release);
+}
+$('meterRun').addEventListener('click',()=>{
+  if(!ready)return;
+  localStop();selectManual();meterUntil=performance.now()+3000;paintKeys();void sendFrame();
+});
 $('stop').addEventListener('click',stop);
 window.addEventListener('keydown',event=>{
   if(event.code==='Space'||event.code==='Escape'){event.preventDefault();stop();return;}
   if(!mapping[event.code]||event.target.closest('input,select,textarea')||event.metaKey||event.ctrlKey||event.altKey)return;
   event.preventDefault();if(!ready||event.repeat||!document.hasFocus())return;
-  pressed.add(event.code);mode='MANUAL';$('mode').value='MANUAL';paintKeys();void sendFrame();
+  meterUntil=0;pressed.add(event.code);mode='MANUAL';$('mode').value='MANUAL';paintKeys();void sendFrame();
 });
 window.addEventListener('keyup',event=>{if(mapping[event.code]&&pressed.delete(event.code)){paintKeys();void sendFrame();}});
 function releaseManual(){if(mode==='MANUAL')stop();}

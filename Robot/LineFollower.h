@@ -38,6 +38,14 @@ class Follower {
   float approachHeading = 0, scanHeading = 0, scanExtent = 0;
   int side = 0, scanSide = 1;
   bool opposite = false, centred = false, clearBand = false, knownTape = false;
+  static constexpr uint32_t gapHoldMs = 45;
+  Command lastTapeCommand{};
+  uint32_t lastTapeMs = 0;
+  Wheels lastProbePosition{};
+  float confirmedMm = 0;
+  uint32_t lastProbeMs = 0, probeGapRemainingMs = 0;
+  bool probeOnTape = false;
+  Command probeCommand{};
   float bend = 0, oppositeBend = 0;
   Wheels turnStart{}, oppositeStart{};
   float turnHeading=0;
@@ -133,6 +141,7 @@ public:
     side = 0;
     bend = 0;
     opposite = centred = false;
+    lastTapeCommand = {};
     knownTape = i.tape == 2;
     reference = wheels(i);
     state = FOLLOW;
@@ -145,8 +154,15 @@ public:
       return {};
     if (state == FOLLOW) {
       remember(p);
+      if (i.tape) lastTapeMs = i.now;
       if (!i.tape) {
         centred = false;
+        if ((lastTapeCommand.left || lastTapeCommand.right) &&
+            (uint32_t)(i.now - lastTapeMs) < gapHoldMs) {
+          reason = "LINE_BRIDGING_GAP";
+          return lastTapeCommand;
+        }
+        lastTapeCommand = {};
         loss = p;
         if (retry) {
           state = ADVANCE;
@@ -168,7 +184,8 @@ public:
         bend = 0;
         opposite = false;
         reason = "LINE_FOLLOW";
-        return {config.cruiseSpeed, config.cruiseSpeed};
+        lastTapeCommand = {config.cruiseSpeed, config.cruiseSpeed};
+        return lastTapeCommand;
       } else {
         centred = false;
         int observed = (i.tape == 4 || i.tape == 6)   ? 1
@@ -205,7 +222,8 @@ public:
         reason = side > 0   ? "LINE_LEFT"
                  : side < 0 ? "LINE_RIGHT"
                             : "LINE_FOLLOW";
-        return arc(fminf(config.cruiseSpeed, config.correctionSpeed));
+        lastTapeCommand = arc(fminf(config.cruiseSpeed, config.correctionSpeed));
+        return lastTapeCommand;
       }
     }
     if (state == ADVANCE) {
@@ -245,14 +263,29 @@ public:
                                 approachHeading + fullTurn * .5f) < .22f;
         if (!clearBand || (i.tape!=2 && i.tape!=3 && i.tape!=6) || incoming)
           return spin();
-        probeOrigin = p;
+        probeOrigin = lastProbePosition = p;
+        confirmedMm = 0;
+        lastProbeMs = i.now;
+        probeGapRemainingMs = gapHoldMs;
+        probeOnTape = true;
         state = VERIFY;
       }
     }
     if (state == VERIFY) {
       reason = "LINE_CONFIRMING";
-      if (i.tape == 2 || i.tape == 3 || i.tape == 6) {
-        if (forward(p, probeOrigin) >= 20) {
+      const bool onTape = i.tape == 2 || i.tape == 3 || i.tape == 6;
+      const uint32_t elapsed = i.now - lastProbeMs;
+      if (probeOnTape && onTape) {
+        confirmedMm += forward(p, lastProbePosition);
+      } else {
+        // Charge intervals touching bare floor to one budget for the whole probe.
+        probeGapRemainingMs -= elapsed < probeGapRemainingMs ? elapsed : probeGapRemainingMs;
+      }
+      probeOnTape = onTape;
+      lastProbeMs = i.now;
+      lastProbePosition = p;
+      if (onTape && probeGapRemainingMs) {
+        if (confirmedMm >= 20) {
           checkpoint(i);
           knownTape = true;
           retry = 0;
@@ -264,9 +297,13 @@ public:
           return step(i);
         }
         const float v = probeSpeed();
-        if(i.tape==6)return {.2f*v,v};
-        if(i.tape==3)return {v,.2f*v};
-        return {v,v};
+        probeCommand = {v,v};
+        if (i.tape == 6) probeCommand.left *= .2f;
+        if (i.tape == 3) probeCommand.right *= .2f;
+        return probeCommand;
+      }
+      if (!i.tape && probeGapRemainingMs) {
+        return probeCommand;
       }
       state = UNDO_PROBE;
     }
